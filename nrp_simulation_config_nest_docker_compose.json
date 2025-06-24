@@ -1,0 +1,39 @@
+{
+    "SimulationName": "test_bullet",
+    "SimulationDescription": "Launch a py_sim engine to run a Bullet simulation and a python engine to control the simulation",
+    "SimulationTimeout": 1,
+    "EngineConfigs": 
+    [
+        {
+            "EngineType": "py_sim",
+            "EngineName": "bullet_simulator",
+            "PythonFileName": "nrp_bullet_interface.py",
+            "Simulator": "Bullet",
+            "WorldFileName": "/home/nrpuser/sim/embodiment_sdf_models/arm_1dof/demo_human_col/skeleton.urdf",
+            "EngineTimestep" : 0.02,
+            "Visualizer": true
+        },
+        {
+            "EngineType": "nest_server",
+            "EngineName": "nest",
+            "NestInitFileName": "nrp_nest_engine.py",
+            "EngineTimestep" : 0.02,
+            "NestServerPort": 9000,
+			"NestServerHost": "nrp-nest-simulator",
+            "EngineLaunchCommand": {
+                "LaunchType": "EmptyLaunchCommand"
+            }
+        }
+    ],
+    "DataPackProcessingFunctions":
+    [
+        {
+            "Name": "to_bullet",
+            "FileName": "nrp_tf_from_nest_to_bullet.py"
+        },
+        {
+            "Name": "from_bullet",
+            "FileName": "nrp_tf_from_bullet.py"
+        }
+    ]
+}
