@@ -1,0 +1,14 @@
+# from gitignore
+__pycache__/
+**/__pycache__/
+**/*.hdf5
+logs/
+.env
+**/runs/*
+
+# docker-specific
+.git
+.gitignore
+*.md
+nearnes*.tar
+nearnes*.tar.gz
