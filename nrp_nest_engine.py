@@ -2,12 +2,14 @@ import numpy
 import nest
 import os
 
+# Here comes the initialization of the nest
+# All the modules and files should be available on nest container/VM/host
+
 # Adjust env vars to be able to import the NESTML-generated module
 # ld_lib_path = os.environ.get('LD_LIBRARY_PATH', '')
 # new_path = ld_lib_path + ":"+"../nestml/target"
 # os.environ['LD_LIBRARY_PATH'] = new_path
 #
-# NOTE: copy controller_module.so to $NRP_INSTALL_DIR/lib/ directory
 
 import json
 
@@ -95,6 +97,8 @@ nest.Connect(brainstem_n, spikedetector_brain_stem_neg)
 nest.Connect(motor_p, spikedetector_motor_cortex_pos)
 nest.Connect(motor_n, spikedetector_motor_cortex_neg)
 
+
+# These variables are bound to NRP DataPacks
 populations = {
     'spikedetector_brain_stem_pos': spikedetector_brain_stem_pos,
     'spikedetector_brain_stem_neg': spikedetector_brain_stem_neg

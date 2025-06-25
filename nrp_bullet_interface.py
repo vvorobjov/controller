@@ -6,6 +6,9 @@ A Py_Sim Engine for a PyBullet car simulation
 --> obtain information from simulation and send them to controller engine
 --> receive controller command from engine to run the simulation
 """
+
+# Here comes the interface with PyBullet
+
 from nrp_core.engines.py_sim import PySimEngineScript
 
 import arm_1dof.robot_arm_1dof
@@ -13,7 +16,6 @@ import arm_1dof.robot_arm_1dof
 import pybullet
 import os
 import numpy as np
-from nrp_core.engines.py_sim.SimManager import SimulatorManager
 
 
 class Script(PySimEngineScript):
