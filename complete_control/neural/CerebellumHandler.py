@@ -137,6 +137,18 @@ class CerebellumHandler:
         # Use path_data implicitly if to_file=True
         return PopView(nest_pop, self.total_time_vect, to_file=True, label=full_label)
 
+    def get_purkinje_from_pf(self):
+        """
+        Returns the NEST connection handles from Parallel Fibers (PF) to Purkinje cells.
+        """
+        pf_population = self.cerebellum.populations.forw_grc_view.pop
+        purkinje_population = self.cerebellum.populations.forw_pc_p_view.pop
+        # Get all connections from PF to Purkinje
+        pf_to_purkinje_conns = nest.GetConnections(
+            source=pf_population, target=purkinje_population
+        )
+        return pf_to_purkinje_conns
+
     def _create_interface_populations(self):
         """Creates the intermediate populations connecting to the cerebellum."""
         # --- Populations based on brain.py logic ---

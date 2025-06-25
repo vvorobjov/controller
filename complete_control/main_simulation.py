@@ -19,7 +19,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 from mpi4py.MPI import Comm
 from neural.Controller import Controller
-from neural.data_handling import collapse_files
+from neural.data_handling import collapse_files, save_pf_to_purkinje_weights_gdf
 from neural.plot_utils import plot_controller_outputs
 from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import setup_logging, tqdm
@@ -91,6 +91,10 @@ def run_simulation(
         pop_views.extend(controller.get_all_recorded_views())
 
     log.info("collected all popviews")
+    controller = controllers[0]
+    log.info("Starting Simulation")
+    PF_to_purkinje = controller.cerebellum_handler.get_purkinje_from_pf()
+    weights_over_trials = []
     with nest.RunManager():
         for trial in range(n_trials):
             current_sim_start_time = nest.GetKernelStatus("biological_time")
@@ -103,6 +107,10 @@ def run_simulation(
             start_trial_time = timer()
 
             nest.Run(single_trial_ms)
+
+            # --- Record weights after each trial ---
+            weights = nest.GetStatus(PF_to_purkinje, ["source", "weight"])
+            weights_over_trials.append(weights)
 
             end_trial_time = timer()
             trial_wall_time = timedelta(seconds=end_trial_time - start_trial_time)
@@ -121,6 +129,12 @@ def run_simulation(
         path_data,
         pop_views,
         comm,
+    )
+    log.info("Synapse Recording for all trials started...")
+    save_pf_to_purkinje_weights_gdf(
+        weights_over_trials,
+        path_data,
+        "PF_to_purkinje_weights.gdf",
     )
 
     end_collapse_time = timer()
