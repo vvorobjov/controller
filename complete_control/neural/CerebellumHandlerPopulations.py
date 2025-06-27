@@ -21,8 +21,7 @@ class CerebellumHandlerPopulations:
     motor_commands_n: Optional[PopView] = None
 
     # From Planner (scaled by basic_neuron_nestml, to Inv Mossy Fibers)
-    plan_to_inv_p: Optional[PopView] = None
-    plan_to_inv_n: Optional[PopView] = None
+    plan_to_inv: Optional[PopView] = None
 
     # From Sensory Neurons (scaled by basic_neuron_nestml, for Fwd Error Calculation input)
     feedback_p: Optional[PopView] = None

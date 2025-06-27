@@ -82,7 +82,13 @@ class ConnectionsParams(BaseModel):
             delay=0.1,
         )
     )
-    plan_to_inv_mossy_i: SingleSynapseParams = Field(
+    planner_error_inv: SingleSynapseParams = Field(
+        default_factory=lambda: SingleSynapseParams(
+            weight=0.001,
+            delay=0.1,
+        )
+    )
+    plan_to_inv_mossy: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
             weight=1.0,
             delay=0.1,

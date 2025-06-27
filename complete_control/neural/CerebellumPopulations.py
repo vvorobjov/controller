@@ -35,8 +35,7 @@ class CerebellumPopulations:
 
     # === Inverse Model Core Populations ===
     # Mossy Fibers
-    inv_mf_p_view: Optional[PopView] = None
-    inv_mf_n_view: Optional[PopView] = None
+    inv_mf_view: Optional[PopView] = None
 
     # Granular Layer
     inv_glom_view: Optional[PopView] = None

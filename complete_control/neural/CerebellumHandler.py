@@ -196,34 +196,33 @@ class CerebellumHandler:
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
             "simulation_steps": len(self.total_time_vect),
+            "sdev": params.sdev,
         }
-        plan_to_inv_p = nest.Create("basic_neuron_nestml", self.N_mossy_inv)
-        nest.SetStatus(plan_to_inv_p, {**pop_params, "pos": True})
-        self.interface_pops.plan_to_inv_p = self._create_pop_view(
-            plan_to_inv_p, "plan_to_inv_p"
+        plan_to_inv = nest.Create("rb_neuron_nestml", self.N_mossy_inv)
+        signal_sensibility = np.linspace(
+            -params.freq_max, params.freq_max, self.N_mossy_inv
         )
-        plan_to_inv_n = nest.Create("basic_neuron_nestml", self.N_mossy_inv)
-        nest.SetStatus(plan_to_inv_n, {**pop_params, "pos": False})
-        self.interface_pops.plan_to_inv_n = self._create_pop_view(
-            plan_to_inv_n, "plan_to_inv_n"
+        nest.SetStatus(plan_to_inv, pop_params)
+        for i, neuron in enumerate(plan_to_inv):
+            nest.SetStatus(neuron, {"desired": signal_sensibility[i]})
+        self.interface_pops.plan_to_inv = self._create_pop_view(
+            plan_to_inv, "plan_to_inv"
         )
 
-        # State Estimator Relay (Input to Inv Error Calc) - Size N_mossy_inv? Check brain.py usage
-        # Assuming size N_mossy_inv based on plan_to_inv, adjust if needed
-        # TODO why is this plan instead of state?
-        params = self.pops_params.plan_to_inv
+        # State Estimator Relay (Input to Inv Error Calc)
+        params = self.pops_params.state_to_inv
         pop_params = {
             "kp": params.kp,
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
             "simulation_steps": len(self.total_time_vect),
         }
-        state_to_inv_p = nest.Create("basic_neuron_nestml", self.N_mossy_inv)
+        state_to_inv_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(state_to_inv_p, {**pop_params, "pos": True})
         self.interface_pops.state_to_inv_p = self._create_pop_view(
             state_to_inv_p, "state_to_inv_p"
         )
-        state_to_inv_n = nest.Create("basic_neuron_nestml", self.N_mossy_inv)
+        state_to_inv_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(state_to_inv_n, {**pop_params, "pos": False})
         self.interface_pops.state_to_inv_n = self._create_pop_view(
             state_to_inv_n, "state_to_inv_n"
@@ -332,18 +331,10 @@ class CerebellumHandler:
         # Planner -> Inv Mossy Fibers
         self.log.debug("Connecting plan_to_inv -> inv_mf")
         nest.Connect(
-            self.interface_pops.plan_to_inv_p.pop,
-            self.cerebellum.populations.inv_mf_p_view.pop,
+            self.interface_pops.plan_to_inv.pop,
+            self.cerebellum.populations.inv_mf_view.pop,
             "one_to_one",
-            # TODO hello? what is this weight?
-            # syn_spec={"weight": 1.0},
-        )
-        nest.Connect(
-            self.interface_pops.plan_to_inv_n.pop,
-            self.cerebellum.populations.inv_mf_n_view.pop,
-            "one_to_one",
-            # TODO hello? what is this weight? Check weight sign
-            # syn_spec={"weight": 1.0},
+            syn_spec=self.conn_params.plan_to_inv_mossy.model_dump(exclude_none=True),
         )
 
         # Inv Error -> Inv Inferior Olive
@@ -476,7 +467,7 @@ class CerebellumHandler:
 
         # --- Inverse Error Calculation (Error = Plan - StateEst?) ---
         # Connect Plan -> Inv Error
-        plan_err_inv_spec = self.conn_params.plan_to_inv_error_inv
+        plan_err_inv_spec = self.conn_params.planner_error_inv
         syn_spec_p = plan_err_inv_spec.model_dump(exclude_none=True)
         syn_spec_n = plan_err_inv_spec.model_copy(
             update={"weight": -plan_err_inv_spec.weight}
@@ -487,25 +478,25 @@ class CerebellumHandler:
             syn_spec_n=syn_spec_n,
         )
         nest.Connect(
-            self.interface_pops.plan_to_inv_p.pop,
+            self.controller_pops.planner_p.pop,
             self.interface_pops.error_inv_p.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
-            self.interface_pops.plan_to_inv_p.pop,
+            self.controller_pops.planner_p.pop,
             self.interface_pops.error_inv_n.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
-            self.interface_pops.plan_to_inv_n.pop,
+            self.controller_pops.planner_n.pop,
             self.interface_pops.error_inv_p.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
         nest.Connect(
-            self.interface_pops.plan_to_inv_n.pop,
+            self.controller_pops.planner_n.pop,
             self.interface_pops.error_inv_n.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
@@ -640,13 +631,13 @@ class CerebellumHandler:
         )
         nest.Connect(
             self.controller_pops.planner_p.pop,
-            self.interface_pops.plan_to_inv_p.pop,
+            self.interface_pops.plan_to_inv.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
             self.controller_pops.planner_n.pop,
-            self.interface_pops.plan_to_inv_n.pop,
+            self.interface_pops.plan_to_inv.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
