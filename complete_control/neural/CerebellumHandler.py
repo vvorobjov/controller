@@ -137,31 +137,35 @@ class CerebellumHandler:
         # Use path_data implicitly if to_file=True
         return PopView(nest_pop, self.total_time_vect, to_file=True, label=full_label)
 
-    def get_purkinje_from_pf(self):
+    def get_synapse_connections_PF_to_PC(self):
         """
         Returns a dict of NEST connection handles for all PF→Purkinje types.
         """
         conns = {}
-        # Forward Positive
-        conns["forw_p"] = nest.GetConnections(
-            source=self.cerebellum.populations.forw_grc_view.pop,
-            target=self.cerebellum.populations.forw_pc_p_view.pop,
-        )
-        # Forward Negative
-        conns["forw_n"] = nest.GetConnections(
-            source=self.cerebellum.populations.forw_grc_view.pop,
-            target=self.cerebellum.populations.forw_pc_n_view.pop,
-        )
-        # Inverse Negative
-        conns["inv_n"] = nest.GetConnections(
-            source=self.cerebellum.populations.inv_grc_view.pop,
-            target=self.cerebellum.populations.inv_pc_n_view.pop,
-        )
-        # Inverse Positive
-        conns["inv_p"] = nest.GetConnections(
-            source=self.cerebellum.populations.inv_grc_view.pop,
-            target=self.cerebellum.populations.inv_pc_p_view.pop,
-        )
+        pairs = [
+            (
+                self.cerebellum.populations.forw_grc_view,
+                self.cerebellum.populations.forw_pc_p_view,
+            ),
+            (
+                self.cerebellum.populations.forw_grc_view,
+                self.cerebellum.populations.forw_pc_n_view,
+            ),
+            (
+                self.cerebellum.populations.inv_grc_view,
+                self.cerebellum.populations.inv_pc_p_view,
+            ),
+            (
+                self.cerebellum.populations.inv_grc_view,
+                self.cerebellum.populations.inv_pc_n_view,
+            ),
+        ]
+        for pre, post in pairs:
+            connection_key = f"{pre.label}>{post.label}"
+            conns[connection_key] = nest.GetConnections(
+                source=pre.pop,
+                target=post.pop,
+            )
         return conns
 
     def _create_interface_populations(self):
@@ -612,7 +616,7 @@ class CerebellumHandler:
             self.cerebellum.populations.forw_dcnp_n_view.pop,
             self.controller_pops.pred_p.pop,
             "all_to_all",
-            syn_spec_n,
+            syn_spec=syn_spec_n,
         )
         # DCN minus drives Negative Prediction
         nest.Connect(

@@ -19,7 +19,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 from mpi4py.MPI import Comm
 from neural.Controller import Controller
-from neural.data_handling import collapse_files, save_pf_to_purkinje_weights_gdf
+from neural.data_handling import collapse_files, save_conn_weights_gdf
 from neural.plot_utils import plot_controller_outputs
 from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import setup_logging, tqdm
@@ -93,7 +93,9 @@ def run_simulation(
     log.info("collected all popviews")
     controller = controllers[0]
     log.info("Starting Simulation")
-    PF_to_purkinje_conns = controller.cerebellum_handler.get_purkinje_from_pf()
+    PF_to_purkinje_conns = (
+        controller.cerebellum_handler.get_synapse_connections_PF_to_PC()
+    )
     weights_over_trials = {k: [] for k in PF_to_purkinje_conns}
 
     with nest.RunManager():
@@ -109,8 +111,7 @@ def run_simulation(
 
             nest.Run(single_trial_ms)
 
-            # --- Record weights after each trial ---
-            # After each trial:
+            # Record weights after each trial
             for key, conns in PF_to_purkinje_conns.items():
                 conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
                 trial_weights = [(entry[0], entry[1], entry[2]) for entry in conn_info]
@@ -135,7 +136,7 @@ def run_simulation(
         comm,
     )
     log.info("Synapse Recording for all trials started...")
-    save_pf_to_purkinje_weights_gdf(
+    save_conn_weights_gdf(
         weights_over_trials,
         path_data,
         "PF_to_purkinje_weights",

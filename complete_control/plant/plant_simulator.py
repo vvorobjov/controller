@@ -198,7 +198,6 @@ class PlantSimulator:
         if self._should_lock_joint(current_sim_time_s):
             self.plant.lock_joint()
             return
-        self.plant.unlock_joint()
         self.plant.set_joint_torques([joint_torque])
 
     def _update_sensory_feedback(
@@ -237,6 +236,7 @@ class PlantSimulator:
             # Loop while current_sim_time_s is less than the total duration.
             # Add a small epsilon to ensure the last step is processed if time is exact.
             # Simulation loop; TODO should this count in num_steps instead?
+
             while current_sim_time_s < self.config.TOTAL_SIM_DURATION_S - (
                 self.config.RESOLUTION_S / 2.0
             ):
@@ -287,17 +287,18 @@ class PlantSimulator:
                 computed_torque_from_input = net_rate_hz / self.config.SCALE_TORQUE
 
                 # Perturbation logic
-                # Only check for trial-based gravity changes if gravity is enabled globally
                 if exp_params.enable_gravity:
                     current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
-                    
+
                     # Turn gravity on if we've reached application trial
-                    if (current_trial >= exp_params.gravity_trial_start):
+                    if current_trial >= exp_params.gravity_trial_start:
                         self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
 
                     # Turn gravity off if removal trial is set and we've reached it
-                    if (exp_params.gravity_trial_end is not None and
-                        current_trial > exp_params.gravity_trial_end):
+                    if (
+                        exp_params.gravity_trial_end is not None
+                        and current_trial > exp_params.gravity_trial_end
+                    ):
                         self.plant.set_gravity(False)
 
                 # 4. Apply motor command to plant

@@ -58,14 +58,13 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     comm.barrier()
 
 
-def save_pf_to_purkinje_weights_gdf(
-    weights_over_trials_dict, dir: Path, base_filename: str = "PF_to_purkinje"
-):
+def save_conn_weights_gdf(weights_over_trials: dict, dir: Path, filename_prefix: str):
     """
-    Save PF→Purkinje weights for each connection group as separate GDF files.
+    Save connection weights for each connection group as separate GDF files.
+    weights_over_trials: Dict[str, Any] (conn_name -> Array[(source,target,weight), trial_idx])
     """
-    for key, trials in weights_over_trials_dict.items():
-        gdf_file = dir / f"{base_filename}_{key}.gdf"
+    for key, trials in weights_over_trials.items():
+        gdf_file = dir / f"{filename_prefix}_{key}.gdf"
         with open(gdf_file, "w") as wfd:
             wfd.write("source\ttarget\ttrial\tweight\n")
             for trial_idx, trial_weights in enumerate(trials):
