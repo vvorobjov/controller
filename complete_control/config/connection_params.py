@@ -78,7 +78,7 @@ class ConnectionsParams(BaseModel):
     )
     planner_plan_to_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.001,
+            weight=1,
             delay=0.1,
         )
     )

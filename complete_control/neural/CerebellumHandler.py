@@ -473,7 +473,7 @@ class CerebellumHandler:
             update={"weight": -plan_err_inv_spec.weight}
         ).model_dump(exclude_none=True)
         self.log.debug(
-            "Connecting plan_to_inv -> error_inv",
+            "Connecting planner_p -> error_inv",
             syn_spec_p=syn_spec_p,
             syn_spec_n=syn_spec_n,
         )
@@ -705,6 +705,7 @@ class CerebellumHandler:
             syn_spec_p=syn_spec_p,
             syn_spec_n=syn_spec_n,
         )
+        # TODO what is this if for?
         if self.controller_pops.state_p and self.interface_pops.state_to_inv_p:
             nest.Connect(
                 self.controller_pops.state_p.pop,
