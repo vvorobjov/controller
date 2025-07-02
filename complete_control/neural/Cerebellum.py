@@ -97,7 +97,7 @@ class Cerebellum:
             ].populations.items()
             if neuron_model.name == "mossy_fibers"
         )
-        self.N_mossy_forw = int(len(self.forw_Nest_Mf) / 2)
+        self.N_mossy_forw = len(self.forw_Nest_Mf)
 
         # Glomerulus
         _forw_N_Glom_gids = next(

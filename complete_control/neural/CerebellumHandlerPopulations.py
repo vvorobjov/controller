@@ -17,8 +17,7 @@ class CerebellumHandlerPopulations:
     # before they reach the core cerebellum model (defined in cerebellum_build.py).
 
     # From Motor Cortex Output (scaled by basic_neuron_nestml, to Fwd Mossy Fibers)
-    motor_commands_p: Optional[PopView] = None
-    motor_commands_n: Optional[PopView] = None
+    motor_commands: Optional[PopView] = None
 
     # From Planner (scaled by basic_neuron_nestml, to Inv Mossy Fibers)
     plan_to_inv: Optional[PopView] = None

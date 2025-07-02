@@ -24,7 +24,7 @@ class PopulationsParams(BaseModel):
     )
     motor_commands: RBFPopParams = Field(
         default_factory=lambda: RBFPopParams(
-            kp=0.1, buffer_size=25.0, base_rate=0.0, sdev=10.0, freq_max=5.5
+            kp=3, buffer_size=10.0, base_rate=0.0, sdev=4.0, freq_max=95
         )
     )
     brain_stem: SinglePopParams = Field(

@@ -53,7 +53,7 @@ class ConnectionsParams(BaseModel):
     )
     mc_out_motor_commands: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.03,
+            weight=1,
             delay=0.1,
         )
     )

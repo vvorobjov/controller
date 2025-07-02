@@ -6,7 +6,7 @@ import structlog
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
 from config.core_models import SimulationParams
-from config.population_params import PopulationsParams
+from config.population_params import PopulationsParams, RBFPopParams
 from mpi4py.MPI import Comm
 
 from .Cerebellum import Cerebellum
@@ -156,22 +156,23 @@ class CerebellumHandler:
         self.interface_pops.feedback_n = self._create_pop_view(feedback_n, "feedback_n")
 
         # Motor Commands Relay (Input to Fwd MFs) - Size N_mossy_forw
-        params = self.pops_params.motor_commands
+        params: RBFPopParams = self.pops_params.motor_commands
+        motor_commands = nest.Create("rb_neuron_nestml", self.N_mossy_forw)
         pop_params = {
             "kp": params.kp,
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
             "simulation_steps": len(self.total_time_vect),
+            "sdev": params.sdev,
         }
-        motor_commands_p = nest.Create("basic_neuron_nestml", self.N_mossy_forw)
-        nest.SetStatus(motor_commands_p, {**pop_params, "pos": True})
-        self.interface_pops.motor_commands_p = self._create_pop_view(
-            motor_commands_p, "motor_commands_p"
+        signal_sensibility = np.linspace(
+            -params.freq_max, params.freq_max, self.N_mossy_inv
         )
-        motor_commands_n = nest.Create("basic_neuron_nestml", self.N_mossy_forw)
-        nest.SetStatus(motor_commands_n, {**pop_params, "pos": False})
-        self.interface_pops.motor_commands_n = self._create_pop_view(
-            motor_commands_n, "motor_commands_n"
+        nest.SetStatus(motor_commands, pop_params)
+        for i, neuron in enumerate(motor_commands):
+            nest.SetStatus(neuron, {"desired": signal_sensibility[i]})
+        self.interface_pops.motor_commands = self._create_pop_view(
+            motor_commands, "motor_commands"
         )
 
         # Forward Error Calculation (Input to Fwd IO)
@@ -293,18 +294,12 @@ class CerebellumHandler:
         # Motor Commands -> Fwd Mossy Fibers
         self.log.debug("Connecting motor_commands -> fwd_mf")
         nest.Connect(
-            self.interface_pops.motor_commands_p.pop,
+            self.interface_pops.motor_commands.pop,
             self.cerebellum.populations.forw_mf_p_view.pop,
             "one_to_one",
-            # TODO no weight given
-            # syn_spec={"weight": 1.0},
-        )
-        nest.Connect(
-            self.interface_pops.motor_commands_n.pop,
-            self.cerebellum.populations.forw_mf_n_view.pop,
-            "one_to_one",
-            # TODO no weight given
-            # syn_spec={"weight": 1.0},
+            syn_spec=self.conn_params.motor_commands_mossy_forw.model_dump(
+                exclude_none=True
+            ),
         )
 
         # Fwd Error -> Fwd Inferior Olive
@@ -607,13 +602,13 @@ class CerebellumHandler:
         )
         nest.Connect(
             self.controller_pops.mc_out_p.pop,
-            self.interface_pops.motor_commands_p.pop,
+            self.interface_pops.motor_commands.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
             self.controller_pops.mc_out_n.pop,
-            self.interface_pops.motor_commands_n.pop,
+            self.interface_pops.motor_commands.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
