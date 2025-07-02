@@ -362,17 +362,11 @@ class Cerebellum:
     ):
         """Creates PopView instances for all core NEST populations."""
         # Forward Model PopViews
-        self.populations.forw_mf_p_view = PopView(
-            self.forw_Nest_Mf[-self.N_mossy_forw :],
+        self.populations.forw_mf_view = PopView(
+            self.forw_Nest_Mf,
             self.total_time_vect,
             to_file=True,
-            label=f"{self.label_prefix}forw_mf_p",
-        )
-        self.populations.forw_mf_n_view = PopView(
-            self.forw_Nest_Mf[0 : self.N_mossy_forw],
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_mf_n",
+            label=f"{self.label_prefix}forw_mf",
         )
         self.populations.forw_glom_view = PopView(
             _forw_N_Glom_gids,

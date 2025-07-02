@@ -8,8 +8,7 @@ from .population_view import PopView
 class CerebellumPopulations:
     # === Forward Model Core Populations ===
     # Mossy Fibers (split for positive/negative or distinct inputs)
-    forw_mf_p_view: Optional[PopView] = None
-    forw_mf_n_view: Optional[PopView] = None
+    forw_mf_view: Optional[PopView] = None
     # Add other specific MF views if inputs are more complex than simple p/n split
 
     # Granular Layer
