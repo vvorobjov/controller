@@ -1,7 +1,5 @@
-import json
 from datetime import datetime
-from pathlib import Path
-from typing import ClassVar, Dict, List, Tuple
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,41 +7,11 @@ import structlog
 from config.MasterParams import MasterParams
 from config.paths import RunPaths
 from config.plant_config import PlantConfig
-from pydantic import BaseModel
 from utils_common.generate_analog_signals import generate_signals
 
-from .plant_utils import JointData
+from .plant_models import PlantPlotData
 
 log = structlog.get_logger(__name__)
-
-
-class PlantPlotData(BaseModel):
-    """Holds all data needed for plotting."""
-
-    joint_data: List[JointData]
-    received_spikes: Dict[str, List[List[Tuple[float, int]]]]
-    sensory_spikes: Dict[str, List[List[Tuple[float, int]]]]
-    errors_per_trial: List[float]
-    init_hand_pos_ee: List[float]
-    trgt_hand_pos_ee: List[float]
-
-    model_config: ClassVar = {
-        "arbitrary_types_allowed": True,
-    }
-
-    def save(self, params_path: Path):
-        """Saves all collected simulation data to a single JSON file."""
-        log.info(f"Saving all simulation data to {params_path}")
-        with open(params_path, "w") as f:
-            f.write(self.model_dump_json(indent=2))
-        log.info("Finished saving all data.")
-
-    @classmethod
-    def load(cls, params_path: Path):
-        """Loads the main plant data model from a JSON file."""
-        log.info(f"Loading plant data from {params_path}")
-        with open(params_path, "r") as f:
-            return cls.model_validate_json(f.read())
 
 
 def plot_joint_space(
@@ -96,6 +64,7 @@ def plot_joint_space(
     plt.title("Joint Space Position")
     plt.legend()
     plt.ylim((0.0, 2.8))
+    plt.tight_layout()
     if save_fig:
         filepath = pth_fig_receiver / f"position_joint_{timestamp}.png"
         plt.savefig(filepath)
@@ -162,6 +131,7 @@ def plot_ee_space(
     plt.ylabel("Position Z (m)")
     plt.title("End-Effector Trajectory")
     plt.legend()
+    plt.tight_layout()
     if save_fig:
         filepath = pth_fig_receiver / f"position_ee_{timestamp}.png"
         plt.savefig(filepath)
@@ -189,6 +159,7 @@ def plot_motor_commands(
     plt.ylabel("Motor Command (Torque N.m)")  # Assuming torque
     plt.title("Motor Commands")
     plt.legend()
+    plt.tight_layout()
     if save_fig:
         filepath = pth_fig_receiver / f"{cond_str}_motCmd_{timestamp}.png"
         plt.savefig(filepath)
@@ -216,6 +187,7 @@ def plot_errors_per_trial(
     plt.ylabel("Final Error (rad or m, depending on error metric)")
     plt.title("Error per Trial")
     plt.grid(True)
+    plt.tight_layout()
     if save_fig:
         filepath = pth_fig_receiver / f"{cond_str}_error_ee_trial_{timestamp}.png"
         plt.savefig(filepath)

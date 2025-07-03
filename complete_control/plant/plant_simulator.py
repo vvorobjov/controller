@@ -7,7 +7,7 @@ from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import tqdm
 
 from . import plant_utils
-from .plant_plotting import PlantPlotData
+from .plant_models import PlantPlotData
 from .robotic_plant import RoboticPlant
 from .sensoryneuron import SensoryNeuron
 
