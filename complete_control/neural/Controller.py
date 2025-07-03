@@ -5,7 +5,13 @@ import numpy as np
 import structlog
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
-from config.core_models import MusicParams, SimulationParams
+from config.core_models import (
+    MusicParams,
+    SimulationParams,
+    SynapseWeightRecord,
+    AllWeightsHistory,
+    ConnectionWeightHistory,
+)
 from config.module_params import (
     MotorCortexModuleConfig,
     PlannerModuleConfig,
@@ -93,6 +99,7 @@ class Controller:
         self.trajectory_slice = trajectory_slice
         self.motor_cmd_slice = motor_cmd_slice
 
+        self.weights_history = AllWeightsHistory(histories={})
         # Store parameters (consider dedicated dataclasses per module if very stable)
         self.mc_params = mc_params
         self.plan_params = plan_params
@@ -152,6 +159,24 @@ class Controller:
         self.log.info(f"Connecting controller to MUSIC")
         self.connect_controller_to_music()
         self.log.info("Controller initialization complete.")
+
+    def synaptic_weight_recorder(self, trial: int):
+        PF_to_purkinje_conns = (
+            self.cerebellum_handler.get_synapse_connections_PF_to_PC()
+        )
+        for key, conns in PF_to_purkinje_conns.items():
+            conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
+            records = [
+                SynapseWeightRecord(
+                    source=entry[0], target=entry[1], trial=trial, weight=entry[2]
+                )
+                for entry in conn_info
+            ]
+            if key not in self.weights_history.histories:
+                self.weights_history.histories[key] = ConnectionWeightHistory(
+                    connection_key=key, records=[]
+                )
+            self.weights_history.histories[key].records.extend(records)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations

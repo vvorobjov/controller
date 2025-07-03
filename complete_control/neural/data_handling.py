@@ -1,9 +1,16 @@
+from collections import defaultdict
 from pathlib import Path
 
 import structlog
 from mpi4py.MPI import Comm
 
 from complete_control.neural.population_view import PopView
+
+from config.core_models import (
+    SynapseWeightRecord,
+    ConnectionWeightHistory,
+    AllWeightsHistory,
+)
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
 
@@ -58,15 +65,18 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     comm.barrier()
 
 
-def save_conn_weights_gdf(weights_over_trials: dict, dir: Path, filename_prefix: str):
+def save_conn_weights_gdf_pydantic(
+    weights_history: "AllWeightsHistory", dir: Path, filename_prefix: str
+):
     """
-    Save connection weights for each connection group as separate GDF files.
-    weights_over_trials: Dict[str, Any] (conn_name -> Array[(source,target,weight), trial_idx])
+    Save connection weights for each connection as separate GDF files using Pydantic models.
     """
-    for key, trials in weights_over_trials.items():
+    for key, history in weights_history.histories.items():
         gdf_file = dir / f"{filename_prefix}_{key}.gdf"
+        lines = (
+            f"{rec.source}\t{rec.target}\t{rec.trial}\t{rec.weight}\n"
+            for rec in history.records
+        )
         with open(gdf_file, "w") as wfd:
             wfd.write("source\ttarget\ttrial\tweight\n")
-            for trial_idx, trial_weights in enumerate(trials):
-                for source, target, weight in trial_weights:
-                    wfd.write(f"{source}\t{target}\t{trial_idx}\t{weight}\n")
+            wfd.writelines(lines)

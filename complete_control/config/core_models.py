@@ -29,6 +29,22 @@ class RobotSpecParams(BaseModel, frozen=True):
     }
 
 
+class SynapseWeightRecord(BaseModel, frozen=True):
+    source: int
+    target: int
+    trial: int
+    weight: float
+
+
+class ConnectionWeightHistory(BaseModel, frozen=True):
+    connection_key: str
+    records: List[SynapseWeightRecord]
+
+
+class AllWeightsHistory(BaseModel, frozen=True):
+    histories: dict[str, ConnectionWeightHistory]
+
+
 class ExperimentParams(BaseModel, frozen=True):
     init_joint_angle: float = 75
     tgt_joint_angle: float = 15
