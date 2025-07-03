@@ -294,7 +294,7 @@ class PlantSimulator:
                     if current_trial >= exp_params.gravity_trial_start:
                         self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
 
-                    # Turn gravity off if removal trial is set and we've reached it
+                    # Turn gravity off if removal trial is set and after we've reached it
                     if (
                         exp_params.gravity_trial_end is not None
                         and current_trial > exp_params.gravity_trial_end

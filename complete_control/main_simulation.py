@@ -93,10 +93,11 @@ def run_simulation(
     log.info("collected all popviews")
     controller = controllers[0]
     log.info("Starting Simulation")
-    PF_to_purkinje_conns = (
-        controller.cerebellum_handler.get_synapse_connections_PF_to_PC()
-    )
-    weights_over_trials = {k: [] for k in PF_to_purkinje_conns}
+    if controller.use_cerebellum:
+        PF_to_purkinje_conns = (
+            controller.cerebellum_handler.get_synapse_connections_PF_to_PC()
+        )
+        weights_over_trials = {k: [] for k in PF_to_purkinje_conns}
 
     with nest.RunManager():
         for trial in range(n_trials):
@@ -112,10 +113,13 @@ def run_simulation(
             nest.Run(single_trial_ms)
 
             # Record weights after each trial
-            for key, conns in PF_to_purkinje_conns.items():
-                conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
-                trial_weights = [(entry[0], entry[1], entry[2]) for entry in conn_info]
-                weights_over_trials[key].append(trial_weights)
+            if controller.use_cerebellum:
+                for key, conns in PF_to_purkinje_conns.items():
+                    conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
+                    trial_weights = [
+                        (entry[0], entry[1], entry[2]) for entry in conn_info
+                    ]
+                    weights_over_trials[key].append(trial_weights)
 
             end_trial_time = timer()
             trial_wall_time = timedelta(seconds=end_trial_time - start_trial_time)
@@ -135,12 +139,13 @@ def run_simulation(
         pop_views,
         comm,
     )
-    log.info("Synapse Recording for all trials started...")
-    save_conn_weights_gdf(
-        weights_over_trials,
-        path_data,
-        "PF_to_purkinje_weights",
-    )
+    if controller.use_cerebellum:
+        log.info("Saving recorded synapse weights for all trials started...")
+        save_conn_weights_gdf(
+            weights_over_trials,
+            path_data,
+            "PF_to_purkinje_weights",
+        )
 
     end_collapse_time = timer()
     collapse_wall_time = timedelta(seconds=end_collapse_time - start_collapse_time)

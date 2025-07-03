@@ -141,9 +141,7 @@ class RoboticPlant:
                 "Torques list must contain exactly one value for 1-DOF arm."
             )
 
-        if self.is_locked:
-            self.unlock_joint()
-            self.log.debug("Joint was unlocked, unlocking before setting torques.")
+        self.unlock_joint()
         self.is_locked = False
         self.bullet_robot.SetJointTorques(
             joint_ids=[self.elbow_joint_id], torques=torques
