@@ -19,7 +19,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 from mpi4py.MPI import Comm
 from neural.Controller import Controller
-from neural.data_handling import collapse_files, save_conn_weights_gdf_pydantic
+from neural.data_handling import collapse_files, save_conn_weights_json
 from neural.plot_utils import plot_controller_outputs
 from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import setup_logging, tqdm
@@ -109,7 +109,7 @@ def run_simulation(
 
             # Record weights after each trial
             if controller.use_cerebellum:
-                controller.synaptic_weight_recorder(trial)
+                controller.record_synaptic_weights(trial)
 
             end_trial_time = timer()
             trial_wall_time = timedelta(seconds=end_trial_time - start_trial_time)
@@ -131,7 +131,7 @@ def run_simulation(
     )
     if controller.use_cerebellum:
         log.info("Saving recorded synapse weights for all trials started...")
-        save_conn_weights_gdf_pydantic(
+        save_conn_weights_json(
             controller.weights_history,
             path_data,
             "PF_to_purkinje_weights",

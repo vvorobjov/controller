@@ -3,15 +3,11 @@ from pathlib import Path
 import numpy as np
 import structlog
 from mpi4py.MPI import Comm
-
+from pydantic import TypeAdapter
 from .neural_models import PopulationSpikes
 from .population_view import PopView
 
-from config.core_models import (
-    SynapseWeightRecord,
-    ConnectionWeightHistory,
-    AllWeightsHistory,
-)
+from neural.neural_models import SynapseWeightRecord
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
 
@@ -83,18 +79,16 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     comm.barrier()
 
 
-def save_conn_weights_gdf_pydantic(
-    weights_history: "AllWeightsHistory", dir: Path, filename_prefix: str
-):
+def save_conn_weights_json(weights_history: dict, dir: Path, filename_prefix: str):
     """
-    Save connection weights for each connection as separate GDF files using Pydantic models.
+    Save connection weights for each connection as separate json files using Pydantic model.
     """
-    for key, history in weights_history.histories.items():
-        gdf_file = dir / f"{filename_prefix}_{key}.gdf"
-        lines = (
-            f"{rec.source}\t{rec.target}\t{rec.trial}\t{rec.weight}\n"
-            for rec in history.records
+    for key, records in weights_history.items():
+        json_file = dir / f"{filename_prefix}_{key}.json"
+        json_str = (
+            TypeAdapter(list[SynapseWeightRecord])
+            .dump_json(records, indent=4)
+            .decode("utf-8")
         )
-        with open(gdf_file, "w") as wfd:
-            wfd.write("source\ttarget\ttrial\tweight\n")
-            wfd.writelines(lines)
+        with open(json_file, "w") as f:
+            f.write(json_str)

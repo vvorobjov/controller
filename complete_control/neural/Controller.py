@@ -5,13 +5,8 @@ import numpy as np
 import structlog
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
-from config.core_models import (
-    MusicParams,
-    SimulationParams,
-    SynapseWeightRecord,
-    AllWeightsHistory,
-    ConnectionWeightHistory,
-)
+from config.core_models import MusicParams, SimulationParams
+from neural.neural_models import SynapseWeightRecord
 from config.module_params import (
     MotorCortexModuleConfig,
     PlannerModuleConfig,
@@ -99,7 +94,8 @@ class Controller:
         self.trajectory_slice = trajectory_slice
         self.motor_cmd_slice = motor_cmd_slice
 
-        self.weights_history = AllWeightsHistory(histories={})
+        # weights_history: dict[str, list[SynapseWeightRecord]]
+        self.weights_history = {}
         # Store parameters (consider dedicated dataclasses per module if very stable)
         self.mc_params = mc_params
         self.plan_params = plan_params
@@ -160,7 +156,7 @@ class Controller:
         self.connect_controller_to_music()
         self.log.info("Controller initialization complete.")
 
-    def synaptic_weight_recorder(self, trial: int):
+    def record_synaptic_weights(self, trial: int):
         PF_to_purkinje_conns = (
             self.cerebellum_handler.get_synapse_connections_PF_to_PC()
         )
@@ -172,11 +168,9 @@ class Controller:
                 )
                 for entry in conn_info
             ]
-            if key not in self.weights_history.histories:
-                self.weights_history.histories[key] = ConnectionWeightHistory(
-                    connection_key=key, records=[]
-                )
-            self.weights_history.histories[key].records.extend(records)
+            if key not in self.weights_history:
+                self.weights_history[key] = []
+            self.weights_history[key].extend(records)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations

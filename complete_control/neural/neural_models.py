@@ -17,3 +17,10 @@ class PopulationSpikes(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class SynapseWeightRecord(BaseModel):
+    source: int
+    target: int
+    trial: int
+    weight: float
