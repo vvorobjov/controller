@@ -19,8 +19,12 @@ class PopulationSpikes(BaseModel):
         arbitrary_types_allowed = True
 
 
-class SynapseWeightRecord(BaseModel):
-    source: int
-    target: int
-    trial: int
-    weight: float
+class SynapseRecording(BaseModel):
+    weight_history: NdArray
+    trials_recorded: int
+    source: NdArray  # GID
+    target: NdArray  # GID
+    type: str
+
+    class Config:
+        arbitrary_types_allowed = True

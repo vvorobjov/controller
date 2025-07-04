@@ -19,7 +19,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 from mpi4py.MPI import Comm
 from neural.Controller import Controller
-from neural.data_handling import collapse_files, save_conn_weights_json
+from neural.data_handling import collapse_files, save_conn_weights
 from neural.plot_utils import plot_controller_outputs
 from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import setup_logging, tqdm
@@ -131,7 +131,7 @@ def run_simulation(
     )
     if controller.use_cerebellum:
         log.info("Saving recorded synapse weights for all trials started...")
-        save_conn_weights_json(
+        save_conn_weights(
             controller.weights_history,
             path_data,
             "PF_to_purkinje_weights",

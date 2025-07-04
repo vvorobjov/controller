@@ -7,7 +7,7 @@ from pydantic import TypeAdapter
 from .neural_models import PopulationSpikes
 from .population_view import PopView
 
-from neural.neural_models import SynapseWeightRecord
+from neural.neural_models import SynapseRecording
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
 
@@ -79,16 +79,15 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     comm.barrier()
 
 
-def save_conn_weights_json(weights_history: dict, dir: Path, filename_prefix: str):
+def save_conn_weights(weights_history: dict, dir: Path, filename_prefix: str):
     """
     Save connection weights for each connection as separate json files using Pydantic model.
     """
     for key, records in weights_history.items():
-        json_file = dir / f"{filename_prefix}_{key}.json"
-        json_str = (
-            TypeAdapter(list[SynapseWeightRecord])
-            .dump_json(records, indent=4)
-            .decode("utf-8")
+        rec_path = dir / f"{filename_prefix}_{key}.json"
+        # Use model_dump_json for each record and join as a JSON array
+        json_array = (
+            "[\n" + ",\n".join(rec.model_dump_json(indent=2) for rec in records) + "\n]"
         )
-        with open(json_file, "w") as f:
-            f.write(json_str)
+        with open(rec_path, "w") as f:
+            f.write(json_array)

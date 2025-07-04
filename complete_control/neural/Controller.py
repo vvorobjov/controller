@@ -6,7 +6,8 @@ import structlog
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
 from config.core_models import MusicParams, SimulationParams
-from neural.neural_models import SynapseWeightRecord
+from neural.neural_models import SynapseRecording
+from collections import defaultdict
 from config.module_params import (
     MotorCortexModuleConfig,
     PlannerModuleConfig,
@@ -94,8 +95,8 @@ class Controller:
         self.trajectory_slice = trajectory_slice
         self.motor_cmd_slice = motor_cmd_slice
 
-        # weights_history: dict[str, list[SynapseWeightRecord]]
-        self.weights_history = {}
+        # Use defaultdict for weights_history
+        self.weights_history = defaultdict(list)
         # Store parameters (consider dedicated dataclasses per module if very stable)
         self.mc_params = mc_params
         self.plan_params = plan_params
@@ -162,15 +163,22 @@ class Controller:
         )
         for key, conns in PF_to_purkinje_conns.items():
             conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
-            records = [
-                SynapseWeightRecord(
-                    source=entry[0], target=entry[1], trial=trial, weight=entry[2]
-                )
-                for entry in conn_info
-            ]
-            if key not in self.weights_history:
-                self.weights_history[key] = []
-            self.weights_history[key].extend(records)
+            # record the full weight history for each synapse
+            source, target, weight = [], [], []
+            for entry in conn_info:
+                source.append(entry[0])
+                target.append(entry[1])
+                weight.append(entry[2])
+                # full history as a numpy array
+            record = SynapseRecording(
+                weight_history=np.array([weight]),
+                trials_recorded=trial + 1,
+                source=np.array([source]),
+                target=np.array([target]),
+                type=key,
+            )
+
+            self.weights_history[key].append(record)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations
