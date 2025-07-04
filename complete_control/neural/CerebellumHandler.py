@@ -156,12 +156,15 @@ class CerebellumHandler:
                 self.cerebellum.populations.inv_pc_n_view,
             ),
         ]
-        for pre, post in pairs:
-            connection_key = f"{pre.label}>{post.label}"
-            conns[connection_key] = nest.GetConnections(
-                source=pre.pop,
-                target=post.pop,
+        tot_syn = 0
+        for pre_pop, post_pop in pairs:
+            c = nest.GetConnections(
+                source=pre_pop.pop,
+                target=post_pop.pop,
             )
+            conns[(pre_pop, post_pop)] = c
+            tot_syn += len(c)
+        self.log.warning(f"total number of synapses: {tot_syn}")
         return conns
 
     def _create_interface_populations(self):

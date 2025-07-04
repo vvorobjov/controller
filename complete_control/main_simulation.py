@@ -134,7 +134,7 @@ def run_simulation(
         save_conn_weights(
             controller.weights_history,
             path_data,
-            "PF_to_purkinje_weights",
+            "weightrecord",
         )
 
     end_collapse_time = timer()

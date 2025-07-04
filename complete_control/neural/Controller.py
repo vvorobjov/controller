@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Any, Dict, Optional, Tuple
 
 import nest
@@ -6,8 +7,6 @@ import structlog
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
 from config.core_models import MusicParams, SimulationParams
-from neural.neural_models import SynapseRecording
-from collections import defaultdict
 from config.module_params import (
     MotorCortexModuleConfig,
     PlannerModuleConfig,
@@ -16,6 +15,7 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from mpi4py.MPI import Comm
+from neural.neural_models import SynapseRecording
 
 from .CerebellumHandler import CerebellumHandler
 from .ControllerPopulations import ControllerPopulations
@@ -95,8 +95,7 @@ class Controller:
         self.trajectory_slice = trajectory_slice
         self.motor_cmd_slice = motor_cmd_slice
 
-        # Use defaultdict for weights_history
-        self.weights_history = defaultdict(list)
+        self.weights_history = {}
         # Store parameters (consider dedicated dataclasses per module if very stable)
         self.mc_params = mc_params
         self.plan_params = plan_params
@@ -161,20 +160,25 @@ class Controller:
         PF_to_purkinje_conns = (
             self.cerebellum_handler.get_synapse_connections_PF_to_PC()
         )
-        for key, conns in PF_to_purkinje_conns.items():
-            # record the full weight history for each synapse
-            conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
-            records = [
-                SynapseRecording(
-                    source=entry[0],
-                    target=entry[1],
-                    trials_recorded=trial + 1,
-                    weight_history=np.array([entry[2]]),
-                    type=key,
+        for (pre_pop, post_pop), conns in PF_to_purkinje_conns.items():
+            self.weights_history[(pre_pop, post_pop)] = defaultdict(list)
+            for conn in conns:
+                source_neur, target_neur, synapse_id, delay, synapse_model, weight = (
+                    nest.GetStatus(
+                        conn,
+                        [
+                            "source",
+                            "target",
+                            "synapse_id",
+                            "delay",
+                            "synapse_model",
+                            "weight",
+                        ],
+                    )[0]
                 )
-                for entry in conn_info
-            ]
-            self.weights_history[key].extend(records)
+                self.weights_history[(pre_pop, post_pop)][
+                    (source_neur, target_neur, synapse_id, synapse_model)
+                ].append(weight)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations
