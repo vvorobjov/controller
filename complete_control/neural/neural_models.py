@@ -22,8 +22,8 @@ class PopulationSpikes(BaseModel):
 class SynapseRecording(BaseModel):
     weight_history: NdArray
     trials_recorded: int
-    source: NdArray  # GID
-    target: NdArray  # GID
+    source: int  # GID
+    target: int  # GID
     type: str
 
     class Config:

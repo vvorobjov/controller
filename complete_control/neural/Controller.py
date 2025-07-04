@@ -162,23 +162,19 @@ class Controller:
             self.cerebellum_handler.get_synapse_connections_PF_to_PC()
         )
         for key, conns in PF_to_purkinje_conns.items():
-            conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
             # record the full weight history for each synapse
-            source, target, weight = [], [], []
-            for entry in conn_info:
-                source.append(entry[0])
-                target.append(entry[1])
-                weight.append(entry[2])
-                # full history as a numpy array
-            record = SynapseRecording(
-                weight_history=np.array([weight]),
-                trials_recorded=trial + 1,
-                source=np.array([source]),
-                target=np.array([target]),
-                type=key,
-            )
-
-            self.weights_history[key].append(record)
+            conn_info = nest.GetStatus(conns, ["source", "target", "weight"])
+            records = [
+                SynapseRecording(
+                    source=entry[0],
+                    target=entry[1],
+                    trials_recorded=trial + 1,
+                    weight_history=np.array([entry[2]]),
+                    type=key,
+                )
+                for entry in conn_info
+            ]
+            self.weights_history[key].extend(records)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations

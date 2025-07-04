@@ -81,13 +81,31 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
 
 def save_conn_weights(weights_history: dict, dir: Path, filename_prefix: str):
     """
-    Save connection weights for each connection as separate json files using Pydantic model.
+    merge SynapseRecording objects with the same (source, target, type, trials_recorded),
+    concatenate their weight_history, and save as a JSON array.
     """
     for key, records in weights_history.items():
+        merged = {}
+        for rec in records:
+            merge_key = (rec.source, rec.target, rec.type, rec.trials_recorded)
+            if merge_key not in merged:
+                merged[merge_key] = SynapseRecording(
+                    source=rec.source,
+                    target=rec.target,
+                    type=rec.type,
+                    weight_history=rec.weight_history.copy(),
+                    trials_recorded=rec.trials_recorded,
+                )
+            else:
+                merged[merge_key].weight_history = np.concatenate(
+                    (merged[merge_key].weight_history, rec.weight_history)
+                )
+
         rec_path = dir / f"{filename_prefix}_{key}.json"
-        # Use model_dump_json for each record and join as a JSON array
-        json_array = (
-            "[\n" + ",\n".join(rec.model_dump_json(indent=2) for rec in records) + "\n]"
-        )
         with open(rec_path, "w") as f:
+            json_array = (
+                "[\n"
+                + ",\n".join(rec.model_dump_json(indent=2) for rec in merged.values())
+                + "\n]"
+            )
             f.write(json_array)
