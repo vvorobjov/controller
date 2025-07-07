@@ -19,7 +19,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 from mpi4py.MPI import Comm
 from neural.Controller import Controller
-from neural.data_handling import collapse_files
+from neural.data_handling import collapse_files, save_conn_weights
 from neural.plot_utils import plot_controller_outputs
 from utils_common.generate_analog_signals import generate_signals
 from utils_common.log import setup_logging, tqdm
@@ -91,6 +91,9 @@ def run_simulation(
         pop_views.extend(controller.get_all_recorded_views())
 
     log.info("collected all popviews")
+    controller = controllers[0]
+    log.info("Starting Simulation")
+
     with nest.RunManager():
         for trial in range(n_trials):
             current_sim_start_time = nest.GetKernelStatus("biological_time")
@@ -103,6 +106,10 @@ def run_simulation(
             start_trial_time = timer()
 
             nest.Run(single_trial_ms)
+
+            # Record weights after each trial
+            if controller.use_cerebellum:
+                controller.record_synaptic_weights(trial)
 
             end_trial_time = timer()
             trial_wall_time = timedelta(seconds=end_trial_time - start_trial_time)
@@ -122,6 +129,13 @@ def run_simulation(
         pop_views,
         comm,
     )
+    if controller.use_cerebellum:
+        log.info("Saving recorded synapse weights for all trials started...")
+        save_conn_weights(
+            controller.weights_history,
+            path_data,
+            "weightrecord",
+        )
 
     end_collapse_time = timer()
     collapse_wall_time = timedelta(seconds=end_collapse_time - start_collapse_time)

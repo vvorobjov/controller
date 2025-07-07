@@ -231,11 +231,14 @@ class PlantSimulator:
         current_sim_time_s = 0.0
         step = 0
 
+        exp_params = self.config.master_config.experiment
+
         with tqdm(total=self.num_total_steps, unit="step", desc="Simulating") as pbar:
             # Simulation loop
             # Loop while current_sim_time_s is less than the total duration.
             # Add a small epsilon to ensure the last step is processed if time is exact.
             # Simulation loop; TODO should this count in num_steps instead?
+
             while current_sim_time_s < self.config.TOTAL_SIM_DURATION_S - (
                 self.config.RESOLUTION_S / 2.0
             ):
@@ -286,7 +289,20 @@ class PlantSimulator:
                 net_rate_hz = rate_pos_hz - rate_neg_hz
                 computed_torque_from_input = net_rate_hz / self.config.SCALE_TORQUE
 
-                # TODO: Add perturbation logic here if needed, to calculate input_cmd_total_torque
+                # Perturbation logic
+                if exp_params.enable_gravity:
+                    current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
+
+                    # Turn gravity on if we've reached application trial
+                    if current_trial >= exp_params.gravity_trial_start:
+                        self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
+
+                    # Turn gravity off if removal trial is set and after we've reached it
+                    if (
+                        exp_params.gravity_trial_end is not None
+                        and current_trial > exp_params.gravity_trial_end
+                    ):
+                        self.plant.set_gravity(False)
 
                 # 4. Apply motor command to plant
                 self._set_joint_torque(computed_torque_from_input, current_sim_time_s)

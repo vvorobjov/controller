@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Any, Dict, Optional, Tuple
 
 import nest
@@ -14,6 +15,7 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from mpi4py.MPI import Comm
+from neural.neural_models import SynapseRecording
 
 from .CerebellumHandler import CerebellumHandler
 from .ControllerPopulations import ControllerPopulations
@@ -93,6 +95,7 @@ class Controller:
         self.trajectory_slice = trajectory_slice
         self.motor_cmd_slice = motor_cmd_slice
 
+        self.weights_history = defaultdict(lambda: defaultdict(list))
         # Store parameters (consider dedicated dataclasses per module if very stable)
         self.mc_params = mc_params
         self.plan_params = plan_params
@@ -152,6 +155,29 @@ class Controller:
         self.log.info(f"Connecting controller to MUSIC")
         self.connect_controller_to_music()
         self.log.info("Controller initialization complete.")
+
+    def record_synaptic_weights(self, trial: int):
+        PF_to_purkinje_conns = (
+            self.cerebellum_handler.get_synapse_connections_PF_to_PC()
+        )
+        for (pre_pop, post_pop), conns in PF_to_purkinje_conns.items():
+            for conn in conns:
+                source_neur, target_neur, synapse_id, delay, synapse_model, weight = (
+                    nest.GetStatus(
+                        conn,
+                        [
+                            "source",
+                            "target",
+                            "synapse_id",
+                            "delay",
+                            "synapse_model",
+                            "weight",
+                        ],
+                    )[0]
+                )
+                self.weights_history[(pre_pop, post_pop)][
+                    (source_neur, target_neur, synapse_id, synapse_model)
+                ].append(weight)
 
     def _instantiate_cerebellum_handler(
         self, controller_pops: ControllerPopulations

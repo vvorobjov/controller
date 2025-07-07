@@ -10,6 +10,7 @@ from config.paths import RunPaths
 from mpi4py import MPI
 
 from .neural_models import PopulationSpikes
+from complete_control.neural.neural_models import SynapseBlock
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 FIGURE_EXT = "png"
@@ -37,6 +38,43 @@ def load_spike_data_from_file(filepath: Path) -> PopulationSpikes:
     except Exception as e:
         _log.error(f"Error loading PopulationSpikes from {filepath}: {e}")
         raise
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import logging
+
+
+def plot_synaptic_weight_evolution(synapse_json_path, max_synapses=10, fig_path=None):
+    """
+    Plots the synaptic weight evolution for a SynapseBlock JSON file.
+    Parameters:
+        synapse_json_path (Path or str): Path to the synapse weight JSON file.
+        max_synapses (int): Maximum number of synapses to plot.
+        fig_path (Path or str): Path to save the figure.
+    """
+    with open(synapse_json_path, "r") as f:
+        syn_block = SynapseBlock.model_validate_json(f.read())
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 8))
+
+    for i, rec in enumerate(syn_block.synapse_recordings):
+        if rec.syn_type == "stdp_synapse_sinexp":
+            if i >= max_synapses:
+                break
+            weights = np.array(rec.weight_history)
+            ax.plot(range(len(weights)), weights, label=f"{rec.source}->{rec.target}")
+
+    ax.set_xlabel("Trial")
+    ax.set_ylabel("Synaptic weight")
+    ax.set_title(
+        f"Weight evolution: {syn_block.source_pop_label} → {syn_block.target_pop_label}"
+    )
+
+    ax.legend(fontsize="small")
+    fig.tight_layout()
+    if fig_path:
+        fig.savefig(fig_path)
 
 
 def plot_rate(time_v, ts, pop_size, buffer_sz, ax, title="", **kwargs):
@@ -301,5 +339,19 @@ def plot_controller_outputs(run_paths: RunPaths):
             buffer_size=15,
             filepath=path_fig / f"{plot_name}_{i}.{FIGURE_EXT}",
         )
+
+    for json_file in sorted(run_paths.data_nest.glob("weightrecord*.json")):
+        try:
+            fig_filename = (
+                json_file.stem.replace("weightrecord-", "") + "." + FIGURE_EXT
+            )
+
+            plot_synaptic_weight_evolution(
+                json_file,
+                max_synapses=500,
+                fig_path=run_paths.figures / fig_filename,
+            )
+        except Exception as e:
+            _log.warning(f"Failed to plot synaptic weights from {json_file}: {e}")
 
     _log.debug("Plot generation finished.")

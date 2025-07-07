@@ -3,8 +3,10 @@ from pathlib import Path
 import numpy as np
 import structlog
 from mpi4py.MPI import Comm
+from neural.neural_models import SynapseRecording
+from pydantic import TypeAdapter
 
-from .neural_models import PopulationSpikes
+from .neural_models import PopulationSpikes, SynapseBlock
 from .population_view import PopView
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
@@ -75,3 +77,35 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
                 f.unlink()
 
     comm.barrier()
+
+
+def save_conn_weights(weights_history: dict, dir: Path, filename_prefix: str):
+    """
+    merge SynapseRecording objects with the same (source, target, type, trials_recorded),
+    concatenate their weight_history, and save as a JSON array.
+    """
+    for (source_pop, target_pop), inner in weights_history.items():
+        label = f"{source_pop.label}>{target_pop.label}"
+        recs = []
+        for (
+            (source_neur, target_neur, synapse_id, synapse_model),
+            weights,
+        ) in inner.items():
+            recs.append(
+                SynapseRecording(
+                    source=source_neur,
+                    target=target_neur,
+                    syn_id=synapse_id,
+                    syn_type=synapse_model,
+                    weight_history=weights,
+                )
+            )
+        s = SynapseBlock(
+            source_pop_label=source_pop.label,
+            target_pop_label=target_pop.label,
+            synapse_recordings=recs,
+        )
+        rec_path = dir / f"{filename_prefix}-{label}.json"
+        with open(rec_path, "w") as f:
+            json_array = s.model_dump_json(indent=2)
+            f.write(json_array)

@@ -133,6 +133,40 @@ class CerebellumHandler:
         # Use path_data implicitly if to_file=True
         return PopView(nest_pop, self.total_time_vect, to_file=True, label=full_label)
 
+    def get_synapse_connections_PF_to_PC(self):
+        """
+        Returns a dict of NEST connection handles for all PF→Purkinje types.
+        """
+        conns = {}
+        pairs = [
+            (
+                self.cerebellum.populations.forw_grc_view,
+                self.cerebellum.populations.forw_pc_p_view,
+            ),
+            (
+                self.cerebellum.populations.forw_grc_view,
+                self.cerebellum.populations.forw_pc_n_view,
+            ),
+            (
+                self.cerebellum.populations.inv_grc_view,
+                self.cerebellum.populations.inv_pc_p_view,
+            ),
+            (
+                self.cerebellum.populations.inv_grc_view,
+                self.cerebellum.populations.inv_pc_n_view,
+            ),
+        ]
+        tot_syn = 0
+        for pre_pop, post_pop in pairs:
+            c = nest.GetConnections(
+                source=pre_pop.pop,
+                target=post_pop.pop,
+            )
+            conns[(pre_pop, post_pop)] = c
+            tot_syn += len(c)
+        self.log.warning(f"total number of synapses: {tot_syn}")
+        return conns
+
     def _create_interface_populations(self):
         """Creates the intermediate populations connecting to the cerebellum."""
         # --- Populations based on brain.py logic ---
@@ -585,7 +619,7 @@ class CerebellumHandler:
             self.cerebellum.populations.forw_dcnp_p_view.pop,
             self.controller_pops.pred_n.pop,
             "all_to_all",
-            syn_spec=syn_spec_n,
+            syn_spec_n,
         )
 
         # --- Connections TO Cerebellum Controller Interfaces (FROM controller_pops) ---
