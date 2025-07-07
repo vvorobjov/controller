@@ -51,7 +51,7 @@ def plot_synaptic_weight_evolution(synapse_json_path, max_synapses=10, fig_path=
     Parameters:
         synapse_json_path (Path or str): Path to the synapse weight JSON file.
         max_synapses (int): Maximum number of synapses to plot.
-        fig_path (Path or str): Path to save the figure if save_fig is True.
+        fig_path (Path or str): Path to save the figure.
     """
     with open(synapse_json_path, "r") as f:
         syn_block = SynapseBlock.model_validate_json(f.read())
