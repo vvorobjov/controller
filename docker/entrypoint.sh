@@ -135,6 +135,7 @@ if [ "$NEST_MODE" = "nest-server" ]; then
 else
     exec gosu "$USERNAME" "$@"
 fi
+exec gosu "$USERNAME" "$@"
 # exec gosu "$USERNAME" bash -c 'run_as_user "$@"' bash "$@"
 # python controller/complete_control/brain.py
 # bash --rcfile <(python controller/complete_control/brain.py)

@@ -36,8 +36,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xterm 
     # && apt-get clean \
     # && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-venv
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-venv \
+    python3-numpy \
+    python3-matplotlib \
+    python3-scipy
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+ENV USERNAME=simuser
+RUN groupadd --gid $USER_GID $USERNAME && \
+    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME
+RUN mkdir /sim && chown $USERNAME:$USERNAME /sim
+
+USER $USERNAME
+ARG PYTHON_MAJOR
+ARG PYTHON_MINOR
+ENV USERNAME=simuser
+
 
 WORKDIR /sim
 ENV VIRTUAL_ENV=/sim/venv
@@ -173,43 +189,18 @@ ENV PYTHON_MAJOR_MINOR="python${PYTHON_MAJOR}.${PYTHON_MINOR}"
 
 RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUAL_ENV}/lib/${PYTHON_MAJOR_MINOR}/site-packages/nest.pth
 
-ARG USER_UID=1000
-ARG USER_GID=1000
-ENV USERNAME=simuser
-RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME
-
-COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-
-# >>>>>>>>>> VNC SETUP >>>>>>>>>>>>>>
-ARG VNC_PASSWORD="vncpass"
-ENV VNC_PASSWORD=${VNC_PASSWORD}
-ENV VNC_DISPLAY=":1"
-ENV DISPLAY="${VNC_DISPLAY}"
-COPY scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
-RUN chmod +x /usr/local/bin/start-vnc.sh
-
-RUN mkdir -p /home/simuser/.vnc
-COPY scripts/xstartup /home/simuser/.vnc/xstartup
-RUN chmod 700 /home/$USERNAME/.vnc/xstartup
 
 # COPY scripts/interactive_start.py /usr/local/bin/run_interactive.py
 # RUN chmod +x /usr/local/bin/run_interactive.py
 
-COPY scripts/aliases.sh /tmp/aliases.sh
-RUN cat /tmp/aliases.sh >> /etc/bash.bashrc && rm /tmp/aliases.sh
-# Set display for terminals opened in VNC
-RUN echo "export DISPLAY=${VNC_DISPLAY}" >> /etc/bash.bashrc
 
 ENV PYTHONPATH="${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
 
-RUN echo "Setting ownership of shared folders to: >>>>>>>>>>>>>>>>>>> userid:$USER_UID groupid:$USER_GID >>>>>>>>>>>>>>>>>>>"
-RUN chown -R $USERNAME:$USERNAME $VIRTUAL_ENV /home/$USERNAME $SHARED_DATA_DIR $NEST_MODULE_PATH $BULLET_MUSCLE_DIR
+# RUN echo "Setting ownership of shared folders to: >>>>>>>>>>>>>>>>>>> userid:$USER_UID groupid:$USER_GID >>>>>>>>>>>>>>>>>>>"
+# RUN chown -R $USERNAME:$USERNAME $VIRTUAL_ENV /home/$USERNAME $SHARED_DATA_DIR $NEST_MODULE_PATH $BULLET_MUSCLE_DIR
 
 
 # Expose VNC port (Display :1 is 5901)
@@ -234,7 +225,25 @@ ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
 # COPY --chown=$USERNAME:$USERNAME --from=nrp-image /home/nrpuser/.local/nrp_deps/ $DEPS_DIR/nrp_deps/
 # RUN ln -sf $INSTALL_DIR/nrp $NRP_INSTALL_DIR
 # RUN ln -sf $DEPS_DIR/nrp_deps $NRP_DEPS_INSTALL_DIR
-# USER 0
+USER 0
+COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+# >>>>>>>>>> VNC SETUP >>>>>>>>>>>>>>
+ARG VNC_PASSWORD="vncpass"
+ENV VNC_PASSWORD=${VNC_PASSWORD}
+ENV VNC_DISPLAY=":1"
+ENV DISPLAY="${VNC_DISPLAY}"
+COPY scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
+RUN chmod +x /usr/local/bin/start-vnc.sh
+
+RUN mkdir -p /home/simuser/.vnc
+COPY scripts/xstartup /home/simuser/.vnc/xstartup
+RUN chmod 700 /home/$USERNAME/.vnc/xstartup
+
+COPY scripts/aliases.sh /tmp/aliases.sh
+RUN cat /tmp/aliases.sh >> /etc/bash.bashrc && rm /tmp/aliases.sh
+# Set display for terminals opened in VNC
+RUN echo "export DISPLAY=${VNC_DISPLAY}" >> /etc/bash.bashrc
 
 # FROM nrp-runtime AS dev
 FROM runtime AS dev

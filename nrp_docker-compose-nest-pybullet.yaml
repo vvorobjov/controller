@@ -12,7 +12,7 @@ services:
         USER_GID: ${GID}
     volumes:
       # Named volume for the virtual environment persistence
-      - nrp_sim_venv:/sim/venv
+      # - nrp_sim_venv:/sim/venv
       # Named volume for persistent simulation data (compiled network, trajectory.txt...)
       - nrp_sim_shared_data:/sim/shared_data
       # Named volume for nest modules (so that user-generated ones are persisted)
@@ -26,14 +26,23 @@ services:
       VNC_PASSWORD: ${VNC_PASSWORD} # this is not a secret.
       NEST_MODE: "nest-server"
       NEST_SERVER_MODULES: 'import nest; import numpy; import os; import json; import sys'
+      PYNEST_QUIET: 0
     ports:
       # Map host port 5901 (localhost only) to container port 5901 (VNC display :1)
       - "127.0.0.1:5901:5901"
-      - 9000:9000
+      - 9000:9000 # nest-server port
     # If you want to run a specific script, use 'docker-compose run simulation python your_script.py'
     command: bash
     working_dir: /sim/controller
-    container_name: nrp-nest-simulator
+
+  # nrp-nest:
+  #   image: neuroroboticsplatform/nrp-vanilla-ubuntu20:1.5.0-test
+  #   user: nrpuser
+  #   volumes:
+  #     - ./:/experiment
+  #   command: python_json_engine.py --engine=python_nest_client --serverurl=0.0.0.0:9002 --regservurl=nrp-core:9001 --options=
+  #   container_name: nrp-nest
+  #   working_dir: /experiment
 
   nrp-core-service:
     image: nrp-pybullet-ubuntu20:latest
@@ -44,14 +53,16 @@ services:
       - ./:/experiment
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
-    command: NRPCoreSim -c /experiment/nrp_simulation_config_nest_docker_compose.json --floglevel debug
+    command: NRPCoreSim -c /experiment/nrp_simulation_config_nest_docker_compose.json --cloglevel debug --logdir /home/nrpuser/logs
+    working_dir: /experiment
     # tty: true
     depends_on:
       - nest-server
+      # - nrp-nest
     environment:
       DISPLAY: $DISPLAY
-    container_name: nrp-core
+
 volumes:
-  nrp_sim_venv:
+  # nrp_sim_venv:
   nrp_sim_shared_data:
   nrp_nest_module_path:

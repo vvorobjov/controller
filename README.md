@@ -23,3 +23,25 @@ Quick notes before a more complete documentation:
 - run the simulation: `mpirun -np 7 singularity exec --bind ./scratch:/scratch_local --bind ./results:/sim/controller/runs --bind ./artifacts:/sim/controller/artifacts --bind ./tmp:/tmp sim.sif/ music /sim/controller/complete_control/complete.music`
 
 Optionally, mount (`--bind`) `complete_control` for "live" code changes. If paired with vscode remote, you can almost have a fully interactive development session on the cluster... Not sure if there's a way to do client vscode -> cineca HPC -> devcontainer, might check [this](https://github.com/microsoft/vscode-remote-release/issues/3066#issuecomment-1019500216)
+
+
+## Build NRP image
+
+```
+git clone --recurse-submodules git@bitbucket.org:hbpneurorobotics/nrp-core.git
+git checkout t3-4-ebrains2
+cd nrp-core/examples/controller
+
+# build simulation:latest image
+docker compose build
+
+# build nrp image
+cd ../../../nrp-core
+./build_nrp_core_image.sh nrp-vanilla
+
+# build nrp experiment image and run run it
+cd ../nrp-core/examples/controller
+docker compose -f nrp_docker-compose-nest-pybullet.yaml build nrp-core-service
+docker compose -f nrp_docker-compose-nest-pybullet.yaml up
+
+```

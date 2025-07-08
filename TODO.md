@@ -1,3 +1,8 @@
+* mini test to see if nest works
+* experiment WITHOUT nrp
+* start trying to port experiment? 
+
+
 * Isolate the nest-simulator initialization:
     - Kernel setup
     - Network setup
