@@ -5,18 +5,16 @@
     "EngineConfigs": 
     [
         {
-            "EngineType": "py_sim",
+            "EngineType": "python_json",
             "EngineName": "bullet_simulator",
-            "PythonFileName": "nrp_bullet_interface.py",
-            "Simulator": "Bullet",
-            "WorldFileName": "/home/nrpuser/sim/embodiment_sdf_models/arm_1dof/demo_human_col/skeleton.urdf",
-            "EngineTimestep" : 0.02,
-            "Visualizer": false
+            "PythonFileName": "complete_control/nrp_bullet_engine.py",
+            "EngineTimestep" : 0.1,
+            "EngineEnvParams": ["PYTHONPATH=/sim/venv/lib/python3.10/site_packages:/home/nrpuser/.local/nrp/lib/python3.10/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/home/nrpuser/.local/nrp_deps/lib/python3.8/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/sim/controller:/sim/dependencies/bullet_muscle_sim:/sim/cerebellum"]
         },
 		{
             "EngineType": "python_json",
 			"EngineName": "python_nest_client",
-			"PythonFileName": "nrp_nest_engine.py",
+			"PythonFileName": "complete_control/nrp_neural_engine.py",
             "EngineTimestep" : 0.1
 		}
     ],
