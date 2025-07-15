@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import structlog
@@ -68,7 +68,7 @@ class Controller:
         conn_params: ConnectionsParams,
         sim_params: SimulationParams,
         path_data: str,
-        # comm: Comm,
+        comm,  # MPI.Comm
         music_cfg: MusicParams,
         label_prefix: str = "",
         use_cerebellum: bool = False,
@@ -105,7 +105,7 @@ class Controller:
         self.path_data = path_data
         self.use_cerebellum = use_cerebellum
         self.cerebellum_paths = cerebellum_paths
-        # self.comm = comm
+        self.comm = comm
         self.label = f"{label_prefix}"
 
         self.log.debug(
@@ -122,7 +122,7 @@ class Controller:
             music_cfg=music_cfg,
             use_cerebellum=self.use_cerebellum,
             cerebellum_config=self.cerebellum_paths,
-            # comm=self.comm,
+            comm=self.comm,
         )
 
         self.pops = ControllerPopulations()

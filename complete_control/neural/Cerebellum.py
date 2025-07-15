@@ -1,7 +1,5 @@
 import numpy as np
 import structlog
-
-# from bsb.core import from_storage
 from bsb import SimulationData, config, from_storage, get_simulation_adapter, options
 from bsb_nest import NestAdapter
 from bsb_nest.adapter import NestResult

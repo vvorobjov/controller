@@ -68,7 +68,7 @@ def create_controllers(
     master_config: MasterParams,
     trj: np.ndarray,
     motor_commands: np.ndarray,
-    # comm: Comm, # TOCHECK: MPI removed
+    comm=None,  # if comm is None, Cerebellum will be loaded without MPI
 ) -> list[Controller]:
     log = structlog.get_logger("main.network_construction")
     module_params = master_config.modules
@@ -119,6 +119,7 @@ def create_controllers(
             sim_params=master_config.simulation,
             path_data=master_config.run_paths.data_nest,  # TOCHECK: path_data from master_config
             label_prefix="",
+            comm=comm,
             music_cfg=master_config.music,
             use_cerebellum=master_config.USE_CEREBELLUM,
             cerebellum_paths=master_config.bsb_config_paths,

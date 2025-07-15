@@ -10,12 +10,6 @@ initialize_nest("MUSIC")
 
 
 import structlog
-from config.paths import RunPaths
-from mpi4py import MPI
-from neural.plot_utils import plot_controller_outputs
-from utils_common.generate_analog_signals import generate_signals
-from utils_common.log import setup_logging
-
 from complete_control.config.core_models import SimulationParams
 from complete_control.config.MasterParams import MasterParams
 from complete_control.neural.Controller import Controller
@@ -25,6 +19,11 @@ from complete_control.neural_simulation_lib import (
     setup_environment,
     setup_nest_kernel,
 )
+from config.paths import RunPaths
+from mpi4py import MPI
+from neural.plot_utils import plot_controller_outputs
+from utils_common.generate_analog_signals import generate_signals
+from utils_common.log import setup_logging
 
 
 def run_simulation(
@@ -158,11 +157,7 @@ if __name__ == "__main__":
     )
 
     # Create controllers
-    controllers = create_controllers(
-        master_config,
-        trj,
-        motor_commands,
-    )
+    controllers = create_controllers(master_config, trj, motor_commands, comm=comm)
 
     # Run simulation
     run_simulation(master_config.simulation, run_paths.data_nest, controllers, comm)
