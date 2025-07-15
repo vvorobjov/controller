@@ -8,8 +8,7 @@
             "EngineType": "python_json",
             "EngineName": "bullet_simulator",
             "PythonFileName": "complete_control/nrp_bullet_engine.py",
-            "EngineTimestep" : 0.1,
-            "EngineEnvParams": ["PYTHONPATH=/sim/venv/lib/python3.10/site_packages:/home/nrpuser/.local/nrp/lib/python3.10/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/home/nrpuser/.local/nrp_deps/lib/python3.8/site-packages:/home/nrpuser/.local/nrp/lib/python3.8/site-packages:/sim/controller:/sim/dependencies/bullet_muscle_sim:/sim/cerebellum"]
+            "EngineTimestep" : 0.1 
         },
 		{
             "EngineType": "python_json",
