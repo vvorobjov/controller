@@ -8,13 +8,13 @@
             "EngineType": "python_json",
             "EngineName": "bullet_simulator",
             "PythonFileName": "complete_control/nrp_bullet_engine.py",
-            "EngineTimestep" : 0.1 
+            "EngineTimestep" : 0.0001 
         },
 		{
             "EngineType": "python_json",
 			"EngineName": "nest_client",
 			"PythonFileName": "complete_control/nrp_neural_engine.py",
-            "EngineTimestep" : 0.1
+            "EngineTimestep" : 0.0001
 		}
     ],
     "DataPackProcessingFunctions":
