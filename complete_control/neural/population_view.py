@@ -208,10 +208,10 @@ class PopView:
     def get_spike_events(self):
         spike_detector = self.detector
         # Get metadata about the recorder
-        metadata = spike_detector.get()
+        metadata = nest.GetStatus(spike_detector)
 
         if metadata.get("record_to") == "memory":
-            dSD = spike_detector.get("events")
+            dSD = nest.GetStatus(spike_detector, "events")
             evs = dSD["senders"]
             ts = dSD["times"]
             return evs, ts

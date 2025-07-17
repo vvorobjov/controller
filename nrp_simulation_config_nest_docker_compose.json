@@ -12,7 +12,7 @@
         },
 		{
             "EngineType": "python_json",
-			"EngineName": "python_nest_client",
+			"EngineName": "nest_client",
 			"PythonFileName": "complete_control/nrp_neural_engine.py",
             "EngineTimestep" : 0.1
 		}

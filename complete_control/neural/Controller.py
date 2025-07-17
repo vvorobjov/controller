@@ -1,3 +1,4 @@
+import bisect
 from typing import List, Optional
 
 import numpy as np
@@ -725,11 +726,11 @@ class Controller:
 
     def extract_motor_command_NRP(self, timestep):
         rate_pos = (
-            len(self.proxy_out_p.get("events")["senders"][timestep:])
+            count_ge(nest.GetStatus(self.proxy_out_p, "events")[0]["times"], timestep)
             / self.sim_params.resolution
         )
         rate_neg = (
-            len(self.proxy_out_n.get("events")["senders"][timestep:])
+            count_ge(nest.GetStatus(self.proxy_out_n, "events")[0]["times"], timestep)
             / self.sim_params.resolution
         )
 
@@ -758,3 +759,14 @@ class Controller:
             f"Collected {len(recorded_views)} views with labels for recording."
         )
         return recorded_views
+
+
+def count_ge(arr, value):
+    """
+    Count the number of elements >= value in an ordered array.
+    """
+    if len(arr) == 0 or arr[0] > value:
+        return 0
+    left_pos = bisect.bisect_left(arr, value)
+
+    return len(arr) - left_pos
