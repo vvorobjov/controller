@@ -45,7 +45,7 @@ services:
   #   working_dir: /experiment
 
   nrp-core-service:
-    image: nrp-pybullet-ubuntu20:latest
+    image: nrp-pybullet-t3.4:latest
     build:
       context: .
       dockerfile: docker/bullet_muscle_sim.Dockerfile
