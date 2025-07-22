@@ -77,12 +77,7 @@ class Script(EngineScript):
 
         # Read sensory data from input datapack
         feedback_data = self._getDataPack("positions")
-        self.log.debug(f"Received feedback: {feedback_data}")
-
-        self.controllers[0].update_sensory_info_from_NRP(feedback_data["joint_pos_rad"])
-        nest.Run(timestep_ns * NANO_SEC)
-        pos, neg = self.controllers[0].extract_motor_command_NRP(timestep_ns * NANO_SEC)
-
+        pos, neg = self.controllers[0].extract_motor_command_NRP(sim_time)
         self._setDataPack("control_cmd", {"rate_pos": pos, "rate_neg": neg})
         self.log.debug(f"Sent motor commands")
 
