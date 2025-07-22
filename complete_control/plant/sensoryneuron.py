@@ -36,7 +36,7 @@ class SensoryNeuron:
         id_vect = np.zeros(shape=numNeurons)
         for i in range(numNeurons):
             id_vect[i] = i + idStart
-        self._pop = id_vect
+        self.pop = id_vect
         self.res = res
         self.rng = np.random.default_rng(SEED)
 
