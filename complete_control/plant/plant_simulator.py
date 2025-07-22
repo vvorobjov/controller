@@ -214,12 +214,8 @@ class PlantSimulator:
         if self._should_mask_sensory_info(current_sim_time_s):
             joint_pos_rad = 0.0
 
-        self.sensory_neurons_p[0].update(
-            joint_pos_rad, self.config.RESOLUTION_S, current_sim_time_s
-        )
-        self.sensory_neurons_n[0].update(
-            joint_pos_rad, self.config.RESOLUTION_S, current_sim_time_s
-        )
+        self.sensory_neurons_p[0].update(joint_pos_rad, current_sim_time_s)
+        self.sensory_neurons_n[0].update(joint_pos_rad, current_sim_time_s)
         music_runtime.tick()
 
     def music_prepare_step(
