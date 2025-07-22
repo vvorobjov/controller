@@ -4,15 +4,17 @@ import datetime
 
 import structlog
 from config.MasterParams import MasterParams
-from config.paths import RunPaths
+from config.paths import COMPLETE_CONTROL, RunPaths
 from neural.nest_adapter import initialize_nest, nest
 from neural_simulation_lib import (
     create_controllers,
     setup_environment,
     setup_nest_kernel,
 )
+from nrp_core import SimulationTime
 from nrp_core.engines.python_json import EngineScript
 from utils_common.generate_analog_signals import generate_signals
+from utils_common.profile import Profile
 
 NANO_SEC = 1e-9
 
@@ -24,11 +26,13 @@ class Script(EngineScript):
         initialize_nest("NRP")
         self.master_config = None
         self.controllers = []
+        self.step = 0
         self.run_paths = None  # TOCHECK: How run_paths are handled in NRP context
 
     def initialize(self):
         self.log.info("NRP Neural Engine: Initializing...")
-        print(nest.GetKernelStatus())
+        self.log.debug(nest.GetKernelStatus())
+        self.step = 0
 
         run_timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -44,7 +48,6 @@ class Script(EngineScript):
         setup_environment()
         setup_nest_kernel(
             self.master_config.simulation,
-            self.master_config.simulation.seed,
             self.run_paths.data_nest,
         )
         self.log.info("Environment and NEST kernel setup complete.")
@@ -61,6 +64,10 @@ class Script(EngineScript):
             motor_commands,
         )
         self.log.info(f"Created {len(self.controllers)} controllers.")
+        self.sensory_profile = Profile()
+        self.sim_profile = Profile()
+        self.motor_profile = Profile()
+        self.rest_profile = Profile()
 
         self._registerDataPack("control_cmd")
         self._registerDataPack("positions")
@@ -71,25 +78,54 @@ class Script(EngineScript):
         self.log.info("NRP Neural Engine: Initialization complete.")
 
     def runLoop(self, timestep_ns):
-        self.log.debug(
-            f"NRP Neural Engine: runLoop at timestep {timestep_ns* NANO_SEC} sec"
-        )
+        self.rest_profile.end()
+        if self.step % 50 == 0:
+            self.log.debug("[neural] starting neural update...")
 
-        # Read sensory data from input datapack
         feedback_data = self._getDataPack("positions")
-        pos, neg = self.controllers[0].extract_motor_command_NRP(sim_time)
+        joint_pos_rad = feedback_data["joint_pos_rad"]
+        sim_time = feedback_data["sim_time"] * NANO_SEC
+
+        with self.sensory_profile.time():
+            self.controllers[0].update_sensory_info_from_NRP(joint_pos_rad)
+
+        if self.step % 50 == 0:
+            self.log.debug("[neural] updated sensory info")
+
+        with self.sim_profile.time():
+            nest.Run(timestep_ns * NANO_SEC)
+
+        if self.step % 50 == 0:
+            self.log.debug("[neural] simulated")
+
+        with self.motor_profile.time():
+            pos, neg = self.controllers[0].extract_motor_command_NRP(sim_time)
+
+        if self.step % 50 == 0:
+            self.log.debug(
+                f"[neural] Update {self.step} complete.",
+                rate_pos=pos,
+                rate_neg=neg,
+                angle=joint_pos_rad,
+                time_sensory=str(self.sensory_profile.total_time),
+                time_sim=str(self.sim_profile.total_time),
+                time_motor=str(self.motor_profile.total_time),
+                time_rest=str(self.rest_profile.total_time),
+            )
+        self.step += 1
         self._setDataPack("control_cmd", {"rate_pos": pos, "rate_neg": neg})
-        self.log.debug(f"Sent motor commands")
+        self.rest_profile.start()
 
     def shutdown(self):
         self.log.info("NRP Neural Engine: Shutting down.")
         self.log.info("Data collapsing and plotting (if enabled) would occur here.")
-        # from neural.data_handling import collapse_files
-        # pop_views = []
-        # for controller in self.controllers:
-        #     pop_views.extend(controller.get_all_recorded_views())
-        # collapse_files(self.run_paths.data_nest, pop_views) # TOCHECK: comm is not available
-        # nest.Cleanup()
+        from neural.data_handling import collapse_files
+
+        pop_views = []
+        for controller in self.controllers:
+            pop_views.extend(controller.get_all_recorded_views())
+        collapse_files(self.run_paths.data_nest, pop_views)
+        nest.Cleanup()
 
     # def reset(self):
     #     self.log.info("NRP Neural Engine: Resetting.")
