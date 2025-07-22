@@ -21,11 +21,11 @@
     [
         {
             "Name": "to_bullet",
-            "FileName": "nrp_tf_from_nest_to_bullet.py"
+            "FileName": "complete_control/nrp_tf_from_nest_to_bullet.py"
         },
         {
             "Name": "from_bullet",
-            "FileName": "nrp_tf_from_bullet.py"
+            "FileName": "complete_control/nrp_tf_from_bullet.py"
         }
     ]
 }
