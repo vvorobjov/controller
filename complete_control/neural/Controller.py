@@ -15,6 +15,7 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from neural.nest_adapter import nest
+from plant.plant_utils import compute_spike_rate
 from plant.sensoryneuron import SensoryNeuron
 
 from .ControllerPopulations import ControllerPopulations
@@ -158,6 +159,16 @@ class Controller:
             self.create_and_connect_NRP_interface()
             self.log.info(f"Connected controller to NRP proxies")
 
+        ### test: is any recorder working AT ALL????
+        self.test_rec = nest.Create("spike_recorder")
+        nest.Connect(self.pops.planner_p.pop, self.test_rec)
+        self.generator = nest.Create(
+            "spike_generator", params={"spike_times": [0.1, 0.2, 0.3]}
+        )
+        self.parrot = nest.Create("parrot_neuron")
+        nest.Connect(self.generator, self.parrot)
+        nest.Connect(self.parrot, self.test_rec)
+        ### answer: no it is not. what the hell?
         self.log.info("Controller initialization complete.")
 
     def _instantiate_cerebellum_handler(self, controller_pops: ControllerPopulations):
@@ -688,8 +699,8 @@ class Controller:
         self.proxy_out_p = nest.Create("spike_recorder", 1)
         self.proxy_out_n = nest.Create("spike_recorder", 1)
 
-        nest.Connect(self.pops.brainstem_p.pop, self.proxy_out_p)
-        nest.Connect(self.pops.brainstem_n.pop, self.proxy_out_n)
+        nest.Connect(self.pops.brainstem_p.pop, self.proxy_out_p, "all_to_all")
+        nest.Connect(self.pops.brainstem_n.pop, self.proxy_out_n, "all_to_all")
 
         # positive
         self.proxy_in_p = SensoryNeuron(
@@ -725,6 +736,25 @@ class Controller:
         nest.SetStatus(self.proxy_in_gen, {"rate": [pos, neg]})
 
     def extract_motor_command_NRP(self, timestep):
+        self.log.debug(nest.GetStatus(self.test_rec))
+        timestep = max(timestep - 0.01, 0)
+        p_spike_times = nest.GetStatus(self.proxy_out_p, "events")[0]["times"]
+        self.log.debug(
+            f"checking behavior for spikes after {timestep}. total spikes: {len(p_spike_times)}"
+        )
+
+        rate_pos_hz, weighted_count = compute_spike_rate(
+            spikes=p_spike_times,
+            weight=self.master_params.modules.spine.wgt_motCtx_motNeur,
+            n_neurons=self.master_params.brain.population_size,
+            time_start=timestep,
+            time_end=timestep + 0.01,
+        )
+        self.log.debug(p_spike_times[:-10])
+        self.log.debug(
+            f"found {count_ge(p_spike_times, timestep)} or {weighted_count} in range"
+        )
+
         rate_pos = (
             count_ge(nest.GetStatus(self.proxy_out_p, "events")[0]["times"], timestep)
             / self.sim_params.resolution
