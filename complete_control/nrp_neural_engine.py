@@ -84,7 +84,7 @@ class Script(EngineScript):
 
         feedback_data = self._getDataPack("positions")
         joint_pos_rad = feedback_data["joint_pos_rad"]
-        sim_time_s = feedback_data["sim_time"] * NANO_SEC
+        sim_time_s = self._time_ns * NANO_SEC
 
         with self.sensory_profile.time():
             self.controllers[0].update_sensory_info_from_NRP(joint_pos_rad)
@@ -105,8 +105,8 @@ class Script(EngineScript):
             self.log.debug(
                 f"[neural] Update {self.step} complete.",
                 sim_time=sim_time_s,
-                rate_pos=pos,
-                rate_neg=neg,
+                rate_pos=int(pos),
+                rate_neg=int(neg),
                 angle=joint_pos_rad,
                 time_sensory=str(self.sensory_profile.total_time),
                 time_sim=str(self.sim_profile.total_time),
