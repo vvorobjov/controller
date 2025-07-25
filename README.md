@@ -30,17 +30,17 @@ Optionally, mount (`--bind`) `complete_control` for "live" code changes. If pair
 ```
 git clone --recurse-submodules git@bitbucket.org:hbpneurorobotics/nrp-core.git
 git checkout t3-4-ebrains2
-cd nrp-core/examples/controller
+cd nrp-core/experiments/controller
 
 # build simulation:latest image
 docker compose build
 
 # build nrp image
 cd ../../../nrp-core
-./build_nrp_core_image.sh nrp-vanilla
+./build_nrp_core_image.sh nrp-t3.4
 
 # build nrp experiment image and run run it
-cd ../nrp-core/examples/controller
+cd ../nrp-core/experiments/controller
 docker compose -f nrp_docker-compose-nest-pybullet.yaml build nrp-core-service
 docker compose -f nrp_docker-compose-nest-pybullet.yaml up
 
