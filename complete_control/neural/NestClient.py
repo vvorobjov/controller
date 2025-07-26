@@ -51,7 +51,7 @@ class NESTClient:
         self.headers = {"Content-type": "application/json", "Accept": "text/plain"}
 
     def Connect(self, *args, **kwargs):
-        args = [i if isinstance(i, list) else [i] for i in args[0:2]]
+        args = [i if isinstance(i, list) else [i] for i in args[0:2]] + list(args[2:])
         kwargs["args"] = args
         response = requests.post(
             self.url + "api/Connect", json=kwargs, headers=self.headers
