@@ -473,182 +473,241 @@ def draw_schema(output_path: Path, scale_factor: float = 0.005):
             FancyArrow(path_x[-2], path_y[-2], dx, dy, color=color, **arrow_props)
         )
 
-    pos = {name: (d[0], d[1], d[2], d[3]) for name, d in components.items()}
-
     # Drawing paths between components
     paths = {
         "planner_to_plan_inv": [
             (
-                pos["Planner"][0] + pos["Planner"][2] / 2,
-                pos["Planner"][1] + pos["Planner"][3],
+                components["Planner"][0] + components["Planner"][2] / 2,
+                components["Planner"][1] + components["Planner"][3],
             ),
-            (pos["plan to inv"][0] + pos["plan to inv"][2] / 2, pos["plan to inv"][1]),
+            (
+                components["plan to inv"][0] + components["plan to inv"][2] / 2,
+                components["plan to inv"][1],
+            ),
         ],
         "plan_inv_to_mf": [
             (
-                pos["plan to inv"][0] + pos["plan to inv"][2],
-                pos["plan to inv"][1] + 1.5,
+                components["plan to inv"][0] + components["plan to inv"][2],
+                components["plan to inv"][1] + 1.5,
             ),
-            (pos["Mf_inv"][0] - 1, pos["plan to inv"][1] + 1.5),
-            (pos["Mf_inv"][0] - 1, pos["Mf_inv"][1] + pos["Mf_inv"][3] / 2),
-            (pos["Mf_inv"][0], pos["Mf_inv"][1] + pos["Mf_inv"][3] / 2),
+            (components["Mf_inv"][0] - 1, components["plan to inv"][1] + 1.5),
+            (
+                components["Mf_inv"][0] - 1,
+                components["Mf_inv"][1] + components["Mf_inv"][3] / 2,
+            ),
+            (
+                components["Mf_inv"][0],
+                components["Mf_inv"][1] + components["Mf_inv"][3] / 2,
+            ),
         ],
         "plan_inv_to_error_inv": [
             (
-                pos["plan to inv"][0] + pos["plan to inv"][2],
-                pos["plan to inv"][1] + 0.5,
+                components["plan to inv"][0] + components["plan to inv"][2],
+                components["plan to inv"][1] + 0.5,
             ),
-            (pos["error inv"][0] + 2, pos["plan to inv"][1] + 0.5),
-            (pos["error inv"][0] + 2, pos["error inv"][1] + pos["error inv"][3]),
+            (components["error inv"][0] + 2, components["plan to inv"][1] + 0.5),
             (
-                pos["error inv"][0] + pos["error inv"][2] / 2,
-                pos["error inv"][1] + pos["error inv"][3],
+                components["error inv"][0] + 2,
+                components["error inv"][1] + components["error inv"][3],
+            ),
+            (
+                components["error inv"][0] + components["error inv"][2] / 2,
+                components["error inv"][1] + components["error inv"][3],
             ),
         ],
         "planner_to_fbk": [
-            (pos["Planner"][0], pos["Planner"][1] + pos["Planner"][3] / 2),
-            (0.5, pos["Planner"][1] + pos["Planner"][3] / 2),
-            (0.5, pos["Fbk"][1] + pos["Fbk"][3] / 2),
-            (pos["Fbk"][0], pos["Fbk"][1] + pos["Fbk"][3] / 2),
+            (
+                components["Planner"][0],
+                components["Planner"][1] + components["Planner"][3] / 2,
+            ),
+            (0.5, components["Planner"][1] + components["Planner"][3] / 2),
+            (0.5, components["Fbk"][1] + components["Fbk"][3] / 2),
+            (components["Fbk"][0], components["Fbk"][1] + components["Fbk"][3] / 2),
         ],
         "error_inv_to_io": [
             (
-                pos["error inv"][0] + pos["error inv"][2],
-                pos["error inv"][1] + pos["error inv"][3] / 2,
+                components["error inv"][0] + components["error inv"][2],
+                components["error inv"][1] + components["error inv"][3] / 2,
             ),
-            (pos["IO_inv"][0], pos["IO_inv"][1] + pos["IO_inv"][3] / 2),
+            (
+                components["IO_inv"][0],
+                components["IO_inv"][1] + components["IO_inv"][3] / 2,
+            ),
         ],
         "state_to_state_inv": [
-            (pos["State"][0] + pos["State"][2] / 2, pos["State"][1] + pos["State"][3]),
             (
-                pos["state to inv"][0] + pos["state to inv"][2] / 2,
-                pos["state to inv"][1],
+                components["State"][0] + components["State"][2] / 2,
+                components["State"][1] + components["State"][3],
+            ),
+            (
+                components["state to inv"][0] + components["state to inv"][2] / 2,
+                components["state to inv"][1],
             ),
         ],
         "state_to_fbk": [
-            (pos["State"][0] + pos["State"][2], pos["State"][1] + pos["State"][3] / 2),
-            (pos["Fbk"][0], pos["Fbk"][1] + pos["Fbk"][3] / 2),
+            (
+                components["State"][0] + components["State"][2],
+                components["State"][1] + components["State"][3] / 2,
+            ),
+            (components["Fbk"][0], components["Fbk"][1] + components["Fbk"][3] / 2),
         ],
         "state_inv_to_error_inv": [
             (
-                pos["state to inv"][0] + pos["state to inv"][2],
-                pos["state to inv"][1] + pos["state to inv"][3] / 2,
+                components["state to inv"][0] + components["state to inv"][2],
+                components["state to inv"][1] + components["state to inv"][3] / 2,
             ),
             (
-                pos["state to inv"][0] + pos["state to inv"][2] + 1,
-                pos["state to inv"][1] + pos["state to inv"][3] / 2,
+                components["state to inv"][0] + components["state to inv"][2] + 1,
+                components["state to inv"][1] + components["state to inv"][3] / 2,
             ),
-            (pos["state to inv"][0] + pos["state to inv"][2] + 1, pos["error inv"][1]),
-            (pos["error inv"][0] + pos["error inv"][2] / 2, pos["error inv"][1]),
+            (
+                components["state to inv"][0] + components["state to inv"][2] + 1,
+                components["error inv"][1],
+            ),
+            (
+                components["error inv"][0] + components["error inv"][2] / 2,
+                components["error inv"][1],
+            ),
         ],
         "prediction_to_state": [
             (
-                pos["prediction"][0] + pos["prediction"][2] / 2,
-                pos["prediction"][1] + pos["prediction"][3],
+                components["prediction"][0] + components["prediction"][2] / 2,
+                components["prediction"][1] + components["prediction"][3],
             ),
-            (pos["State"][0] + pos["State"][2] / 2, pos["State"][1]),
+            (
+                components["State"][0] + components["State"][2] / 2,
+                components["State"][1],
+            ),
         ],
         "dcn_forw_to_prediction": [
-            (pos["DCN_forw"][0], pos["DCN_forw"][1] + pos["DCN_forw"][3] / 2),
             (
-                pos["prediction"][0] + pos["prediction"][2],
-                pos["prediction"][1] + pos["prediction"][3] / 2,
+                components["DCN_forw"][0],
+                components["DCN_forw"][1] + components["DCN_forw"][3] / 2,
+            ),
+            (
+                components["prediction"][0] + components["prediction"][2],
+                components["prediction"][1] + components["prediction"][3] / 2,
             ),
         ],
         "dcn_inv_to_motor_pred": [
             (
-                pos["DCN_inv"][0] + pos["DCN_inv"][2],
-                pos["DCN_inv"][1] + pos["DCN_inv"][3] / 2,
+                components["DCN_inv"][0] + components["DCN_inv"][2],
+                components["DCN_inv"][1] + components["DCN_inv"][3] / 2,
             ),
             (
-                pos["motor prediction"][0],
-                pos["motor prediction"][1] + pos["motor prediction"][3] - 1,
+                components["motor prediction"][0],
+                components["motor prediction"][1]
+                + components["motor prediction"][3]
+                - 1,
             ),
         ],
         "motor_pred_to_smoothing": [
             (
-                pos["motor prediction"][0] + pos["motor prediction"][2] / 2,
-                pos["motor prediction"][1],
+                components["motor prediction"][0]
+                + components["motor prediction"][2] / 2,
+                components["motor prediction"][1],
             ),
             (
-                pos["Smoothing"][0] + pos["Smoothing"][2] / 2,
-                pos["Smoothing"][1] + pos["Smoothing"][3],
+                components["Smoothing"][0] + components["Smoothing"][2] / 2,
+                components["Smoothing"][1] + components["Smoothing"][3],
             ),
         ],
         "out_to_smoothing": [
-            (pos["Out"][0] + pos["Out"][2], pos["Out"][1] + pos["Out"][3] / 2),
-            (pos["Smoothing"][0], pos["Smoothing"][1] + pos["Smoothing"][3] / 2),
-        ],
-        "out_to_motor_commands": [
-            (pos["Out"][0] + pos["Out"][2] / 2, pos["Out"][1]),
             (
-                pos["Out"][0] + pos["Out"][2] / 2,
-                pos["motor commands"][1] + pos["motor commands"][3],
+                components["Out"][0] + components["Out"][2],
+                components["Out"][1] + components["Out"][3] / 2,
             ),
             (
-                pos["motor commands"][0],
-                pos["motor commands"][1] + pos["motor commands"][3] / 2,
+                components["Smoothing"][0],
+                components["Smoothing"][1] + components["Smoothing"][3] / 2,
+            ),
+        ],
+        "out_to_motor_commands": [
+            (components["Out"][0] + components["Out"][2] / 2, components["Out"][1]),
+            (
+                components["Out"][0] + components["Out"][2] / 2,
+                components["motor commands"][1] + components["motor commands"][3],
+            ),
+            (
+                components["motor commands"][0],
+                components["motor commands"][1] + components["motor commands"][3] / 2,
             ),
         ],
         "motor_commands_to_mf_forw": [
             (
-                pos["motor commands"][0],
-                pos["motor commands"][1] + pos["motor commands"][3] / 2,
+                components["motor commands"][0],
+                components["motor commands"][1] + components["motor commands"][3] / 2,
             ),
             (
-                pos["Mf_forw"][0] + pos["Mf_forw"][2],
-                pos["Mf_forw"][1] + pos["Mf_forw"][3] / 2,
+                components["Mf_forw"][0] + components["Mf_forw"][2],
+                components["Mf_forw"][1] + components["Mf_forw"][3] / 2,
             ),
         ],
         "dcn_forw_to_error_forw": [
-            (pos["DCN_forw"][0], pos["DCN_forw"][1] + pos["DCN_forw"][3] / 2),
-            (9.5, pos["DCN_forw"][1] + pos["DCN_forw"][3] / 2),
+            (
+                components["DCN_forw"][0],
+                components["DCN_forw"][1] + components["DCN_forw"][3] / 2,
+            ),
+            (9.5, components["DCN_forw"][1] + components["DCN_forw"][3] / 2),
             (9.5, 1),
-            (pos["error forw"][0] + pos["error forw"][2] / 2, 1),
-            (pos["error forw"][0] + pos["error forw"][2] / 2, pos["error forw"][1]),
+            (components["error forw"][0] + components["error forw"][2] / 2, 1),
+            (
+                components["error forw"][0] + components["error forw"][2] / 2,
+                components["error forw"][1],
+            ),
         ],
         "error_forw_to_io_forw": [
-            (pos["error forw"][0], pos["error forw"][1] + pos["error forw"][3] / 2),
             (
-                pos["IO_forw"][0] + pos["IO_forw"][2],
-                pos["IO_forw"][1] + pos["IO_forw"][3] / 2,
+                components["error forw"][0],
+                components["error forw"][1] + components["error forw"][3] / 2,
+            ),
+            (
+                components["IO_forw"][0] + components["IO_forw"][2],
+                components["IO_forw"][1] + components["IO_forw"][3] / 2,
             ),
         ],
         "feedback_to_error_forw": [
-            (pos["feedback"][0], pos["feedback"][1] + pos["feedback"][3] / 2),
             (
-                pos["error forw"][0] + pos["error forw"][2],
-                pos["error forw"][1] + pos["error forw"][3] / 2,
+                components["feedback"][0],
+                components["feedback"][1] + components["feedback"][3] / 2,
+            ),
+            (
+                components["error forw"][0] + components["error forw"][2],
+                components["error forw"][1] + components["error forw"][3] / 2,
             ),
         ],
         "smoothing_to_human": [
             (
-                pos["Smoothing"][0] + pos["Smoothing"][2],
-                pos["Smoothing"][1] + pos["Smoothing"][3] / 2,
+                components["Smoothing"][0] + components["Smoothing"][2],
+                components["Smoothing"][1] + components["Smoothing"][3] / 2,
             ),
             (
-                pos["Human Figure Plot"][0],
-                pos["Human Figure Plot"][1] + pos["Human Figure Plot"][3] / 2,
+                components["Human Figure Plot"][0],
+                components["Human Figure Plot"][1]
+                + components["Human Figure Plot"][3] / 2,
             ),
         ],
         "human_to_sensory": [
             (
-                pos["Human Figure Plot"][0] + pos["Human Figure Plot"][2] / 2,
-                pos["Human Figure Plot"][1],
+                components["Human Figure Plot"][0]
+                + components["Human Figure Plot"][2] / 2,
+                components["Human Figure Plot"][1],
             ),
             (
-                pos["Sensory feedback"][0] + pos["Sensory feedback"][2] / 2,
-                pos["Sensory feedback"][1] + pos["Sensory feedback"][3],
+                components["Sensory feedback"][0]
+                + components["Sensory feedback"][2] / 2,
+                components["Sensory feedback"][1] + components["Sensory feedback"][3],
             ),
         ],
         "sensory_to_feedback": [
             (
-                pos["Sensory feedback"][0] + pos["Sensory feedback"][2] / 2,
-                pos["Sensory feedback"][1],
+                components["Sensory feedback"][0]
+                + components["Sensory feedback"][2] / 2,
+                components["Sensory feedback"][1],
             ),
             (
-                pos["feedback"][0] + pos["feedback"][2] / 2,
-                pos["feedback"][1] + pos["feedback"][3],
+                components["feedback"][0] + components["feedback"][2] / 2,
+                components["feedback"][1] + components["feedback"][3],
             ),
         ],
     }
