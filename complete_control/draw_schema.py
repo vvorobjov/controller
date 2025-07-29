@@ -9,7 +9,7 @@ import structlog
 log = structlog.get_logger(__name__)
 
 
-def draw_schema(config: PlantConfig, scale_factor: float = 0.005):
+def draw_schema(run_paths: RunPaths, scale_factor: float = 0.005):
 
     fig, ax = plt.subplots(figsize=(40, 35))
     ax.set_facecolor("#fefbf3")
@@ -39,17 +39,12 @@ def draw_schema(config: PlantConfig, scale_factor: float = 0.005):
         elif img_path:
             log.warning(f"Warning: images can not be found in {img_path}.")
 
-    # Find the latest run directory
-    try:
-        neural_figs_path = config.run_paths.figures
-        robotic_figs_path = config.run_paths.figures_receiver
-        print(f"Neural figures path: {neural_figs_path}")
-        log.info(
-            f"Taking all images: {neural_figs_path.name} and {robotic_figs_path.name}"
-        )
-    except Exception as e:
-        log.error("Error: Images couldn't find.", detail=str(e))
-        return
+        # Find the latest run directory
+
+    neural_figs_path = run_paths.figures
+    robotic_figs_path = run_paths.figures_receiver
+    print(f"Neural figures path: {neural_figs_path}")
+    log.info(f"Taking all images: {neural_figs_path.name} and {robotic_figs_path.name}")
 
     components_raw = {
         "Inverse model_container": (
