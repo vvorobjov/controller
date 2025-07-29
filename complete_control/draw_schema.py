@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.patches import Rectangle, FancyArrow
 from pathlib import Path
-
+from config.plant_config import PlantConfig
 from config.paths import RunPaths
 import structlog
 
 log = structlog.get_logger(__name__)
 
 
-def draw_schema(output_path: Path, scale_factor: float = 0.005):
+def draw_schema(config: PlantConfig, scale_factor: float = 0.005):
 
     fig, ax = plt.subplots(figsize=(40, 35))
     ax.set_facecolor("#fefbf3")
@@ -41,21 +41,12 @@ def draw_schema(output_path: Path, scale_factor: float = 0.005):
 
     # Find the latest run directory
     try:
-        runs_dir = Path(__file__).resolve().parent.parent / "runs"
-        if not runs_dir.is_dir():
-            raise FileNotFoundError(f"Runs directory not found at {runs_dir}")
-
-        all_runs = sorted([d for d in runs_dir.iterdir() if d.is_dir()], reverse=True)
-        if not all_runs:
-            raise FileNotFoundError("No run directories found in 'runs/'.")
-
-        latest_run_dir = all_runs[0]
-        log.info(f"Taking all images: {latest_run_dir.name}")
-
-        run_paths = RunPaths.from_run_id(latest_run_dir.name)
-        neural_figs_path = run_paths.figures
-        robotic_figs_path = run_paths.figures_receiver
-
+        neural_figs_path = config.run_paths.figures
+        robotic_figs_path = config.run_paths.figures_receiver
+        print(f"Neural figures path: {neural_figs_path}")
+        log.info(
+            f"Taking all images: {neural_figs_path.name} and {robotic_figs_path.name}"
+        )
     except Exception as e:
         log.error("Error: Images couldn't find.", detail=str(e))
         return
@@ -733,8 +724,9 @@ def draw_schema(output_path: Path, scale_factor: float = 0.005):
     draw_path(paths["smoothing_to_human"], "dimgray")
     draw_path(paths["human_to_sensory"], "black")
     draw_path(paths["sensory_to_feedback"], "black")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, bbox_inches="tight", dpi=300, facecolor=ax.get_facecolor())
+
+    filepath = robotic_figs_path / f"whole_controller_schema.png"
+    plt.savefig(filepath, bbox_inches="tight", dpi=300, facecolor=ax.get_facecolor())
     plt.close(fig)
 
 

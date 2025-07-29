@@ -237,6 +237,6 @@ def plot_plant_outputs(run_paths: RunPaths):
     if plant_data.errors_per_trial:
         plot_errors_per_trial(config=config, errors_list=plant_data.errors_per_trial)
 
-    draw_schema(Path("./whole_controller_schema.png"), scale_factor=0.005)
+    draw_schema(config, scale_factor=0.005)
 
     log.info("Plant plots generated.")
