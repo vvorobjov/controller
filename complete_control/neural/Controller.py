@@ -747,10 +747,12 @@ class Controller:
     def update_sensory_info_from_NRP(self, angle: float, sim_time: float):
         pos = self.proxy_in_p.lam(angle)
         neg = self.proxy_in_n.lam(angle)
-        # self.log.debug(f"result for angle={angle}", pos=pos, neg=neg)
         nest.SetStatus(
             self.proxy_in_gen,
-            {"rate_times": [sim_time, sim_time], "rate_values": [pos, neg]},
+            [
+                {"rate_times": [sim_time], "rate_values": [pos]},
+                {"rate_times": [sim_time], "rate_values": [neg]},
+            ],
         )
 
     def extract_motor_command_NRP(self):
