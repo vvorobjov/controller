@@ -15,7 +15,6 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from neural.nest_adapter import nest
-from plant.plant_utils import compute_spike_rate
 from plant.sensoryneuron import SensoryNeuron
 
 from .ControllerPopulations import ControllerPopulations
@@ -757,7 +756,9 @@ class Controller:
         )
 
     def extract_motor_command_NRP(self):
-        rate_pos, rate_neg = nest.GetStatus(self.proxy_out, "in_rate")[0:2]
+        rate_pos, rate_neg = [
+            i / self.N for i in nest.GetStatus(self.proxy_out, "in_rate")[0:2]
+        ]
 
         return rate_pos, rate_neg
 
