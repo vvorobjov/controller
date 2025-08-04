@@ -5,6 +5,7 @@ from pathlib import Path
 from config.plant_config import PlantConfig
 from config.paths import RunPaths
 import structlog
+import contextlib
 
 log = structlog.get_logger(__name__)
 
@@ -22,7 +23,8 @@ def draw_schema(run_paths: RunPaths, scale_factor: float = 0.005):
     def embed_image(ax, img_path, x, y, w, h):
         if img_path and img_path.exists():
             try:
-                img = mpimg.imread(img_path)
+                with contextlib.redirect_stdout(None), contextlib.redirect_stderr(None):
+                    img = mpimg.imread(img_path)
                 border = Rectangle(
                     (x, y), w, h, fill=False, edgecolor="black", linewidth=1.5, zorder=3
                 )
@@ -376,7 +378,8 @@ def draw_schema(run_paths: RunPaths, scale_factor: float = 0.005):
         w, h = initial_w, initial_h
         if plot_file and plot_file.exists():
             try:
-                img = mpimg.imread(plot_file)
+                with contextlib.redirect_stdout(None), contextlib.redirect_stderr(None):
+                    img = mpimg.imread(plot_file)
                 height_px, width_px, _ = img.shape
                 w = width_px * scale_factor
                 h = height_px * scale_factor
@@ -721,10 +724,6 @@ def draw_schema(run_paths: RunPaths, scale_factor: float = 0.005):
     draw_path(paths["sensory_to_feedback"], "black")
 
     filepath = robotic_figs_path / f"whole_controller_schema.png"
+
     plt.savefig(filepath, bbox_inches="tight", dpi=300, facecolor=ax.get_facecolor())
     plt.close(fig)
-
-
-if __name__ == "__main__":
-    draw_schema(Path("./whole_controller_schema.png"), scale_factor=0.005)
-    # print(f"Saved there: ./whole_controller_schema.png")
