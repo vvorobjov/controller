@@ -46,7 +46,7 @@ services:
   #   working_dir: /experiment
 
   nrp-core-service:
-    image: nrp-pybullet-t3.4:latest
+    image: simulation:latest
     build:
       context: .
       dockerfile: docker/bullet_muscle_sim.Dockerfile
@@ -55,6 +55,7 @@ services:
       # - ../tf_exchange:/sim/controller
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
+    # entrypoint: ["/sim/install/nrp/bin/nrp-run.bash"]
     command: sh -c "export EXEC_TIMESTAMP=$(date +%Y%m%d_%H%M%S) && NRPCoreSim -c /sim/controller/nrp_simulation_config_nest_docker_compose.json --cloglevel debug --logdir /home/nrpuser/logs"
     # command: NRPCoreSim -c /sim/controller/simulation_config.json --cloglevel debug --logdir /home/nrpuser/logs
     working_dir: /sim/controller

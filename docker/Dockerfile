@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline-dev \
     libhdf5-dev \
     python3-dev \
+    python3-venv \
     python-is-python3 \
     gcc \
     gosu \
@@ -36,17 +37,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xterm 
 # && apt-get clean \
 # && rm -rf /var/lib/apt/lists/*
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    python3-venv \
-    python3-numpy \
-    # python3-matplotlib \
-    python3-scipy
+
+# nrp-core dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gnupg2 \
+    software-properties-common \
+    sudo
+RUN add-apt-repository ppa:pistache+team/unstable
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    doxygen \
+    libboost-filesystem-dev \
+    libboost-numpy-dev \
+    libboost-python-dev \
+    libbrotli-dev \
+    libcurl4-openssl-dev \
+    libclang-dev\
+    libgrpc++-dev \
+    llvm-dev \
+    # libopenmpi-dev \
+    libpistache-dev \
+    libprotobuf-dev \
+    libzip-dev \
+    nlohmann-json3-dev \
+    protobuf-compiler-grpc
 
 ARG USER_UID=1000
 ARG USER_GID=1000
 ENV USERNAME=simuser
 RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME
+    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN mkdir /sim && chown $USERNAME:$USERNAME /sim
 
 USER $USERNAME
@@ -57,10 +77,10 @@ ENV USERNAME=simuser
 
 WORKDIR /sim
 ENV VIRTUAL_ENV=/sim/venv
-RUN python -m venv $VIRTUAL_ENV
+RUN python -m venv --system-site-packages $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN pip install --upgrade pip setuptools wheel
+RUN pip install --upgrade pip setuptools wheel packaging
 
 ENV INSTALL_DIR=/sim/install
 ENV DEPS_DIR=/sim/dependencies
@@ -102,7 +122,6 @@ ENV CFLAGS=-O2
 # ^ for https://github.com/mpi4py/mpi4py/issues/652
 COPY ./docker/requirements_base.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
     pip install -r requirements_base.txt
 ENV CFLAGS=
 
@@ -147,11 +166,62 @@ RUN mkdir -p nest-build \
 RUN sed -i 's/jsonify(response)/jsonify(nest.serialize_data(response))/' "${NEST_PYTHON_MODULE_PATH}"/server/hl_api_server.py
 COPY ./docker/hl_api_types.py "${NEST_PYTHON_MODULE_PATH}"/lib/hl_api_types.py
 
+
+# # nrp
+# FROM base AS builder-nrp
+
+ENV NRP_INSTALL_DIR=${INSTALL_DIR}/nrp
+ENV NRP_DEPS_INSTALL_DIR=${INSTALL_DIR}/nrp_deps
+
+# nrp-core tests dependencies
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    cppcheck \
+    libgmock-dev \
+    xvfb
+# unclear nrp-core dependencies
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    pkg-config
+
+# Install MQTT (to NRP_DEPS_INSTALL_DIR)
+RUN git clone https://github.com/eclipse/paho.mqtt.cpp \
+    && cd paho.mqtt.cpp \
+    && git checkout v1.4.0 \
+    && git submodule init \
+    && git submodule update \
+    && cmake -Bbuild -H. -DPAHO_BUILD_STATIC=OFF -DPAHO_BUILD_SHARED=ON -DCMAKE_INSTALL_PREFIX="${NRP_DEPS_INSTALL_DIR}" -DCMAKE_PREFIX_PATH="${NRP_DEPS_INSTALL_DIR}" -DPAHO_WITH_MQTT_C=ON \
+    && cmake --build build/ --target install \
+    && sudo ldconfig && cd .. && rm -rf paho.mqtt.cpp
+
+COPY ./docker/requirements_nrp.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements_nrp.txt
+
+ENV NRP_SRC_DIR=/tmp/nrp-core-src
+RUN mkdir -p /tmp/nrp-core-src
+ENV CMAKE_CACHE_FILE=${NRP_SRC_DIR}/.ci/cmake_cache/t3_4.cmake
+# TODO: copy source files more elegant, but without breaking the cache
+# Copying the root (.) immediatly breaks the cache
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/src ${NRP_SRC_DIR}/src
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/docs ${NRP_SRC_DIR}/docs
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/examples ${NRP_SRC_DIR}/examples
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/cmake ${NRP_SRC_DIR}/cmake
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/CMakeLists.txt ${NRP_SRC_DIR}/CMakeLists.txt
+COPY --chown=${USERNAME}:${USERNAME} docker/nrp_t3_4.cmake ${CMAKE_CACHE_FILE}
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/.ci/11-prepare-build.sh ${NRP_SRC_DIR}/.ci/11-prepare-build.sh
+COPY --chown=${USERNAME}:${USERNAME} nrp-core/.ci/20-build.sh ${NRP_SRC_DIR}/.ci/20-build.sh
+
+RUN cd ${NRP_SRC_DIR} && ls -al && bash .ci/11-prepare-build.sh && bash .ci/20-build.sh
+
+
 # final runtime image
 FROM base AS runtime
 
-ENV PATH="${VIRTUAL_ENV}/bin:${MUSIC_INSTALL_DIR}/bin:${NEST_INSTALL_DIR}/bin:${OMPI_INSTALL_DIR}/bin:${PATH}"
+ENV NRP_INSTALL_DIR=${INSTALL_DIR}/nrp
+ENV NRP_DEPS_INSTALL_DIR=${INSTALL_DIR}/nrp_deps
+
+ENV PATH="${VIRTUAL_ENV}/bin:${NRP_INSTALL_DIR}/bin:${MUSIC_INSTALL_DIR}/bin:${NEST_INSTALL_DIR}/bin:${OMPI_INSTALL_DIR}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${OMPI_INSTALL_DIR}/lib64:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH=${NRP_INSTALL_DIR}/lib:${NRP_DEPS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
 COPY --from=builder ${INSTALL_DIR} ${INSTALL_DIR}
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
@@ -199,7 +269,7 @@ RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUA
 # RUN chmod +x /usr/local/bin/run_interactive.py
 
 
-ENV PYTHONPATH="${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
