@@ -1,12 +1,12 @@
 {
     "name": "Develop controller",
     "dockerComposeFile": [
-        "docker-compose.yml"
+        "nrp_docker-compose-nest-pybullet.yaml"
     ],
     "remoteUser": "simuser",
     // "remoteUser": "${localEnv:USER}",
     "workspaceFolder": "/sim/controller",
-    "service": "simulation",
+    "service": "nrp-core-service",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -28,5 +28,6 @@
                 }
             }
         }
-    }
+    },
+    "overrideCommand": true
 }

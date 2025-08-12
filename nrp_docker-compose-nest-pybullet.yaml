@@ -36,15 +36,6 @@ services:
     command: bash
     working_dir: /sim/controller
 
-  # nrp-nest:
-  #   image: neuroroboticsplatform/nrp-vanilla-ubuntu20:1.5.0-test
-  #   user: nrpuser
-  #   volumes:
-  #     - ./:/experiment
-  #   command: python_json_engine.py --engine=python_nest_client --serverurl=0.0.0.0:9002 --regservurl=nrp-core:9001 --options=
-  #   container_name: nrp-nest
-  #   working_dir: /experiment
-
   nrp-core-service:
     image: simulation:latest
     build:
@@ -52,21 +43,16 @@ services:
       dockerfile: docker/bullet_muscle_sim.Dockerfile
     volumes:
       - ./:/sim/controller
-      # - ../tf_exchange:/sim/controller
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
-    # entrypoint: ["/sim/install/nrp/bin/nrp-run.bash"]
+    stdin_open: true
     command: sh -c "export EXEC_TIMESTAMP=$(date +%Y%m%d_%H%M%S) && NRPCoreSim -c /sim/controller/nrp_simulation_config_nest_docker_compose.json --cloglevel debug --logdir /home/nrpuser/logs"
-    # command: NRPCoreSim -c /sim/controller/simulation_config.json --cloglevel debug --logdir /home/nrpuser/logs
     working_dir: /sim/controller
-    # tty: true
     depends_on:
       - nest-server
-      # - nrp-nest
     environment:
       DISPLAY: $DISPLAY
 
 volumes:
-  # nrp_sim_venv:
   nrp_sim_shared_data:
   nrp_nest_module_path:
