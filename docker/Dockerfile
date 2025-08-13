@@ -8,58 +8,53 @@ ARG PYTHON_MAJOR
 ARG PYTHON_MINOR
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    ca-certificates \
-    git \
-    # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
-    libtool \
-    cmake \
-    gsl-bin \
-    libgsl-dev \
-    libltdl-dev \
-    libboost-dev \
-    libreadline-dev \
-    libhdf5-dev \
-    python3-dev \
-    python3-venv \
-    python-is-python3 \
-    gcc \
-    gosu \
-    vim \
-    gzip \
-    tar \
-    wget \
-    # --- VNC Dependencies ---
-    tigervnc-standalone-server \
-    tigervnc-common \
-    tigervnc-tools \
-    fluxbox \
-    xterm 
-# && apt-get clean \
-# && rm -rf /var/lib/apt/lists/*
+        ca-certificates \
+        git \
+        # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
+        gsl-bin \
+        libgsl27 \
+        libltdl7 \
+        # libboost-dev \
+        libgomp1 \
+        libreadline8 \
+        libhdf5-dev \
+        python3-venv \
+        python-is-python3 \
+        gosu \
+        vim \
+        gzip \
+        tar \
+        wget \
+        # --- VNC Dependencies ---
+        tigervnc-standalone-server \
+        tigervnc-common \
+        tigervnc-tools \
+        fluxbox \
+        xterm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # nrp-core dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gnupg2 \
-    software-properties-common \
-    sudo
+        gnupg2 \
+        software-properties-common \
+        sudo \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 RUN add-apt-repository ppa:pistache+team/unstable
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    doxygen \
-    libboost-filesystem-dev \
-    libboost-numpy-dev \
-    libboost-python-dev \
-    libbrotli-dev \
-    libcurl4-openssl-dev \
-    libclang-dev\
-    libgrpc++-dev \
-    llvm-dev \
-    # libopenmpi-dev \
-    libpistache-dev \
-    libprotobuf-dev \
-    libzip-dev \
-    nlohmann-json3-dev \
-    protobuf-compiler-grpc
+        libboost-filesystem1.74.0 \
+        libboost-python1.74.0 \
+        libboost-numpy1.74.0 \
+        libbrotli1 \
+        libcurl4 \
+        libgrpc++1 \
+        libpistache0 \
+        libprotobuf23 \
+        libzip-dev \
+        nlohmann-json3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG USER_UID=1000
 ARG USER_GID=1000
@@ -101,6 +96,36 @@ RUN mkdir -p $INSTALL_DIR $DEPS_DIR $NEST_INSTALL_DIR $MUSIC_INSTALL_DIR
 
 # openmpi, music and nest
 FROM base AS builder
+
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        libtool \
+        cmake \
+        libgsl-dev \
+        libltdl-dev \
+        libreadline-dev \
+        python3-dev \
+    && sudo apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/*
+
+# nrp-core dependencies
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+        doxygen \
+        libboost-filesystem-dev \
+        libboost-numpy-dev \
+        libboost-python-dev \
+        libbrotli-dev \
+        libclang-dev \
+        libcurl4-openssl-dev \
+        libgrpc++-dev \
+        llvm-dev \
+        llvm \
+        libprotobuf-dev \
+        protobuf-compiler-grpc \
+        libpistache-dev \
+    && sudo apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/*
 
 ENV PATH="${VIRTUAL_ENV}/bin:${MUSIC_INSTALL_DIR}/bin:${NEST_INSTALL_DIR}/bin:${OMPI_INSTALL_DIR}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${OMPI_INSTALL_DIR}/lib64:${LD_LIBRARY_PATH}"
@@ -213,6 +238,16 @@ COPY --chown=${USERNAME}:${USERNAME} nrp-core/.ci/20-build.sh ${NRP_SRC_DIR}/.ci
 RUN cd ${NRP_SRC_DIR} && ls -al && bash .ci/11-prepare-build.sh && bash .ci/20-build.sh
 
 
+# # cerebellum model
+RUN git clone https://github.com/near-nes/cerebellar-models $CEREBELLUM_PATH \
+    && cd $CEREBELLUM_PATH \
+    && git checkout 53656eea5c5dd671371ff3b4f1ac0be9cadf32e9\
+    && cd custom_stdp \
+    && cmake . \
+    && make \
+    && make install
+
+
 # final runtime image
 FROM base AS runtime
 
@@ -225,6 +260,7 @@ ENV LD_LIBRARY_PATH=${NRP_INSTALL_DIR}/lib:${NRP_DEPS_INSTALL_DIR}/lib:${LD_LIBR
 
 COPY --from=builder ${INSTALL_DIR} ${INSTALL_DIR}
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+COPY --from=builder ${CEREBELLUM_PATH} ${CEREBELLUM_PATH}
 # openMPI needs this if no ssh/rsh available
 ENV OMPI_MCA_plm=^rsh
 
@@ -247,15 +283,6 @@ RUN git clone https://github.com/near-nes/bullet_muscle_sim.git $BULLET_MUSCLE_D
 
 
 
-RUN git clone https://github.com/near-nes/cerebellar-models $CEREBELLUM_PATH \
-    && cd $CEREBELLUM_PATH \
-    && git checkout 53656eea5c5dd671371ff3b4f1ac0be9cadf32e9\
-    && cd custom_stdp \
-    && cmake . \
-    && make \
-    && make install
-
-
 WORKDIR ${DEPS_DIR}
 COPY ./docker/requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -275,32 +302,13 @@ RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
 
-# RUN echo "Setting ownership of shared folders to: >>>>>>>>>>>>>>>>>>> userid:$USER_UID groupid:$USER_GID >>>>>>>>>>>>>>>>>>>"
-# RUN chown -R $USERNAME:$USERNAME $VIRTUAL_ENV /home/$USERNAME $SHARED_DATA_DIR $NEST_MODULE_PATH $BULLET_MUSCLE_DIR
-
-
 # Expose VNC port (Display :1 is 5901)
 EXPOSE 5901
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
 
-# FROM docker-registry.ebrains.eu/neurorobotics/nrp/nrp-core/nrp-vanilla-ubuntu20:latest AS nrp-image
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    libgomp1
 
-# FROM runtime AS nrp-runtime
-# ENV NRP_HOME=/home/nrpuser/.local/
-# ENV NRP_INSTALL_DIR=${NRP_HOME}/nrp
-# ENV NRP_DEPS_INSTALL_DIR=${NRP_HOME}/nrp_deps
-
-# RUN mkdir -p $NRP_HOME && chown $USERNAME:$USERNAME $NRP_HOME
-# RUN mkdir -p $INSTALL_DIR/nrp $DEPS_DIR/nrp_deps \
-#         && chown $USERNAME:$USERNAME $INSTALL_DIR/nrp \
-#         && chown $USERNAME:$USERNAME $DEPS_DIR/nrp_deps
-
-# USER $USERNAME
-
-# COPY --chown=$USERNAME:$USERNAME --from=nrp-image /home/nrpuser/.local/nrp/ $INSTALL_DIR/nrp/
-# COPY --chown=$USERNAME:$USERNAME --from=nrp-image /home/nrpuser/.local/nrp_deps/ $DEPS_DIR/nrp_deps/
-# RUN ln -sf $INSTALL_DIR/nrp $NRP_INSTALL_DIR
-# RUN ln -sf $DEPS_DIR/nrp_deps $NRP_DEPS_INSTALL_DIR
 USER 0
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -331,3 +339,4 @@ FROM runtime AS hpc
 ENV SIMULATION_MODE=hpc
 COPY . /sim/controller
 RUN chown -R simuser:simuser /sim/controller
+RUN chmod -R a+rwX /sim

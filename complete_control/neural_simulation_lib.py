@@ -53,7 +53,7 @@ def setup_nest_kernel(
         "rng_seed": simulation_config.seed,
     }
     nest.SetKernelStatus(kernel_status)
-    nest.set_verbosity("M_ERROR")
+    nest.set_verbosity("M_WARNING")
     log.info(
         f"NEST Kernel: Resolution: {nest.GetKernelStatus('resolution')}ms, Seed: {nest.GetKernelStatus('rng_seed')}, Data path: {nest.GetKernelStatus('data_path')}"
     )

@@ -98,6 +98,18 @@ else
     echo "Uncompressed network file ${BSB_NETWORK_FILE} already exists. Skipping decompression."
 fi
 
+# --- Set Environment Variables for Final Command ---
+# Ensure these are set *before* gosu executes the final command
+# so they are inherited by the user's environment.
+
+echo "Final LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+echo "Final PATH: $PATH"
+echo "Final PYTHONPATH: $PYTHONPATH"
+
+# --- Execute the command directly if in HPC mode ---
+if [ "$SIMULATION_MODE" = "hpc" ]; then
+    exec "$@"
+fi
 
 
 # --- Prerequisite Scripts ---
@@ -113,13 +125,6 @@ echo "----------------------------------------"
 echo "Switching to user $USERNAME (UID: $USER_ID_TO_USE, GID: $GROUP_ID_TO_USE) and executing command: $@"
 echo "----------------------------------------"
 
-# --- Set Environment Variables for Final Command ---
-# Ensure these are set *before* gosu executes the final command
-# so they are inherited by the user's environment.
-
-echo "Final LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-echo "Final PATH: $PATH"
-echo "Final PYTHONPATH: $PYTHONPATH"
 
 if [ "$NEST_MODE" = "nest-server" ]; then
     export NEST_SERVER_HOST="${NEST_SERVER_HOST:-0.0.0.0}"
