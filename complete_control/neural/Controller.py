@@ -1,6 +1,5 @@
-import bisect
 from collections import defaultdict
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import structlog
@@ -16,7 +15,6 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from neural.nest_adapter import nest
-from neural.neural_models import SynapseRecording
 from plant.sensoryneuron import SensoryNeuron
 
 from .ControllerPopulations import ControllerPopulations
@@ -810,14 +808,3 @@ class Controller:
             f"Collected {len(recorded_views)} views with labels for recording."
         )
         return recorded_views
-
-
-def count_ge(arr, value):
-    """
-    Count the number of elements >= value in an ordered array.
-    """
-    if len(arr) == 0 or arr[0] > value:
-        return 0
-    left_pos = bisect.bisect_left(arr, value)
-
-    return len(arr) - left_pos
