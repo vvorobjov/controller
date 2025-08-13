@@ -270,7 +270,6 @@ class PlantSimulator:
             )
             return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list
 
-        exp_params = self.config.master_config.experiment
         net_rate_hz = rate_pos_hz - rate_neg_hz
         input_torque = net_rate_hz / self.config.SCALE_TORQUE
 
@@ -279,30 +278,14 @@ class PlantSimulator:
                 "Simulation progress", step=step, sim_time_s=current_sim_time_s
             )
 
-        # 1. Get current plant state
         self.plant.update_stats()
-
-        if exp_params.enable_gravity:
-            current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
-
-            # Turn gravity on if we've reached application trial
-            if current_trial >= exp_params.gravity_trial_start:
-                self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
-
-            # Turn gravity off if removal trial is set and after we've reached it
-            if (
-                exp_params.gravity_trial_end is not None
-                and current_trial > exp_params.gravity_trial_end
-            ):
-                self.plant.set_gravity(False)
-
-        # 2. Apply motor command to plant
+        # Enable perturbation/gravity
+        self._check_gravity(current_sim_time_s)
+        # Apply motor command to plant
         self._set_joint_torque(input_torque, current_sim_time_s)
-
-        # 3. Step PyBullet simulation
+        # Step PyBullet simulation
         self.plant.simulate_step(self.config.RESOLUTION_S)
-
-        # 4. Record data for this step (For NJT=1)
+        # Record data for this step (For NJT=1)
         self.joint_data[0].record_step(
             step=step,
             joint_pos_rad=joint_pos_rad,
@@ -315,7 +298,7 @@ class PlantSimulator:
             input_cmd_torque=input_torque,
         )
 
-        # 5. Trial end logic (reset plant if needed)
+        # Trial end logic (reset plant if needed)
         is_trial_end_time = self._check_trial_end(current_sim_time_s)
         if is_trial_end_time:
             final_error_rad = joint_pos_rad - self.config.target_joint_pos_rad
@@ -329,6 +312,21 @@ class PlantSimulator:
             self.plant.reset_plant()
 
         return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list
+
+    def _check_gravity(self, current_sim_time_s: float):
+        """Check trial number and enable/disable gravity"""
+        exp_params = self.config.master_config.experiment
+
+        if exp_params.enable_gravity:
+            current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
+
+            if current_trial >= exp_params.gravity_trial_start:
+                self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
+            if (
+                exp_params.gravity_trial_end is not None
+                and current_trial > exp_params.gravity_trial_end
+            ):
+                self.plant.set_gravity(False)
 
     def _check_trial_end(self, current_sim_time_s: float) -> bool:
         """Check if current step is at the end of a trial.
