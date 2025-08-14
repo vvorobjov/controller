@@ -8,51 +8,51 @@ ARG PYTHON_MAJOR
 ARG PYTHON_MINOR
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        git \
-        # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
-        gsl-bin \
-        libgsl27 \
-        libltdl7 \
-        # libboost-dev \
-        libgomp1 \
-        libreadline8 \
-        libhdf5-dev \
-        python3-venv \
-        python-is-python3 \
-        gosu \
-        vim \
-        gzip \
-        tar \
-        wget \
-        # --- VNC Dependencies ---
-        tigervnc-standalone-server \
-        tigervnc-common \
-        tigervnc-tools \
-        fluxbox \
-        xterm \
+    ca-certificates \
+    git \
+    # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
+    gsl-bin \
+    libgsl27 \
+    libltdl7 \
+    # libboost-dev \
+    libgomp1 \
+    libreadline8 \
+    libhdf5-dev \
+    python3-venv \
+    python-is-python3 \
+    gosu \
+    vim \
+    gzip \
+    tar \
+    wget \
+    # --- VNC Dependencies ---
+    tigervnc-standalone-server \
+    tigervnc-common \
+    tigervnc-tools \
+    fluxbox \
+    xterm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # nrp-core dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gnupg2 \
-        software-properties-common \
-        sudo \
+    gnupg2 \
+    software-properties-common \
+    sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN add-apt-repository ppa:pistache+team/unstable
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libboost-filesystem1.74.0 \
-        libboost-python1.74.0 \
-        libboost-numpy1.74.0 \
-        libbrotli1 \
-        libcurl4 \
-        libgrpc++1 \
-        libpistache0 \
-        libprotobuf23 \
-        libzip-dev \
-        nlohmann-json3-dev \
+    libboost-filesystem1.74.0 \
+    libboost-python1.74.0 \
+    libboost-numpy1.74.0 \
+    libbrotli1 \
+    libcurl4 \
+    libgrpc++1 \
+    libpistache0 \
+    libprotobuf23 \
+    libzip-dev \
+    nlohmann-json3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -98,32 +98,32 @@ RUN mkdir -p $INSTALL_DIR $DEPS_DIR $NEST_INSTALL_DIR $MUSIC_INSTALL_DIR
 FROM base AS builder
 
 RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libtool \
-        cmake \
-        libgsl-dev \
-        libltdl-dev \
-        libreadline-dev \
-        python3-dev \
+    build-essential \
+    gcc \
+    libtool \
+    cmake \
+    libgsl-dev \
+    libltdl-dev \
+    libreadline-dev \
+    python3-dev \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 
 # nrp-core dependencies
 RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-        doxygen \
-        libboost-filesystem-dev \
-        libboost-numpy-dev \
-        libboost-python-dev \
-        libbrotli-dev \
-        libclang-dev \
-        libcurl4-openssl-dev \
-        libgrpc++-dev \
-        llvm-dev \
-        llvm \
-        libprotobuf-dev \
-        protobuf-compiler-grpc \
-        libpistache-dev \
+    doxygen \
+    libboost-filesystem-dev \
+    libboost-numpy-dev \
+    libboost-python-dev \
+    libbrotli-dev \
+    libclang-dev \
+    libcurl4-openssl-dev \
+    libgrpc++-dev \
+    llvm-dev \
+    llvm \
+    libprotobuf-dev \
+    protobuf-compiler-grpc \
+    libpistache-dev \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 
@@ -317,16 +317,26 @@ ARG VNC_PASSWORD="vncpass"
 ENV VNC_PASSWORD=${VNC_PASSWORD}
 ENV VNC_DISPLAY=":1"
 ENV DISPLAY="${VNC_DISPLAY}"
-COPY scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
+COPY scripts/services/start-vnc.sh /usr/local/bin/start-vnc.sh
 RUN chmod +x /usr/local/bin/start-vnc.sh
 
 RUN mkdir -p /home/simuser/.vnc
-COPY scripts/xstartup /home/simuser/.vnc/xstartup
+COPY scripts/services/xstartup /home/simuser/.vnc/xstartup
 RUN chmod 700 /home/$USERNAME/.vnc/xstartup
 
-COPY scripts/aliases.sh /tmp/aliases.sh
-RUN cat /tmp/aliases.sh >> /etc/bash.bashrc && rm /tmp/aliases.sh
-# Set display for terminals opened in VNC
+# ensure env is loaded for all shells
+# login shells
+COPY scripts/env/* /etc/profile.d/
+RUN chmod +x /etc/profile.d/*
+
+# non-login interactive bash shells
+RUN mkdir -p /etc/bashrc.d
+COPY scripts/env/* /etc/bashrc.d/
+RUN chmod +x /etc/bashrc.d/*
+# interactive bash shells
+RUN echo 'if [ -d /etc/bashrc.d ]; then for f in /etc/bashrc.d/*; do [ -f "$f" ] && . "$f"; done; fi' \
+    >> /etc/bash.bashrc
+# (everything else is unsupported)
 RUN echo "export DISPLAY=${VNC_DISPLAY}" >> /etc/bash.bashrc
 
 # FROM nrp-runtime AS dev
