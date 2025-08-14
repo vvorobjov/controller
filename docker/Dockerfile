@@ -337,6 +337,8 @@ ENV SIMULATION_MODE=dev
 FROM runtime AS hpc
 # In HPC, the controller directory is copied into the image and the user is the default simuser.
 ENV SIMULATION_MODE=hpc
+# On HPC do not mount anythin on top of artifacts folder, so that the archive is not overwritten
+ENV BSB_NETWORK_FILE=/tmp/cerebellum_plastic_base.hdf5
 COPY . /sim/controller
 RUN chown -R simuser:simuser /sim/controller
 RUN chmod -R a+rwX /sim
