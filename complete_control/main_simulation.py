@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # Setup environment and NEST kernel
     setup_environment()
     setup_nest_kernel(
-        master_config.simulation,
+        master_config,
         run_paths.data_nest,
     )
 

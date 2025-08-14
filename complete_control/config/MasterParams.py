@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import ClassVar
 
@@ -40,6 +41,15 @@ class MasterParams(BaseModel):
     @property
     def meta(self) -> MetaInfo:
         return MetaInfo(run_id=self.run_paths.run.name)
+
+    @computed_field
+    @property
+    def total_num_virtual_procs(self) -> int:
+        if self.USE_MUSIC:
+            # https://github.com/nest/nest-simulator/issues/3446
+            return None
+        else:
+            return int(os.getenv("NPROC", 1))
 
     @computed_field
     @property

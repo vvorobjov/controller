@@ -1,9 +1,7 @@
 import random
 import sys
 from pathlib import Path
-from timeit import default_timer as timer
 
-import config.paths as paths
 import numpy as np
 import structlog
 from config.core_models import SimulationParams
@@ -40,19 +38,22 @@ def setup_environment():
 
 # --- NEST Kernel Setup ---
 def setup_nest_kernel(
-    simulation_config: SimulationParams,
+    master_params: MasterParams,
     path_data: Path,
 ):
     """Configures the NEST kernel."""
     log = structlog.get_logger("main.nest_setup")
-
-    kernel_status = {
+    simulation_config: SimulationParams = master_params.simulation
+    kernel_params = {
         "resolution": simulation_config.resolution,
         "overwrite_files": True,
         "data_path": str(path_data),
         "rng_seed": simulation_config.seed,
     }
-    nest.SetKernelStatus(kernel_status)
+    if not master_params.USE_MUSIC:
+        kernel_params["total_num_virtual_procs"] = master_params.total_num_virtual_procs
+
+    nest.SetKernelStatus(kernel_params)
     nest.set_verbosity("M_WARNING")
     log.info(
         f"NEST Kernel: Resolution: {nest.GetKernelStatus('resolution')}ms, Seed: {nest.GetKernelStatus('rng_seed')}, Data path: {nest.GetKernelStatus('data_path')}"

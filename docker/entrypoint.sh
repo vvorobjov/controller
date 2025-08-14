@@ -1,4 +1,5 @@
 #!/bin/bash
+. /etc/profile
 
 # this entrypoint script does NOT include defaults. it expects env vars to be set by the container, 
 # and should error out if they aren't
