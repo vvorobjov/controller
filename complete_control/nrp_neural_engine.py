@@ -51,7 +51,7 @@ class Script(GrpcEngineScript):
 
         setup_environment()
         setup_nest_kernel(
-            self.master_config.simulation,
+            self.master_config,
             self.run_paths.data_nest,
         )
         self.log.info("Environment and NEST kernel setup complete.")
@@ -60,7 +60,6 @@ class Script(GrpcEngineScript):
             self.master_config.experiment, self.master_config.simulation
         )
         self.log.info("Input data (trajectory, motor_commands) generated.")
-        motor_commands = [float(i) for i in motor_commands]
 
         self.controllers = create_controllers(
             self.master_config,
