@@ -21,8 +21,8 @@ class ControllerPopulations:
     planner_p: Optional[PopView] = None
     planner_n: Optional[PopView] = None
     # Motor Cortex
-    mc_ffwd_p: Optional[PopView] = None
-    mc_ffwd_n: Optional[PopView] = None
+    mc_M1_p: Optional[PopView] = None
+    mc_M1_n: Optional[PopView] = None
     mc_fbk_p: Optional[PopView] = None
     mc_fbk_n: Optional[PopView] = None
     mc_out_p: Optional[PopView] = None

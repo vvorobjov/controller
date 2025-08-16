@@ -10,10 +10,21 @@ class PlannerModuleConfig(BaseModel):
     base_rate: float = 10.0
 
 
+class M1MockConfig(BaseModel):
+    m1_base_rate: float = 0.0
+    m1_kp: float = 2000.0296740997816629
+
+
+class M1EPropConfig(BaseModel):
+    config_path: str = ""
+    weights_path: str = ""
+
+
 class MotorCortexModuleConfig(BaseModel):
     model_config: ClassVar = {"frozen": True}
-    ffwd_base_rate: float = 0.0
-    ffwd_kp: float = 2000.0296740997816629
+    use_m1_eprop: bool = False
+    m1_mock_config: M1MockConfig = Field(default_factory=lambda: M1MockConfig())
+    m1_eprop_config: M1EPropConfig = Field(default_factory=lambda: M1EPropConfig())
     fbk_base_rate: float = 0.0
     fbk_kp: float = 0.20
     out_base_rate: float = 0.0

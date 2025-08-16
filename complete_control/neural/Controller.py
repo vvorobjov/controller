@@ -320,19 +320,13 @@ class Controller:
             njt=1,
             mc_params=self.mc_params,
         )
-        self.mc = MotorCortex(
-            self.N,
-            NJT,
-            self.total_time_vect,
-            self.motor_cmd_slice,
-            **self.mc_params.model_dump(),
-        )
-        self.pops.mc_ffwd_p = self.mc.ffwd_p[0]
-        self.pops.mc_ffwd_n = self.mc.ffwd_n[0]
-        self.pops.mc_fbk_p = self.mc.fbk_p[0]
-        self.pops.mc_fbk_n = self.mc.fbk_n[0]
-        self.pops.mc_out_p = self.mc.out_p[0]
-        self.pops.mc_out_n = self.mc.out_n[0]
+        self.mc = MotorCortex(self.N, self.motor_cmd_slice, self.mc_params)
+        self.pops.mc_M1_p = self.mc.m1_out_p
+        self.pops.mc_M1_n = self.mc.m1_out_n
+        self.pops.mc_fbk_p = self.mc.fbk_p
+        self.pops.mc_fbk_n = self.mc.fbk_n
+        self.pops.mc_out_p = self.mc.out_p
+        self.pops.mc_out_n = self.mc.out_n
 
     def _build_state_estimator(self, to_file=False):
         buf_sz = self.state_params.buffer_size
@@ -438,8 +432,10 @@ class Controller:
         """Connects the created populations using PopView attributes."""
         self.log.debug("Connecting internal controller blocks")
 
+        # Planner -> M1
+        self.mc.connect(self.pops.planner_p, self.pops.planner_n)
+
         # Planner -> Motor Cortex Feedback Input
-        # if self.pops.planner_p and self.pops.mc_fbk_p:  # Check populations exist
         conn_spec = self.conn_params.planner_mc_fbk
         syn_spec_p = conn_spec.model_dump(exclude_none=True)
         syn_spec_n = conn_spec.model_copy(
@@ -476,7 +472,6 @@ class Controller:
         )
 
         # State Estimator -> Motor Cortex Feedback Input (Inhibitory)
-        # if self.pops.state_p and self.pops.mc_fbk_p:
         conn_spec_state_mc_fbk = self.conn_params.state_mc_fbk
         self.log.debug(
             "Connecting StateEst to MC Fbk (Inhibitory)",

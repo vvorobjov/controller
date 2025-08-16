@@ -1,213 +1,224 @@
 """Motor cortex class"""
 
-__authors__ = "Cristiano Alessandro"
-__copyright__ = "Copyright 2021"
-__credits__ = ["Cristiano Alessandro"]
-__license__ = "GPL"
-__version__ = "1.0.1"
+from abc import ABC, abstractmethod
 
+from config.module_params import M1MockConfig, MotorCortexModuleConfig
+
+# from M1MotorCortexEprop import M1MotorCortexEprop
 from neural.nest_adapter import nest
 
 from .population_view import PopView
 
 
+class M1SubModule(ABC):
+    @abstractmethod
+    def connect(self, source_population):
+        """Connect source to this component"""
+        pass
+
+    @abstractmethod
+    def get_output_pops(self):
+        """Return output populations (pos/neg)"""
+        pass
+
+
+class M1Mock(M1SubModule):
+    #                motorcommands.txt
+    #                        │
+    #  ┌─────────┐    ┌──────┼──────────────────────────┐
+    #  │         │    │      ▼         Motor Cortex     │
+    #  │ Planner │    │  ┌─────────┐       ┌─────────┐  │
+    #  │         │----│-▶│  Ffwd   │──────▶│   Out   │  │
+    #  │         │    │  │(tracking│       │  (basic │  │
+    #  └─────────┘    │  │ neuron) │       │  neuron)│  │
+    #       │         │  └─────────┘       └─────────┘  │
+    #       │         │                         ▲       │
+    #       │  +      │  ┌─────────┐            │       │
+    #       └────▶█───┼─▶│   Fbk   │            │       │
+    #             ▲   │  │  (diff  │────────────┘       │
+    #           - │   │  │  neuron)│                    │
+    #             │   │  └─────────┘                    │
+    #                 └─────────────────────────────────┘
+    def __init__(self, numNeurons, motorCommands, params: M1MockConfig):
+        self.N = numNeurons
+        self.params = params
+        self.motorCommands = motorCommands
+        self.create_network()
+
+    def create_network(self):
+        par_m1 = {"base_rate": self.params.m1_base_rate, "kp": self.params.m1_kp}
+        p = nest.Create("tracking_neuron_nestml", n=self.N, params=par_m1)
+        nest.SetStatus(
+            p,
+            {
+                "pos": True,
+                "traj": self.motorCommands,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.output_p = PopView(p, to_file=True, label="mc_m1_p")
+
+        n = nest.Create("tracking_neuron_nestml", n=self.N, params=par_m1)
+        nest.SetStatus(
+            n,
+            {
+                "pos": False,
+                "traj": self.motorCommands,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.output_n = PopView(n, to_file=True, label="mc_m1_n")
+
+    def connect(self, source):
+        return
+
+    def get_output_pops(self):
+        return self.output_p, self.output_n
+
+
 class MotorCortex:
-    ############## Constructor (plant value is just for testing) ##############
-    def __init__(self, numNeurons, numJoints, time_vect, mtCmds, **kwargs):
+    #                 ┌─────────────────────────────────┐
+    #  ┌─────────┐    │                Motor Cortex     │
+    #  │ Planner │    │  ┌─────────┐       ┌─────────┐  │
+    #  └─────────┘----│-▶│    M1   │──────▶│   Out   │  │
+    #       │         │  └─────────┘       └─────────┘  │
+    #       │         │                         ▲       │
+    #       │  +      │  ┌─────────┐            │       │
+    #       └────▶█───┼─▶│   Fbk   │            │       │
+    #             ▲   │  │  (diff  │────────────┘       │
+    #           - │   │  │  neuron)│                    │
+    #             │   │  └─────────┘                    │
+    #                 └─────────────────────────────────┘
+    """Module that creates the motor commands
 
-        ### Initialize neural network
-        # General parameters of neurons
-        param_neurons = {
-            "ffwd_base_rate": 0.0,  # Feedforward neurons
-            "ffwd_kp": 1.0,
-            "fbk_base_rate": 0.0,  # Feedback neurons
-            "fbk_kp": 1.0,
-            "out_base_rate": 0.0,  # Summation neurons
-            "out_kp": 1.0,
-            "wgt_ffwd_out": (
-                1.0
-            ),  # Connection weight from ffwd to output neurons (must be positive)
-            "wgt_fbk_out": (
-                1.0
-            ),  # Connection weight from fbk to output neurons (must be positive)
-            "buf_sz": (
-                10.0  # Size of the buffer to compute spike rate in basic_neurons (ms)
-            ),
-        }
-        param_neurons.update(kwargs)
-        # Motor commands
+    The MotorCortex has 2 main roles:
+    1. translating the Planner's desired trajectory (rate-based) into motor commands
+    2. correct motor commands accounting for current state (compared to expected state
+        acc to Planner trajectory)
+
+    1 is accomplished by the M1 Submodule. The M1 exists in two versions. A complete one
+    based on E-Prop, implemented in https://github.com/shimoura/motor-controller-model;
+    and a mock one, implemented above.
+    """
+
+    def __init__(self, numNeurons, mtCmds, params: MotorCortexModuleConfig):
         self.motorCommands = mtCmds
-        self.numJoints = numJoints
-        # Time vector
-        self.time_vect = time_vect
-        # Initialize
-        self.init_neurons(numNeurons, param_neurons)
+        self.N = numNeurons
+        self.params = params
+        self.create_net(params, numNeurons)
 
-    ############################ Motor commands ############################
-    """
-        # Include pause into the motor commands
-        res = nest.GetKernelStatus({"resolution"})[0]
-        time_bins = commands.shape[0] + int(self.pause_len/res)
-        commands_pause = np.zeros((time_bins, commands.shape[1])) 
-        for i in range(nj):
-            commands_pause[:,i] = AddPause(commands[:,i], self.pause_len, res)
+    def create_net(self, params: MotorCortexModuleConfig, numNeurons):
+        if params.use_m1_eprop:
+            pass
+            # self.m1 = M1MotorCortexEprop()
+        else:
+            self.m1 = M1Mock(numNeurons, self.motorCommands, params.m1_mock_config)
 
-        # save joint trajectories into files
-        # NOTE: THIS OVERWRITES EXISTING TRAJECTORIES
-        for i in range(nj):
-            cmd_file = self.pathData + "joint_cmd_"+str(i)+".dat"
-            a_file = open(cmd_file, "w")
-            np.savetxt( a_file, commands_pause[:,i] )
-            a_file.close()
-    """
+        par_fbk = {"base_rate": params.fbk_base_rate, "kp": params.fbk_kp}
+        par_out = {"base_rate": params.out_base_rate, "kp": params.out_kp}
+        buf_sz = params.buf_sz
 
-    ######################## Initialize neural network #########################
-    def init_neurons(self, numNeurons, params):
+        self.m1_out_p, self.m1_out_n = self.m1.get_output_pops()
+        self.fbk_p = None
+        self.fbk_n = None
+        self.out_p = None
+        self.out_n = None
 
-        par_ffwd = {"base_rate": params["ffwd_base_rate"], "kp": params["ffwd_kp"]}
+        ############ FEEDBACK ############
+        tmp_pop_p = nest.Create("diff_neuron_nestml", n=numNeurons, params=par_fbk)
+        nest.SetStatus(
+            tmp_pop_p,
+            {
+                "pos": True,
+                "buffer_size": buf_sz,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.fbk_p = PopView(tmp_pop_p, to_file=True, label="mc_fbk_p")
 
-        par_fbk = {"base_rate": params["fbk_base_rate"], "kp": params["fbk_kp"]}
+        tmp_pop_n = nest.Create("diff_neuron_nestml", n=numNeurons, params=par_fbk)
+        nest.SetStatus(
+            tmp_pop_n,
+            {
+                "pos": False,
+                "buffer_size": buf_sz,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.fbk_n = PopView(tmp_pop_n, to_file=True, label="mc_fbk_n")
 
-        par_out = {"base_rate": params["out_base_rate"], "kp": params["out_kp"]}
+        ############ OUTPUT ############
+        tmp_pop_p = nest.Create("basic_neuron_nestml", n=numNeurons, params=par_out)
+        nest.SetStatus(
+            tmp_pop_p,
+            {
+                "pos": True,
+                "buffer_size": buf_sz,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.out_p = PopView(tmp_pop_p, to_file=True, label="mc_out_p")
 
-        buf_sz = params["buf_sz"]
+        tmp_pop_n = nest.Create("basic_neuron_nestml", n=numNeurons, params=par_out)
+        nest.SetStatus(
+            tmp_pop_n,
+            {
+                "pos": False,
+                "buffer_size": buf_sz,
+                "simulation_steps": len(self.motorCommands),
+            },
+        )
+        self.out_n = PopView(tmp_pop_n, to_file=True, label="mc_out_n")
 
-        self.ffwd_p = []
-        self.ffwd_n = []
-        self.fbk_p = []
-        self.fbk_n = []
-        self.out_p = []
-        self.out_n = []
+        nest.Connect(
+            self.m1_out_p.pop,
+            self.out_p.pop,
+            "one_to_one",
+            {"weight": params.wgt_ffwd_out},
+        )
+        nest.Connect(
+            self.m1_out_p.pop,
+            self.out_n.pop,
+            "one_to_one",
+            {"weight": params.wgt_ffwd_out},
+        )
+        nest.Connect(
+            self.m1_out_n.pop,
+            self.out_p.pop,
+            "one_to_one",
+            {"weight": -params.wgt_ffwd_out},
+        )
+        nest.Connect(
+            self.m1_out_n.pop,
+            self.out_n.pop,
+            "one_to_one",
+            {"weight": -params.wgt_ffwd_out},
+        )
 
-        res = self.time_vect[1] - self.time_vect[0]
+        nest.Connect(
+            self.fbk_p.pop,
+            self.out_p.pop,
+            "one_to_one",
+            {"weight": params.wgt_fbk_out},
+        )
+        nest.Connect(
+            self.fbk_p.pop,
+            self.out_n.pop,
+            "one_to_one",
+            {"weight": params.wgt_fbk_out},
+        )
+        nest.Connect(
+            self.fbk_n.pop,
+            self.out_p.pop,
+            "one_to_one",
+            {"weight": -params.wgt_fbk_out},
+        )
+        nest.Connect(
+            self.fbk_n.pop,
+            self.out_n.pop,
+            "one_to_one",
+            {"weight": -params.wgt_fbk_out},
+        )
 
-        # Create populations
-        for i in range(self.numJoints):
-
-            ############ FEEDFORWARD POPULATION ############
-            # Positive and negative populations for each joint
-            # Positive population (joint i)
-            tmp_pop_p = nest.Create(
-                "tracking_neuron_nestml", n=numNeurons, params=par_ffwd
-            )
-            nest.SetStatus(
-                tmp_pop_p,
-                {
-                    "pos": True,
-                    "traj": self.motorCommands,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.ffwd_p.append(
-                PopView(tmp_pop_p, self.time_vect, to_file=True, label="mc_ffwd_p")
-            )
-
-            # Negative population (joint i)
-            tmp_pop_n = nest.Create(
-                "tracking_neuron_nestml", n=numNeurons, params=par_ffwd
-            )
-            nest.SetStatus(
-                tmp_pop_n,
-                {
-                    "pos": False,
-                    "traj": self.motorCommands,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.ffwd_n.append(
-                PopView(tmp_pop_n, self.time_vect, to_file=True, label="mc_ffwd_n")
-            )
-
-            ############ FEEDBACK POPULATION ############
-            # Positive and negative populations for each joint
-
-            # Positive population (joint i)
-            tmp_pop_p = nest.Create("diff_neuron_nestml", n=numNeurons, params=par_fbk)
-            nest.SetStatus(
-                tmp_pop_p,
-                {
-                    "pos": True,
-                    "buffer_size": buf_sz,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.fbk_p.append(
-                PopView(tmp_pop_p, self.time_vect, to_file=True, label="mc_fbk_p")
-            )
-
-            # Negative population (joint i)
-            tmp_pop_n = nest.Create("diff_neuron_nestml", n=numNeurons, params=par_fbk)
-            nest.SetStatus(
-                tmp_pop_n,
-                {
-                    "pos": False,
-                    "buffer_size": buf_sz,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.fbk_n.append(
-                PopView(tmp_pop_n, self.time_vect, to_file=True, label="mc_fbk_n")
-            )
-
-            ############ OUTPUT POPULATION ############
-            # Positive and negative populations for each joint.
-            # Here I could probably just use a neuron that passes the spikes it receives  from
-            # the connected neurons (excitatory), rather tahan computing the frequency in a buffer
-            # and draw from Poisson (i.e. basic_neuron).
-
-            # Positive population (joint i)
-            tmp_pop_p = nest.Create("basic_neuron_nestml", n=numNeurons, params=par_out)
-            nest.SetStatus(
-                tmp_pop_p,
-                {
-                    "pos": True,
-                    "buffer_size": buf_sz,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.out_p.append(
-                PopView(tmp_pop_p, self.time_vect, to_file=True, label="mc_out_p")
-            )
-
-            # Negative population (joint i)
-            tmp_pop_n = nest.Create("basic_neuron_nestml", n=numNeurons, params=par_out)
-            nest.SetStatus(
-                tmp_pop_n,
-                {
-                    "pos": False,
-                    "buffer_size": buf_sz,
-                    "simulation_steps": len(self.motorCommands),
-                },
-            )
-            self.out_n.append(
-                PopView(tmp_pop_n, self.time_vect, to_file=True, label="mc_out_n")
-            )
-
-            ###### CONNECT FFWD AND FBK POULATIONS TO OUT POPULATION ######
-            # Populations of each joint are connected together according to connection
-            # rules and network topology. There is no connections across joints
-            self.ffwd_p[i].connect(
-                self.out_p[i], rule="one_to_one", w=params["wgt_ffwd_out"], d=res
-            )
-            self.ffwd_p[i].connect(
-                self.out_n[i], rule="one_to_one", w=params["wgt_ffwd_out"], d=res
-            )
-            self.ffwd_n[i].connect(
-                self.out_p[i], rule="one_to_one", w=-params["wgt_ffwd_out"], d=res
-            )
-            self.ffwd_n[i].connect(
-                self.out_n[i], rule="one_to_one", w=-params["wgt_ffwd_out"], d=res
-            )
-
-            self.fbk_p[i].connect(
-                self.out_p[i], rule="one_to_one", w=params["wgt_fbk_out"], d=res
-            )
-            self.fbk_p[i].connect(
-                self.out_n[i], rule="one_to_one", w=params["wgt_fbk_out"], d=res
-            )
-            self.fbk_n[i].connect(
-                self.out_p[i], rule="one_to_one", w=-params["wgt_fbk_out"], d=res
-            )
-            self.fbk_n[i].connect(
-                self.out_n[i], rule="one_to_one", w=-params["wgt_fbk_out"], d=res
-            )
+    def connect(self, planner_p, planner_n):
+        self.m1.connect((planner_p, planner_n))
