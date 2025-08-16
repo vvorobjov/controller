@@ -3,8 +3,7 @@
 from abc import ABC, abstractmethod
 
 from config.module_params import M1MockConfig, MotorCortexModuleConfig
-
-# from M1MotorCortexEprop import M1MotorCortexEprop
+from M1MotorCortexEprop import M1MotorCortexEprop
 from neural.nest_adapter import nest
 
 from .population_view import PopView
@@ -109,8 +108,7 @@ class MotorCortex:
 
     def create_net(self, params: MotorCortexModuleConfig, numNeurons):
         if params.use_m1_eprop:
-            pass
-            # self.m1 = M1MotorCortexEprop()
+            self.m1 = M1MotorCortexEprop()
         else:
             self.m1 = M1Mock(numNeurons, self.motorCommands, params.m1_mock_config)
 

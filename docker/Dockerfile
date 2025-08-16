@@ -295,9 +295,9 @@ RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUA
 
 # COPY scripts/interactive_start.py /usr/local/bin/run_interactive.py
 # RUN chmod +x /usr/local/bin/run_interactive.py
+ARG M1EPROP_PATH=${CONTROLLER_DIR}/motor_cortex/eprop-motor-control
 
-
-ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}:${M1EPROP_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
