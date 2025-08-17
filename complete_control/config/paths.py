@@ -23,6 +23,12 @@ INVERSE = CEREBELLUM_CONFIGS / "inverse.yaml"
 BASE = CEREBELLUM_CONFIGS / "microzones_complete_nest.yaml"
 PATH_HDF5 = os.environ.get("BSB_NETWORK_FILE")
 
+M1 = ROOT / "motor_cortex" / "eprop-motor-control"
+M1_CONFIG = M1 / "config" / "config.yaml"
+M1_WEIGHTS = (
+    M1 / "sim_results" / "default_plastic_False_manualRBF_False" / "trained_weights.npz"
+)
+
 
 @dataclass(frozen=True)
 class RunPaths:
