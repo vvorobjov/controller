@@ -11,12 +11,6 @@ services:
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
     volumes:
-      # Named volume for the virtual environment persistence
-      # - sim_venv:/sim/venv
-      # Named volume for persistent simulation data (compiled network, trajectory.txt...)
-      - sim_shared_data:/sim/shared_data
-      # Named volume for nest modules (so that user-generated ones are persisted)
-      - nest_module_path:/sim/install/nest/lib/nest/
       # Bind mount the current host directory (.) into /sim/controller
       - .:/sim/controller
     stdin_open: true
@@ -31,8 +25,3 @@ services:
       - 9000:9000
     # If you want to run a specific script, use 'docker-compose run simulation python your_script.py'
     command: bash
-
-volumes:
-  sim_venv:
-  sim_shared_data:
-  nest_module_path:
