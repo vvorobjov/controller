@@ -21,7 +21,7 @@ def minimumJerk(x_init, x_des, timespan):
     return pp, pol
 
 
-def generate_trajectory(sim: SimulationParams):
+def generate_trajectory_minjerk(sim: SimulationParams):
     """Generate trajectory for the simulation.
 
     Returns:
@@ -50,7 +50,7 @@ def generate_trajectory(sim: SimulationParams):
     return trj
 
 
-def generate_motor_commands(sim: SimulationParams):
+def generate_motor_commands_minjerk(sim: SimulationParams):
     """Generate motor commands for the simulation.
 
     Returns:
@@ -139,7 +139,7 @@ def generate_motor_commands(sim: SimulationParams):
 
 
 def generate_signals(sim: SimulationParams):
-    return generate_trajectory(sim), generate_motor_commands(sim)
+    return generate_trajectory_minjerk(sim), generate_motor_commands_minjerk(sim)
 
 
 if __name__ == "__main__":
