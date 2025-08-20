@@ -1,0 +1,5 @@
+jupyter
+Pillow
+torch
+torchvision
+gle-code @ git+https://github.com/unibe-cns/gle-code
