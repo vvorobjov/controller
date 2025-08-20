@@ -54,10 +54,10 @@ class PlantConfig:
         self.CONNECT_GUI = self.master_config.GUI_PYBULLET
 
         self.initial_joint_pos_rad: float = (
-            self.master_config.experiment.init_pos_angle_rad
+            self.master_config.simulation.oracle.init_pos_angle_rad
         )
         self.target_joint_pos_rad: float = (
-            self.master_config.experiment.tgt_pos_angle_rad
+            self.master_config.simulation.oracle.tgt_pos_angle_rad
         )
 
         self.N_NEURONS: int = self.master_config.brain.population_size

@@ -56,9 +56,7 @@ class Script(GrpcEngineScript):
         )
         self.log.info("Environment and NEST kernel setup complete.")
 
-        trj, motor_commands = generate_signals(
-            self.master_config.experiment, self.master_config.simulation
-        )
+        trj, motor_commands = generate_signals(self.master_config.simulation)
         self.log.info("Input data (trajectory, motor_commands) generated.")
 
         self.controllers = create_controllers(
@@ -75,7 +73,7 @@ class Script(GrpcEngineScript):
         # joint_pos_rad (datapack<Double>)
         self._registerDataPack("joint_pos_rad", wrappers_pb2.DoubleValue)
         proto_wrapper = wrappers_pb2.DoubleValue()
-        proto_wrapper.value = self.master_config.experiment.init_joint_angle
+        proto_wrapper.value = self.master_config.simulation.oracle.init_joint_angle
         self._setDataPack("joint_pos_rad", proto_wrapper)
         # control_cmd (datapack<Double[]>)
         self._registerDataPack("control_cmd", nrpgenericproto_pb2.ArrayDouble)

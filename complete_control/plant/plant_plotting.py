@@ -247,10 +247,7 @@ def plot_plant_outputs(run_paths: RunPaths):
         config=config,
         time_vector_s=config.time_vector_total_s,
         pos_j_rad_actual=joint_data.pos_rad,
-        desired_trj_joint_rad=generate_signals(
-            config.master_config.experiment,
-            config.master_config.simulation,
-        )[0],
+        desired_trj_joint_rad=generate_signals(config.master_config.simulation)[0],
     )
     plot_ee_space(
         config=config,

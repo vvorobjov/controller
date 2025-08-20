@@ -171,9 +171,8 @@ if __name__ == "__main__":
     )
 
     # Generate signals
-    trj, motor_commands = generate_signals(
-        master_config.experiment, master_config.simulation
-    )
+    trj, motor_commands = generate_signals(master_config.simulation)
+
 
     # Create controllers
     controllers = create_controllers(master_config, trj, motor_commands, comm=comm)

@@ -22,24 +22,18 @@ class RobotSpecParams(BaseModel, frozen=True):
     links: List[float] = [0.31]
     I: List[float] = [0.00189]
 
-    model_config = {
-        "arbitrary_types_allowed": True  # For potential np.ndarray use later
-    }
-
 
 class ExperimentParams(BaseModel, frozen=True):
-    init_joint_angle: float = 90
-    tgt_joint_angle: float = 20
-    robot_spec: RobotSpecParams = Field(default_factory=lambda: RobotSpecParams())
-    # frcFld_angle: float  # unused for now
-    # frcFld_k: float  # unused for now
-    # ff_application: float  # unused for now
-    # cerebellum_application_forw: float # unused for now
-    # cerebellum_application_inv: float # unused for now
     enable_gravity: bool = False
     z_gravity_magnitude: float = 9.81  # m/s^2
     gravity_trial_start: int = 0  # gravity turns ON at start of this trial
     gravity_trial_end: int = 1  # gravity turns OFF at end of this trial
+
+
+class OracleData(BaseModel):
+    init_joint_angle: float = 90
+    tgt_joint_angle: float = 20
+    robot_spec: RobotSpecParams = Field(default_factory=lambda: RobotSpecParams())
 
     @computed_field
     @property
@@ -58,6 +52,8 @@ class SimulationParams(BaseModel, frozen=True):
     time_move: float = 500.0  # ms
     time_post: float = 350.0  # ms
     n_trials: int = 1
+
+    oracle: OracleData = Field(default_factory=lambda: OracleData())
 
     seed: int = 12345
 

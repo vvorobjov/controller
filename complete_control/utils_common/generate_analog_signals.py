@@ -21,7 +21,7 @@ def minimumJerk(x_init, x_des, timespan):
     return pp, pol
 
 
-def generate_trajectory(exp: ExperimentParams, sim: SimulationParams):
+def generate_trajectory(sim: SimulationParams):
     """Generate trajectory for the simulation.
 
     Returns:
@@ -38,8 +38,8 @@ def generate_trajectory(exp: ExperimentParams, sim: SimulationParams):
     )
 
     # Joint space
-    init_pos = np.array([exp.init_pos_angle_rad])
-    tgt_pos = np.array([exp.tgt_pos_angle_rad])
+    init_pos = np.array([sim.oracle.init_pos_angle_rad])
+    tgt_pos = np.array([sim.oracle.tgt_pos_angle_rad])
 
     trj, pol = minimumJerk(init_pos, tgt_pos, time_sim_vec)  # Joint space (angle)
 
@@ -50,7 +50,7 @@ def generate_trajectory(exp: ExperimentParams, sim: SimulationParams):
     return trj
 
 
-def generate_motor_commands(exp: ExperimentParams, sim: SimulationParams):
+def generate_motor_commands(sim: SimulationParams):
     """Generate motor commands for the simulation.
 
     Returns:
@@ -66,12 +66,12 @@ def generate_motor_commands(exp: ExperimentParams, sim: SimulationParams):
         0, time_sim, num=int(np.round(time_sim / res)), endpoint=True
     )
 
-    dynSys = Robot1J(robot=exp.robot_spec)
+    dynSys = Robot1J(robot=sim.oracle.robot_spec)
     njt = dynSys.numVariables()
 
     # Joint space
-    init_pos = np.array([exp.init_pos_angle_rad])
-    tgt_pos = np.array([exp.tgt_pos_angle_rad])
+    init_pos = np.array([sim.oracle.init_pos_angle_rad])
+    tgt_pos = np.array([sim.oracle.tgt_pos_angle_rad])
 
     # Double derivative of the trajectory
     def minimumJerk_ddt(x_init, x_des, timespan):
@@ -138,14 +138,13 @@ def generate_motor_commands(exp: ExperimentParams, sim: SimulationParams):
     return motorCommands
 
 
-def generate_signals(exp: ExperimentParams, sim: SimulationParams):
-    return generate_trajectory(exp, sim), generate_motor_commands(exp, sim)
+def generate_signals(sim: SimulationParams):
+    return generate_trajectory(sim), generate_motor_commands(sim)
 
 
 if __name__ == "__main__":
-    exp_p = ExperimentParams()
     sim_p = SimulationParams()
-    trj, motorCommands = generate_signals(exp_p, sim_p)
+    trj, motorCommands = generate_signals(sim_p)
     print(f"Generated trajectory shape: {trj.shape}")
     print(trj)
     print(f"Generated motor commands shape: {motorCommands.shape}")
