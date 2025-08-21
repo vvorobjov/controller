@@ -10,6 +10,5 @@ singularity exec \
     --bind ./results:/sim/controller/runs \
     --bind ./tmp:/tmp  \
     --env PYNEST_QUIET=0 \
-    --env NPROC=4 \
     --env EXEC_TIMESTAMP=$(date +%Y%m%d_%H%M%S) \
     sim.sif/ /usr/local/bin/entrypoint.sh NRPCoreSim -c /sim/controller/nrp_simulation_config_nest_singularity.json --cloglevel debug --floglevel debug --logdir /tmp/logs
