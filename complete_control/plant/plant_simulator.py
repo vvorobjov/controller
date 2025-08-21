@@ -1,5 +1,6 @@
 from typing import Any, List, Tuple
 
+import numpy as np
 import structlog
 from config.plant_config import PlantConfig
 from utils_common.log import tqdm
@@ -66,7 +67,44 @@ class PlantSimulator:
         ]
         self.errors_per_trial: List[float] = []  # Store final error of each trial
 
+        self._capture_state_and_save(self.config.run_paths.input_image)
+
         self.log.info("PlantSimulator initialization complete.")
+
+    def _capture_state_and_save(self, image_path) -> None:
+        from PIL import Image
+
+        self.log.warning("setting up camera...")
+
+        camera_target_position = [0.3, 0.3, 1.4]  # where the camera looks
+        camera_position = [1, 1, 1]  # where the camera is
+        up_vector = [0, 0, 1]  # world "up" direction
+        width = 640
+        height = 480
+        fov = 60
+        aspect = width / height
+        near = 0.1
+        far = 100
+        projection_matrix = self.p.computeProjectionMatrixFOV(fov, aspect, near, far)
+        view_matrix = self.p.computeViewMatrix(
+            camera_position, camera_target_position, up_vector
+        )
+
+        self.log.warning("getting image...")
+        img_arr = self.p.getCameraImage(
+            width,
+            height,
+            viewMatrix=view_matrix,
+            projectionMatrix=projection_matrix,
+            renderer=self.p.ER_BULLET_HARDWARE_OPENGL,
+        )
+
+        self.log.warning("saving image...")
+        rgb_buffer = np.array(img_arr[2])
+        rgb = rgb_buffer[:, :, :3]  # drop alpha
+        Image.fromarray(rgb.astype(np.uint8)).save(image_path)
+        self.log.warning(f"saved image at {str(image_path)}...")
+        raise ValueError("stop here until we've figured out this camera thing.")
 
     def _setup_music_communication(self) -> None:
         """Sets up MUSIC input and output ports and handlers."""
