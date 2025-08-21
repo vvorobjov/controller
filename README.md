@@ -25,10 +25,9 @@ Quick notes before a more complete documentation:
 - run the simulation: `mpirun -np 7 singularity exec --bind ./scratch:/scratch_local --bind ./results:/sim/controller/runs --bind ./artifacts:/sim/controller/artifacts --bind ./tmp:/tmp sim.sif/ music /sim/controller/complete_control/complete.music`
 
 ### NRP without MPI
-- allocate what you need: `salloc --ntasks-per-node=7 --mem=23000MB --account=<your_account_name> --time=01:00:00 --partition=g100_usr_interactive`- run the simulation:
-```
-    singularity exec --bind ./scratch:/scratch_local --bind ./results:/sim/controller/runs --bind ./tmp:/tmp --env EXEC_TIMESTAMP=$(date +%Y%m%d_%H%M%S) sim.sif/ /usr/local/bin/entrypoint.sh NRPCoreSim -c /sim/controller/nrp_simulation_config_nest_singularity.json --cloglevel debug --logdir /tmp/logs
-```
+- edit `batch_job.sh` to make sure you have a valid resource allocation and run command
+- copy it to the HPC
+- run it with `sbatch batch_job.sh`
 
 
 Optionally, mount (`--bind`) `complete_control` for "live" code changes. If paired with vscode remote, you can almost have a fully interactive development session on the cluster... Not sure if there's a way to do client vscode -> cineca HPC -> devcontainer, might check [this](https://github.com/microsoft/vscode-remote-release/issues/3066#issuecomment-1019500216)
