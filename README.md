@@ -25,7 +25,7 @@ Quick notes before a more complete documentation:
 - run the simulation: `mpirun -np 7 singularity exec --bind ./scratch:/scratch_local --bind ./results:/sim/controller/runs --bind ./artifacts:/sim/controller/artifacts --bind ./tmp:/tmp sim.sif/ music /sim/controller/complete_control/complete.music`
 
 ### NRP without MPI
-- edit `batch_job.sh` to make sure you have a valid resource allocation and run command
+- edit `scripts/hpc/batch_job.sh` to make sure you have a valid resource allocation and run command
 - copy it to the HPC
 - run it with `sbatch batch_job.sh`
 

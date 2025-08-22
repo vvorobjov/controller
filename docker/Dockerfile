@@ -56,11 +56,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ARG USER_UID=1000
-ARG USER_GID=1000
+ARG UID=1000
+ARG GID=1000
 ENV USERNAME=simuser
-RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME \
+RUN groupadd --gid $GID $USERNAME && \
+    useradd --uid $UID --gid $GID --create-home --shell /bin/bash $USERNAME \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN mkdir /sim && chown $USERNAME:$USERNAME /sim
 
