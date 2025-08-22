@@ -56,11 +56,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ARG USER_UID=1000
-ARG USER_GID=1000
+ARG UID=1000
+ARG GID=1000
 ENV USERNAME=simuser
-RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID --create-home --shell /bin/bash $USERNAME \
+RUN groupadd --gid $GID $USERNAME && \
+    useradd --uid $UID --gid $GID --create-home --shell /bin/bash $USERNAME \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN mkdir /sim && chown $USERNAME:$USERNAME /sim
 
@@ -296,9 +296,6 @@ ENV PYTHON_MAJOR_MINOR="python${PYTHON_MAJOR}.${PYTHON_MINOR}"
 
 RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUAL_ENV}/lib/${PYTHON_MAJOR_MINOR}/site-packages/nest.pth
 
-
-# COPY scripts/interactive_start.py /usr/local/bin/run_interactive.py
-# RUN chmod +x /usr/local/bin/run_interactive.py
 ARG M1EPROP_PATH=${CONTROLLER_DIR}/motor_cortex/eprop-motor-control
 ARG PFCPLANNER_PATH=${CONTROLLER_DIR}/pfc-planner
 
@@ -354,6 +351,8 @@ ENV SIMULATION_MODE=dev
 FROM runtime AS hpc
 # In HPC, the controller directory is copied into the image and the user is the default simuser.
 ENV SIMULATION_MODE=hpc
+# On HPC do not mount anythin on top of artifacts folder, so that the archive is not overwritten
+ENV BSB_NETWORK_FILE=/tmp/cerebellum_plastic_base.hdf5
 COPY . /sim/controller
 RUN chown -R simuser:simuser /sim/controller
 RUN chmod -R a+rwX /sim
