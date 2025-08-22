@@ -1,3 +1,4 @@
+import time
 from typing import Any, List, Tuple
 
 import numpy as np
@@ -66,7 +67,9 @@ class PlantSimulator:
             [] for _ in range(self.config.NJT)
         ]
         self.errors_per_trial: List[float] = []  # Store final error of each trial
-
+        plane_id = self.p.loadURDF("/sim/controller/complete_control/plant/plane.urdf")
+        while True:
+            time.wait(1)
         self._capture_state_and_save(self.config.run_paths.input_image)
 
         self.log.info("PlantSimulator initialization complete.")
@@ -74,13 +77,13 @@ class PlantSimulator:
     def _capture_state_and_save(self, image_path) -> None:
         from PIL import Image
 
-        self.log.warning("setting up camera...")
+        self.log.debug("setting up camera...")
 
         camera_target_position = [0.3, 0.3, 1.4]  # where the camera looks
-        camera_position = [1, 1, 1]  # where the camera is
+        camera_position = [0, -1, 1.5]  # where the camera is
         up_vector = [0, 0, 1]  # world "up" direction
-        width = 640
-        height = 480
+        width = 1024
+        height = 768
         fov = 60
         aspect = width / height
         near = 0.1
@@ -89,8 +92,7 @@ class PlantSimulator:
         view_matrix = self.p.computeViewMatrix(
             camera_position, camera_target_position, up_vector
         )
-
-        self.log.warning("getting image...")
+        self.log.debug("getting image...")
         img_arr = self.p.getCameraImage(
             width,
             height,
@@ -99,12 +101,13 @@ class PlantSimulator:
             renderer=self.p.ER_BULLET_HARDWARE_OPENGL,
         )
 
-        self.log.warning("saving image...")
+        self.log.debug("saving image...")
         rgb_buffer = np.array(img_arr[2])
         rgb = rgb_buffer[:, :, :3]  # drop alpha
         Image.fromarray(rgb.astype(np.uint8)).save(image_path)
-        self.log.warning(f"saved image at {str(image_path)}...")
-        raise ValueError("stop here until we've figured out this camera thing.")
+        self.log.info(f"saved input image at {str(image_path)}")
+
+        raise ValueError()
 
     def _setup_music_communication(self) -> None:
         """Sets up MUSIC input and output ports and handlers."""

@@ -328,6 +328,8 @@ RUN chmod +x /usr/local/bin/start-vnc.sh
 RUN mkdir -p /home/simuser/.vnc
 COPY scripts/services/xstartup /home/simuser/.vnc/xstartup
 RUN chmod 700 /home/$USERNAME/.vnc/xstartup
+RUN chown -R simuser:simuser /home/$USERNAME/.vnc
+RUN chmod 777 -R  /home/$USERNAME/.vnc
 
 # ensure env is loaded for all shells
 # login shells

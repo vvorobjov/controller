@@ -17,7 +17,7 @@ class GLETrajGeneratorConfig(BaseModel):
 
 class PlannerModuleConfig(BaseModel):
     model_config: ClassVar = {"frozen": True}
-    trajgen_type: TrajGeneratorType = Field(default=TrajGeneratorType.MOCKED)
+    trajgen_type: TrajGeneratorType = Field(default=TrajGeneratorType.GLE)
     gle_config: GLETrajGeneratorConfig = Field(
         default_factory=lambda: GLETrajGeneratorConfig()
     )
@@ -38,7 +38,7 @@ class M1EPropConfig(BaseModel):
 
 class MotorCortexModuleConfig(BaseModel):
     model_config: ClassVar = {"frozen": True}
-    use_m1_eprop: bool = True
+    use_m1_eprop: bool = False
     m1_mock_config: M1MockConfig = Field(default_factory=lambda: M1MockConfig())
     m1_eprop_config: M1EPropConfig = Field(default_factory=lambda: M1EPropConfig())
     fbk_base_rate: float = 0.0
