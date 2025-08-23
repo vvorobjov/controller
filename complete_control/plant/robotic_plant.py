@@ -40,6 +40,7 @@ class RoboticPlant:
         self.bullet_robot = self.bullet_world.LoadRobot()
         self.robot_id = self.bullet_robot._body_id
         self.is_locked = False
+        self.bullet_world.LoadPlane()
         self.log.info("PyBullet initialized and robot loaded", robot_id=self.robot_id)
 
         # Specific joint ID for the 1-DOF arm

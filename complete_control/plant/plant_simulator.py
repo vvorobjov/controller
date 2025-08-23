@@ -67,9 +67,6 @@ class PlantSimulator:
             [] for _ in range(self.config.NJT)
         ]
         self.errors_per_trial: List[float] = []  # Store final error of each trial
-        plane_id = self.p.loadURDF("/sim/controller/complete_control/plant/plane.urdf")
-        while True:
-            time.wait(1)
         self._capture_state_and_save(self.config.run_paths.input_image)
 
         self.log.info("PlantSimulator initialization complete.")
@@ -79,9 +76,9 @@ class PlantSimulator:
 
         self.log.debug("setting up camera...")
 
-        camera_target_position = [0.3, 0.3, 1.4]  # where the camera looks
-        camera_position = [0, -1, 1.5]  # where the camera is
-        up_vector = [0, 0, 1]  # world "up" direction
+        camera_target_position = [0.3, 0.3, 1.5]
+        camera_position = [0, -1, 1.7]
+        up_vector = [0, 0, 1]
         width = 1024
         height = 768
         fov = 60
@@ -106,8 +103,6 @@ class PlantSimulator:
         rgb = rgb_buffer[:, :, :3]  # drop alpha
         Image.fromarray(rgb.astype(np.uint8)).save(image_path)
         self.log.info(f"saved input image at {str(image_path)}")
-
-        raise ValueError()
 
     def _setup_music_communication(self) -> None:
         """Sets up MUSIC input and output ports and handlers."""
