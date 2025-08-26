@@ -1,12 +1,10 @@
+import os
 from pathlib import Path
 
 import numpy as np
 import structlog
-import torch
 from config.core_models import SimulationParams
-from gle_planner import GLEPlanner
 from PIL import Image
-from torchvision import transforms
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger("traj.generate_gle")
 
@@ -14,6 +12,12 @@ _log: structlog.stdlib.BoundLogger = structlog.get_logger("traj.generate_gle")
 def generate_trajectory_gle(
     image_path: Path, model_path: Path, sim: SimulationParams
 ) -> np.ndarray:
+    os.environ["OMP_NUM_THREADS"] = os.getenv("NPROC", "1")
+
+    import torch
+    from gle_planner import GLEPlanner
+    from torchvision import transforms
+
     """
     Generates a trajectory using the pre-trained GLEPlanner model.
 
