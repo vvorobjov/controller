@@ -12,7 +12,6 @@ _log: structlog.stdlib.BoundLogger = structlog.get_logger("traj.generate_gle")
 def generate_trajectory_gle(
     image_path: Path, model_path: Path, sim: SimulationParams
 ) -> np.ndarray:
-    os.environ["OMP_NUM_THREADS"] = os.getenv("NPROC", "1")
 
     import torch
     from pfc_planner.gle_planner import GLEPlanner
