@@ -18,6 +18,10 @@ def generate_trajectory_gle(
     from pfc_planner.gle_planner import GLEPlanner
     from torchvision import transforms
 
+    torch.set_num_threads(int(os.getenv("OMP_NUM_THREADS")))
+    # otherwise torch messes with OMP_NUM_THREADS;
+    # then nest does `assert env(OMP_NUM_THREADS) == kernel.virtual_threads` and fails
+
     """
     Generates a trajectory using the pre-trained GLEPlanner model.
 

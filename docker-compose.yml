@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: hpc
-    command: mpirun -np 4 music /sim/controller/complete_control/complete.music
+    command: gosu simuser mpirun -np 4 music /sim/controller/complete_control/complete.music
 
   simulation-nrp:
     <<: *simulation-base

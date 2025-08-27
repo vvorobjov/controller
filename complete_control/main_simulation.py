@@ -163,7 +163,7 @@ if __name__ == "__main__":
     main_log.info("MasterParams initialized in main_simulation (MUSIC).")
 
     # Setup environment and NEST kernel
-    setup_environment()
+    setup_environment(master_config)
     setup_nest_kernel(
         master_config,
         run_paths.data_nest,

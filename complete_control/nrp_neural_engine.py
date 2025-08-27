@@ -48,7 +48,7 @@ class Script(GrpcEngineScript):
             f.write(self.master_config.model_dump_json(indent=2))
         self.log.info("MasterParams loaded and dumped successfully.")
 
-        setup_environment()
+        setup_environment(self.master_config)
         setup_nest_kernel(
             self.master_config,
             self.run_paths.data_nest,

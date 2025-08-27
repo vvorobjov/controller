@@ -14,9 +14,13 @@ from neural.nest_adapter import nest
 
 
 # --- Configuration and Setup ---
-def setup_environment():
+def setup_environment(master_config: MasterParams):
     log = structlog.get_logger("main.env_setup")
     """Sets up environment variables if needed (e.g., for NESTML)."""
+    os.environ["OMP_NUM_THREADS"] = str(
+        1 if master_config.USE_MUSIC else str(master_config.total_num_virtual_procs)
+    )
+
     try:
         # Check if module is already installed to prevent errors on reset
         if "eglif_cond_alpha_multisyn" not in nest.Models(mtype="nodes"):
