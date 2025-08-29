@@ -267,9 +267,9 @@ ENV OMPI_MCA_plm=^rsh
 # suppress nest startup message
 ENV PYNEST_QUIET=1
 
-ENV BULLET_MUSCLE_DIR=$DEPS_DIR/bullet_muscle_sim
-ENV SDF_MODELS_DIR=/sim/embodiment_sdf_models
-RUN mkdir -p $BULLET_MUSCLE_DIR $SDF_MODELS_DIR
+# ENV BULLET_MUSCLE_DIR=$DEPS_DIR/bullet_muscle_sim
+# ENV SDF_MODELS_DIR=/sim/embodiment_sdf_models
+# RUN mkdir -p $BULLET_MUSCLE_DIR $SDF_MODELS_DIR
 
 # cerebellum
 ENV COMPRESSED_BSB_NETWORK_FILE=${CONTROLLER_DIR}/artifacts/cerebellum_plastic_base.hdf5.gz
@@ -278,8 +278,8 @@ ENV BSB_NETWORK_FILE=${CONTROLLER_DIR}/artifacts/cerebellum_plastic_base.hdf5
 
 # Install bullet muscle simulation and skeleton models
 
-RUN git clone https://github.com/near-nes/bullet_muscle_sim.git $BULLET_MUSCLE_DIR \
-    && git clone https://github.com/near-nes/embodiment_sdf_models.git $SDF_MODELS_DIR
+# RUN git clone https://github.com/near-nes/bullet_muscle_sim.git $BULLET_MUSCLE_DIR \
+    # && git clone https://github.com/near-nes/embodiment_sdf_models.git $SDF_MODELS_DIR
 
 
 
@@ -296,7 +296,7 @@ ENV PYTHON_MAJOR_MINOR="python${PYTHON_MAJOR}.${PYTHON_MINOR}"
 
 RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUAL_ENV}/lib/${PYTHON_MAJOR_MINOR}/site-packages/nest.pth
 
-ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
@@ -344,12 +344,14 @@ FROM runtime AS dev
 ENV SIMULATION_MODE=dev
 ENV SUBMODULES_PATH=${CONTROLLER_DIR}/submodules
 ENV PYTHONPATH="${SUBMODULES_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV SDF_MODELS_DIR=${SUBMODULES_PATH}/embodiment_sdf_models
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 FROM runtime AS hpc
 # >>>>>>>tmp, move to git-installable packages asap TODO
 ENV SUBMODULES_PATH=${CONTROLLER_DIR}/submodules
 ENV PYTHONPATH="${SUBMODULES_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV SDF_MODELS_DIR=${SUBMODULES_PATH}/embodiment_sdf_models
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 # <<<<<<<
 
