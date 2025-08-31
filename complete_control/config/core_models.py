@@ -43,6 +43,7 @@ class OracleData(BaseModel):
     init_joint_angle: float = 90
     tgt_joint_angle: float = 20
     target_visual_offset: float = 4.0
+    target_tolerance_angle_deg: float = 10
     target_color: TargetColor = Field(default=TargetColor.BLUE_LEFT)
     robot_spec: RobotSpecParams = Field(default_factory=lambda: RobotSpecParams())
 

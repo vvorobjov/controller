@@ -278,12 +278,13 @@ class RoboticPlant:
     def check_target_proximity(self) -> bool:
         body_id = self.bullet_robot._body_id
         elbow_state = self.p.getJointState(body_id, 1)[0]
-        if math.isclose(
-            elbow_state, self.target_joint_position_rad, abs_tol=np.deg2rad(10)
-        ):
-            return True
-        else:
-            return False
+        return math.isclose(
+            elbow_state,
+            self.target_joint_position_rad,
+            abs_tol=np.deg2rad(
+                self.config.master_config.simulation.oracle.target_tolerance_angle_deg
+            ),
+        )
 
     def move_shoulder(self, speed: float) -> None:
         hand_state = self.p.getLinkState(
