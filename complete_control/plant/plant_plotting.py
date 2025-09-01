@@ -8,9 +8,9 @@ import structlog
 from config.MasterParams import MasterParams
 from config.paths import RunPaths
 from config.plant_config import PlantConfig
-from draw_schema import draw_schema
 from pydantic import BaseModel
 
+from complete_control.utils_common.draw_schema import draw_schema
 from complete_control.utils_common.generate_signals_minjerk import (
     generate_trajectory_minjerk,
 )
