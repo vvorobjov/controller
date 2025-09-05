@@ -16,7 +16,7 @@ from .sensoryneuron import SensoryNeuron
 
 
 class TrialSection(Enum):
-    TIME_PREP, TIME_MOVE, TIME_POST = range(3)
+    TIME_START, TIME_PREP, TIME_MOVE, TIME_POST, TIME_END_TRIAL = range(5)
 
 
 class PlantSimulator:
@@ -283,7 +283,11 @@ class PlantSimulator:
             self.plant.update_ball_position()
 
     def get_current_section(self, curr_time_s: float):
-        if curr_time_s <= self.config.TIME_PREP_S:
+        if curr_time_s == 0:
+            return TrialSection.TIME_START
+        elif 0 <= (curr_time_s % self.config.TIME_TRIAL_S) < self.config.RESOLUTION_S:
+            return TrialSection.TIME_END_TRIAL
+        elif curr_time_s <= self.config.TIME_PREP_S:
             return TrialSection.TIME_PREP
         elif curr_time_s <= self.config.TIME_MOVE_S + self.config.TIME_PREP_S:
             return TrialSection.TIME_MOVE
@@ -350,7 +354,7 @@ class PlantSimulator:
         )
 
         # Trial end logic (reset plant if needed)
-        is_trial_end_time = self._check_trial_end(current_sim_time_s)
+        is_trial_end_time = curr_section == TrialSection.TIME_END_TRIAL
         if is_trial_end_time:
             final_error_rad = joint_pos_rad - self.config.target_joint_pos_rad
             self.errors_per_trial.append(final_error_rad)
@@ -379,30 +383,6 @@ class PlantSimulator:
                 and current_trial > exp_params.gravity_trial_end
             ):
                 self.plant.set_gravity(False)
-
-    def _check_trial_end(self, current_sim_time_s: float) -> bool:
-        """Check if current step is at the end of a trial.
-
-        Args:
-            current_sim_time_s: Current simulation time in seconds
-
-        Returns:
-            True if this is the end of a trial, False otherwise
-        """
-
-        # Check if current_sim_time_s is (almost) a multiple of TIME_TRIAL_S
-        # Or if it's the last step of the simulation
-        if abs(current_sim_time_s % self.config.TIME_TRIAL_S) < (
-            self.config.RESOLUTION_S / 2.0
-        ) or abs(
-            current_sim_time_s
-            - (self.config.TOTAL_SIM_DURATION_S - self.config.RESOLUTION_S)
-        ) < (
-            self.config.RESOLUTION_S / 2.0
-        ):
-            if not (abs(current_sim_time_s) < self.config.RESOLUTION_S / 2.0):
-                return True
-        return False
 
     def run_simulation(self) -> None:
         """Runs the main simulation loop. **NJT==1**"""
