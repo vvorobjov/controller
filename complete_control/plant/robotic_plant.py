@@ -217,6 +217,12 @@ class RoboticPlant:
             targetValue=self.shoulder_joint_start_position_rad,
             targetVelocity=0.0,
         )
+        self.p.setJointMotorControl2(
+            self.bullet_robot._body_id,
+            self.bullet_robot.SHOULDER_A_JOINT_ID,
+            controlMode=self.p.VELOCITY_CONTROL,
+            targetVelocity=0,
+        )
         self.update_stats()
         self.log.debug(
             "Plant reset to initial position and zero velocity.",
@@ -303,7 +309,6 @@ class RoboticPlant:
             self.bullet_robot.SHOULDER_A_JOINT_ID,
             controlMode=self.p.VELOCITY_CONTROL,
             targetVelocity=speed,
-            force=1000,
         )
 
     def update_ball_position(self):

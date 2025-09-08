@@ -287,9 +287,10 @@ class PlantSimulator:
             return TrialSection.TIME_START
         elif 0 <= (curr_time_s % self.config.TIME_TRIAL_S) < self.config.RESOLUTION_S:
             return TrialSection.TIME_END_TRIAL
-        elif curr_time_s <= self.config.TIME_PREP_S:
+        time_in_trial = curr_time_s % self.config.TIME_TRIAL_S
+        if time_in_trial <= self.config.TIME_PREP_S:
             return TrialSection.TIME_PREP
-        elif curr_time_s <= self.config.TIME_MOVE_S + self.config.TIME_PREP_S:
+        elif time_in_trial <= self.config.TIME_MOVE_S + self.config.TIME_PREP_S:
             return TrialSection.TIME_MOVE
         else:
             return TrialSection.TIME_POST
@@ -364,6 +365,8 @@ class PlantSimulator:
                 sim_time_s=current_sim_time_s,
                 final_error_rad=final_error_rad,
             )
+            self.checked_proximity = False
+            self.target_attached = False
             self.plant.reset_plant()
             self.plant.reset_target()
 
