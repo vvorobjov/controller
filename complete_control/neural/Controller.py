@@ -278,7 +278,10 @@ class Controller:
         p_params = self.plan_params
         N = self.N
         trajectory = generate_traj(
-            p_params, self.sim_params, self.master_params.run_paths.input_image
+            p_params,
+            self.sim_params,
+            self.master_params.run_paths.input_image,
+            self.master_params.run_paths.trajectory,
         )
         self.log.debug(
             "Initializing Planner sub-module",
@@ -287,6 +290,8 @@ class Controller:
             kpl=p_params.kpl,
             base_rate=p_params.base_rate,
             kp=p_params.kp,
+            traj_len=len(trajectory),
+            sim_steps=self.sim_params.sim_steps,
         )
         tmp_pop_p = nest.Create(
             "tracking_neuron_nestml",

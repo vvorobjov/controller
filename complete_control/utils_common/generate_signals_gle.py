@@ -75,10 +75,11 @@ def generate_trajectory_gle(
         model_output[:, TRAJECTORY_LEN:],
     )
     predicted_trajectory = predicted_trajectory_tensor.squeeze(0).cpu().numpy()
+    _, predicted_choice_idx = torch.max(pred_choice_logits, 1)
 
     predicted_trajectory_padded = np.concatenate(
         [predicted_trajectory, np.zeros(sim.manual_control_steps)]
     )
     traj_all_trials = np.tile(predicted_trajectory_padded, sim.n_trials)
 
-    return traj_all_trials
+    return traj_all_trials, predicted_choice_idx

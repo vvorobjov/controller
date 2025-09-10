@@ -46,6 +46,7 @@ class RunPaths:
     figures_receiver: Path
     logs: Path
     params_json: Path
+    trajectory: Path
 
     @classmethod
     def from_run_id(cls, run_timestamp: str):
@@ -68,6 +69,7 @@ class RunPaths:
         logs_dir = run_dir / "logs"
         params_path = run_dir / f"params{run_timestamp}.json"
         input_image = run_dir / "input_image.bmp"
+        trajectory = run_dir / "traj.npy"
 
         # Create directories if they don't exist
         for dir_path in [
@@ -89,6 +91,7 @@ class RunPaths:
             figures_receiver=figures_receiver_dir,
             logs=logs_dir,
             params_json=params_path,
+            trajectory=trajectory,
         )
 
 
