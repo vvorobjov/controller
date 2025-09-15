@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class TrajGeneratorType(str, Enum):
     MOCKED = "mocked"
     GLE = "gle"
-    ANN = "ann"
+    # ANN = "ann"
 
 
 class GLETrajGeneratorConfig(BaseModel):
