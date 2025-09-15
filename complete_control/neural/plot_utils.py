@@ -198,6 +198,7 @@ def plot_population_single(
     ax[0].set_ylabel("raster", fontsize=15)
     ax[0].set_title(title, fontsize=16)
     ax[0].set_ylim(bottom=0, top=pop_data.population_size + 1)
+
     for i, axs in enumerate(ax):
         axs.spines["top"].set_visible(False)
         axs.spines["right"].set_visible(False)
@@ -273,6 +274,8 @@ def plot_controller_outputs(run_paths: RunPaths):
         "brainstem",
         "mc_out",
         "mc_m1",
+        "mc_ffwd",
+        "mc_fbk",
         "state",
         "sensoryneur",
         "cereb_core_forw_dcnp",

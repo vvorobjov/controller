@@ -232,13 +232,13 @@ class CerebellumHandler:
             "simulation_steps": len(self.total_time_vect),
             "sdev": params.sdev,
         }
+
         plan_to_inv = nest.Create("rb_neuron_nestml", self.N_mossy_inv)
-        signal_sensibility = np.linspace(
-            -params.freq_max, params.freq_max, self.N_mossy_inv
-        )
+        signal_sensibility = np.linspace(0, params.freq_max, self.N_mossy_inv)
         nest.SetStatus(plan_to_inv, pop_params)
         for i, neuron in enumerate(plan_to_inv):
             nest.SetStatus(neuron, {"desired": signal_sensibility[i]})
+
         self.interface_pops.plan_to_inv = self._create_pop_view(
             plan_to_inv, "plan_to_inv"
         )
@@ -530,9 +530,7 @@ class CerebellumHandler:
             syn_spec=syn_spec_n,
         )
 
-        # Connect StateEst -> Inv Error (Inhibitory?)
-        # TODO why is this called "plan" when it is the state? Using same spec for now.
-        state_err_inv_spec = self.conn_params.plan_to_inv_error_inv
+        state_err_inv_spec = self.conn_params.state_to_inv_error_inv
         syn_spec_p = state_err_inv_spec.model_dump(exclude_none=True)
         syn_spec_n = state_err_inv_spec.model_copy(
             update={"weight": -state_err_inv_spec.weight}
@@ -599,6 +597,7 @@ class CerebellumHandler:
             "all_to_all",
             syn_spec=syn_spec_p,
         )
+
         # DCN minus inhibits Positive Prediction
         nest.Connect(
             self.cerebellum.populations.forw_dcnp_n_view.pop,
@@ -611,14 +610,15 @@ class CerebellumHandler:
             self.cerebellum.populations.forw_dcnp_n_view.pop,
             self.controller_pops.pred_n.pop,
             "all_to_all",
-            syn_spec=syn_spec_p,
+            syn_spec=syn_spec_n,
         )
+
         # DCN plus inhibits Negative Prediction
         nest.Connect(
             self.cerebellum.populations.forw_dcnp_p_view.pop,
             self.controller_pops.pred_n.pop,
             "all_to_all",
-            syn_spec_n,
+            syn_spec_p,
         )
 
         # --- Connections TO Cerebellum Controller Interfaces (FROM controller_pops) ---
@@ -718,10 +718,8 @@ class CerebellumHandler:
             syn_spec=syn_spec_n,
         )
 
-        # StateEst -> Cereb State To Inv Input
-        # TODO: Check if "planner_plan_to_inv" is the correct conn_spec or if a dedicated one like "state_state_to_inv" is needed.
         state_sti_spec = (
-            self.conn_params.planner_plan_to_inv
+            self.conn_params.state_state_to_inv
         )  # Using planner_plan_to_inv as per existing code
         syn_spec_p = state_sti_spec.model_dump(exclude_none=True)
         syn_spec_n = state_sti_spec.model_copy(
