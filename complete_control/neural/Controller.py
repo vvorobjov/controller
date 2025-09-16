@@ -16,6 +16,7 @@ from config.module_params import (
 from config.population_params import PopulationsParams
 from neural.nest_adapter import nest
 from plant.sensoryneuron import SensoryNeuron
+from utils_common.generate_signals import generate_traj
 
 from .ControllerPopulations import ControllerPopulations
 from .motorcortex import MotorCortex
@@ -60,8 +61,6 @@ class Controller:
         dof_id: int,
         N: int,
         total_time_vect: np.ndarray,
-        trajectory_slice: np.ndarray,
-        motor_cmd_slice: np.ndarray,
         mc_params: MotorCortexModuleConfig,
         plan_params: PlannerModuleConfig,
         spine_params: SpineModuleConfig,
@@ -92,8 +91,6 @@ class Controller:
         self.dof_id = dof_id
         self.N = N
         self.total_time_vect = total_time_vect
-        self.trajectory_slice = trajectory_slice
-        self.motor_cmd_slice = motor_cmd_slice
 
         self.weights_history = defaultdict(lambda: defaultdict(list))
         self.mc_params = mc_params
@@ -276,10 +273,16 @@ class Controller:
             nest_pop, self.total_time_vect, to_file=to_file, label=full_label
         )
 
-    # --- Build Methods (Example: Planner) ---
+    # --- Build Methods ---
     def _build_planner(self, to_file=False):
         p_params = self.plan_params
         N = self.N
+        trajectory = generate_traj(
+            p_params,
+            self.sim_params,
+            self.master_params.run_paths.input_image,
+            self.master_params.run_paths.trajectory,
+        )
         self.log.debug(
             "Initializing Planner sub-module",
             N=N,
@@ -287,6 +290,8 @@ class Controller:
             kpl=p_params.kpl,
             base_rate=p_params.base_rate,
             kp=p_params.kp,
+            traj_len=len(trajectory),
+            sim_steps=self.sim_params.sim_steps,
         )
         tmp_pop_p = nest.Create(
             "tracking_neuron_nestml",
@@ -295,8 +300,8 @@ class Controller:
                 "kp": p_params.kp,
                 "base_rate": p_params.base_rate,
                 "pos": True,
-                "traj": self.trajectory_slice.tolist(),
-                "simulation_steps": len(self.trajectory_slice),
+                "traj": trajectory.tolist(),
+                "simulation_steps": self.sim_params.sim_steps,
             },
         )
         tmp_pop_n = nest.Create(
@@ -306,8 +311,8 @@ class Controller:
                 "kp": p_params.kp,
                 "base_rate": p_params.base_rate,
                 "pos": False,
-                "traj": self.trajectory_slice.tolist(),
-                "simulation_steps": len(self.trajectory_slice),
+                "traj": trajectory.tolist(),
+                "simulation_steps": self.sim_params.sim_steps,
             },
         )
         self.pops.planner_p = self._create_pop_view(tmp_pop_p, "planner_p", to_file)
@@ -320,19 +325,13 @@ class Controller:
             njt=1,
             mc_params=self.mc_params,
         )
-        self.mc = MotorCortex(
-            self.N,
-            NJT,
-            self.total_time_vect,
-            self.motor_cmd_slice,
-            **self.mc_params.model_dump(),
-        )
-        self.pops.mc_ffwd_p = self.mc.ffwd_p[0]
-        self.pops.mc_ffwd_n = self.mc.ffwd_n[0]
-        self.pops.mc_fbk_p = self.mc.fbk_p[0]
-        self.pops.mc_fbk_n = self.mc.fbk_n[0]
-        self.pops.mc_out_p = self.mc.out_p[0]
-        self.pops.mc_out_n = self.mc.out_n[0]
+        self.mc = MotorCortex(self.N, self.mc_params, self.sim_params)
+        self.pops.mc_M1_p = self.mc.m1_out_p
+        self.pops.mc_M1_n = self.mc.m1_out_n
+        self.pops.mc_fbk_p = self.mc.fbk_p
+        self.pops.mc_fbk_n = self.mc.fbk_n
+        self.pops.mc_out_p = self.mc.out_p
+        self.pops.mc_out_n = self.mc.out_n
 
     def _build_state_estimator(self, to_file=False):
         buf_sz = self.state_params.buffer_size
@@ -384,7 +383,7 @@ class Controller:
             "kp": params.kp,
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
-            "simulation_steps": len(self.total_time_vect),
+            "simulation_steps": self.sim_params.sim_steps,
         }
 
         pop_p = nest.Create("diff_neuron_nestml", self.N)
@@ -402,7 +401,7 @@ class Controller:
             "kp": params.kp,
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
-            "simulation_steps": len(self.total_time_vect),
+            "simulation_steps": self.sim_params.sim_steps,
         }
         self.log.debug("Creating feedback neurons", **pop_params)
 
@@ -421,7 +420,7 @@ class Controller:
             "kp": params.kp,
             "buffer_size": params.buffer_size,
             "base_rate": params.base_rate,
-            "simulation_steps": len(self.total_time_vect),
+            "simulation_steps": self.sim_params.sim_steps,
         }
         self.log.debug("Creating output neurons (brainstem)", **pop_params)
 
@@ -438,8 +437,10 @@ class Controller:
         """Connects the created populations using PopView attributes."""
         self.log.debug("Connecting internal controller blocks")
 
+        # Planner -> M1
+        self.mc.connect(self.pops.planner_p, self.pops.planner_n)
+
         # Planner -> Motor Cortex Feedback Input
-        # if self.pops.planner_p and self.pops.mc_fbk_p:  # Check populations exist
         conn_spec = self.conn_params.planner_mc_fbk
         syn_spec_p = conn_spec.model_dump(exclude_none=True)
         syn_spec_n = conn_spec.model_copy(
@@ -476,7 +477,6 @@ class Controller:
         )
 
         # State Estimator -> Motor Cortex Feedback Input (Inhibitory)
-        # if self.pops.state_p and self.pops.mc_fbk_p:
         conn_spec_state_mc_fbk = self.conn_params.state_mc_fbk
         self.log.debug(
             "Connecting StateEst to MC Fbk (Inhibitory)",
@@ -720,7 +720,7 @@ class Controller:
                 "kp": 0,
                 "buffer_size": buffer_len,
                 "base_rate": 0,
-                "simulation_steps": len(self.total_time_vect),
+                "simulation_steps": self.sim_params.sim_steps,
                 "pos": True,
             },
         )

@@ -2,9 +2,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-COMPLETE_CONTROL = Path(__file__).parent.parent.resolve()
-ROOT = COMPLETE_CONTROL.parent
-RUNS_DIR = ROOT / "runs"  # Base directory for all runs
+ROOT = Path(os.getenv("CONTROLLER_DIR"))
+COMPLETE_CONTROL = ROOT / "complete_control"
+RUNS_DIR = Path(os.getenv("RUNS_PATH", ROOT / "runs"))  # Base directory for all runs
 
 FOLDER_NAME_NEURAL_FIGS = "figs_neural"
 FOLDER_NAME_ROBOTIC_FIGS = "figs_robotic"
@@ -23,18 +23,30 @@ INVERSE = CEREBELLUM_CONFIGS / "inverse.yaml"
 BASE = CEREBELLUM_CONFIGS / "microzones_complete_nest.yaml"
 PATH_HDF5 = os.environ.get("BSB_NETWORK_FILE")
 
+SUBMODULES = ROOT / "submodules"
+
+M1 = SUBMODULES / "motor_cortex" / "eprop-motor-control"
+M1_CONFIG = M1 / "config" / "config.yaml"
+M1_WEIGHTS = (
+    M1 / "sim_results" / "default_plastic_False_manualRBF_False" / "trained_weights.npz"
+)
+
+PFC_PLANNER = SUBMODULES / "pfc_planner"
+
 
 @dataclass(frozen=True)
 class RunPaths:
     """Holds the standard paths for a single simulation run."""
 
     run: Path
+    input_image: Path
     data_nest: Path
     robot_result: Path
     figures: Path
     figures_receiver: Path
     logs: Path
     params_json: Path
+    trajectory: Path
 
     @classmethod
     def from_run_id(cls, run_timestamp: str):
@@ -56,6 +68,8 @@ class RunPaths:
         figures_receiver_dir = run_dir / FOLDER_NAME_ROBOTIC_FIGS
         logs_dir = run_dir / "logs"
         params_path = run_dir / f"params{run_timestamp}.json"
+        input_image = run_dir / "input_image.bmp"
+        trajectory = run_dir / "traj.npy"
 
         # Create directories if they don't exist
         for dir_path in [
@@ -70,12 +84,14 @@ class RunPaths:
 
         return cls(
             run=run_dir,
+            input_image=input_image,
             data_nest=data_nest_dir,
             robot_result=robot_result,
             figures=figures_dir,
             figures_receiver=figures_receiver_dir,
             logs=logs_dir,
             params_json=params_path,
+            trajectory=trajectory,
         )
 
 

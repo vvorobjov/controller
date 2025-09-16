@@ -1,9 +1,11 @@
+import math
+import time
 from typing import List, Tuple
 
 import numpy as np
 import structlog
-from arm_1dof.bullet_arm_1dof import BulletArm1Dof
-from arm_1dof.robot_arm_1dof import RobotArm1Dof
+from bullet_muscle_sim.arm_1dof.bullet_arm_1dof import BulletArm1Dof
+from bullet_muscle_sim.arm_1dof.robot_arm_1dof import RobotArm1Dof
 from config.plant_config import PlantConfig
 
 
@@ -30,7 +32,7 @@ class RoboticPlant:
         self.p = pybullet_instance
 
         # Initialize BulletArm1Dof helper
-        self.bullet_world = BulletArm1Dof()
+        self.bullet_world = BulletArm1Dof(self.p)
 
         if self.config.CONNECT_GUI:
             self.bullet_world.InitPybullet(bullet_connect=self.p.GUI)
@@ -39,8 +41,17 @@ class RoboticPlant:
 
         self.bullet_robot = self.bullet_world.LoadRobot()
         self.robot_id = self.bullet_robot._body_id
-        self.is_locked_post = False
-        self.is_locked_pre = False
+        self.shoulder_joint_id = self.bullet_robot.SHOULDER_A_JOINT_ID
+        self.elbow_joint_locked = False
+        self.ball = None
+        self.bullet_world.LoadPlane()
+
+        self.target_position = self._set_EE_pos(
+            config.target_joint_pos_rad
+            + config.master_config.simulation.oracle.tgt_visual_offset_rad
+        )
+        self.reset_target()
+        self.shoulder_joint_start_position_rad = 0
         self.log.info("PyBullet initialized and robot loaded", robot_id=self.robot_id)
 
         # Specific joint ID for the 1-DOF arm
@@ -67,6 +78,39 @@ class RoboticPlant:
         return self.p.getLinkState(
             self.bullet_robot._body_id, RobotArm1Dof.HAND_LINK_ID
         )[0]
+
+    def _capture_state_and_save(self, image_path) -> None:
+        from PIL import Image
+
+        self.log.debug("setting up camera...")
+
+        camera_target_position = [0.3, 0.3, 1.5]
+        camera_position = [0, -1, 1.7]
+        up_vector = [0, 0, 1]
+        width = 1024
+        height = 768
+        fov = 60
+        aspect = width / height
+        near = 0.1
+        far = 100
+        projection_matrix = self.p.computeProjectionMatrixFOV(fov, aspect, near, far)
+        view_matrix = self.p.computeViewMatrix(
+            camera_position, camera_target_position, up_vector
+        )
+        self.log.debug("getting image...")
+        img_arr = self.p.getCameraImage(
+            width,
+            height,
+            viewMatrix=view_matrix,
+            projectionMatrix=projection_matrix,
+            renderer=self.p.ER_BULLET_HARDWARE_OPENGL,
+        )
+
+        self.log.debug("saving image...")
+        rgb_buffer = np.array(img_arr[2])
+        rgb = rgb_buffer[:, :, :3]  # drop alpha
+        Image.fromarray(rgb.astype(np.uint8)).save(image_path)
+        self.log.info(f"saved input image at {str(image_path)}")
 
     def _test_init_tgt_positions(self) -> None:
         self.init_hand_pos_ee = self._set_EE_pos(self.initial_joint_position_rad)
@@ -125,7 +169,7 @@ class RoboticPlant:
 
         return pose_xyz, linear_velocity_xyz
 
-    def set_joint_torques(self, torques: List[float]) -> None:
+    def set_elbow_joint_torque(self, torques: List[float]) -> None:
         """
         Applies the given torques to the elbow joint.
 
@@ -142,8 +186,6 @@ class RoboticPlant:
                 "Torques list must contain exactly one value for 1-DOF arm."
             )
         self.unlock_joint()
-        self.is_locked_post = False
-        self.is_locked_pre = False
         self.bullet_robot.SetJointTorques(
             joint_ids=[self.elbow_joint_id], torques=torques
         )
@@ -167,15 +209,35 @@ class RoboticPlant:
             targetValue=self.initial_joint_position_rad,
             targetVelocity=0.0,
         )
+        self.p.resetJointState(
+            bodyUniqueId=self.robot_id,
+            jointIndex=self.shoulder_joint_id,
+            targetValue=self.shoulder_joint_start_position_rad,
+            targetVelocity=0.0,
+        )
+        self.p.setJointMotorControl2(
+            self.bullet_robot._body_id,
+            self.bullet_robot.SHOULDER_A_JOINT_ID,
+            controlMode=self.p.VELOCITY_CONTROL,
+            targetVelocity=0,
+        )
         self.update_stats()
         self.log.debug(
             "Plant reset to initial position and zero velocity.",
             target_pos_rad=self.initial_joint_position_rad,
         )
 
-    def lock_joint_post(self) -> None:
-        """Lock joint at its current position using position control."""
-        if not self.is_locked_post:
+    def reset_target(self) -> None:
+        if self.ball:
+            self.p.removeBody(self.ball)
+        self.ball = self.bullet_world.LoadTarget(
+            self.target_position,
+            self.config.master_config.simulation.oracle.target_color.value,
+        )
+
+    def lock_elbow_joint(self) -> None:
+        """Lock elbow joint at its current position using position control."""
+        if not self.elbow_joint_locked:
             self.log.debug("setting joint torque to zero")
             current_joint_pos_rad, vel = self.get_joint_state()
             self.log.debug("current joint state", pos=current_joint_pos_rad, vel=vel)
@@ -204,30 +266,7 @@ class RoboticPlant:
             self.log.debug(
                 "Joint locked at current position", pos=current_joint_pos_rad, vel=vel
             )
-            self.is_locked_post = True
-
-    def lock_joint_pre(self) -> None:
-        """Lock joint at its initial position using position control."""
-        if not self.is_locked_pre:
-            self.log.debug("setting joint torque to zero")
-
-            # First reset state with zero velocity
-            self.p.resetJointState(
-                bodyUniqueId=self.robot_id,
-                jointIndex=self.elbow_joint_id,
-                targetValue=self.initial_joint_position_rad,
-                targetVelocity=0.0,
-            )
-
-            self.p.setJointMotorControl2(
-                bodyIndex=self.robot_id,
-                jointIndex=self.elbow_joint_id,
-                targetPosition=self.initial_joint_position_rad,
-                controlMode=self.p.VELOCITY_CONTROL,
-                targetVelocity=0.0,
-                force=10000,  # whatever is strong enough to hold it
-            )
-            self.is_locked_pre = True
+            self.elbow_joint_locked = True
 
     def unlock_joint(self) -> None:
         """Unlock joint by setting it to velocity control mode."""
@@ -239,3 +278,44 @@ class RoboticPlant:
             controlMode=self.p.VELOCITY_CONTROL,
             force=0,
         )
+        self.elbow_joint_locked = False
+
+    def check_target_proximity(self) -> bool:
+        body_id = self.bullet_robot._body_id
+        elbow_state = self.p.getJointState(body_id, 1)[0]
+        return math.isclose(
+            elbow_state,
+            self.target_joint_position_rad,
+            abs_tol=np.deg2rad(
+                self.config.master_config.simulation.oracle.target_tolerance_angle_deg
+            ),
+        )
+
+    def move_shoulder(self, speed: float) -> None:
+        hand_state = self.p.getLinkState(
+            self.bullet_robot._body_id, self.bullet_robot.HAND_LINK_ID
+        )
+        hand_pos, hand_orn = hand_state[0], hand_state[1]
+        inv_hand_pos, inv_hand_orn = self.p.invertTransform(hand_pos, hand_orn)
+
+        ball_pos, ball_orn = self.p.getBasePositionAndOrientation(self.ball)
+        self.ball_hand_rel_pos, self.ball_hand_rel_orn = self.p.multiplyTransforms(
+            inv_hand_pos, inv_hand_orn, ball_pos, ball_orn
+        )
+
+        move = self.p.setJointMotorControl2(
+            self.bullet_robot._body_id,
+            self.bullet_robot.SHOULDER_A_JOINT_ID,
+            controlMode=self.p.VELOCITY_CONTROL,
+            targetVelocity=speed,
+        )
+
+    def update_ball_position(self):
+        hand_state = self.p.getLinkState(
+            self.bullet_robot._body_id, self.bullet_robot.HAND_LINK_ID
+        )
+        hand_pos, hand_orn = hand_state[0], hand_state[1]
+        ball_pos, ball_orn = self.p.multiplyTransforms(
+            hand_pos, hand_orn, self.ball_hand_rel_pos, self.ball_hand_rel_orn
+        )
+        self.p.resetBasePositionAndOrientation(self.ball, ball_pos, ball_orn)

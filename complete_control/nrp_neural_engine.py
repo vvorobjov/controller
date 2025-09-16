@@ -15,7 +15,6 @@ from neural_simulation_lib import (
 )
 from nrp_core.engines.python_grpc import GrpcEngineScript
 from nrp_protobuf import nrpgenericproto_pb2, wrappers_pb2
-from utils_common.generate_analog_signals import generate_signals
 from utils_common.profile import Profile
 
 NANO_SEC = 1e-9
@@ -44,28 +43,21 @@ class Script(GrpcEngineScript):
         self.log: structlog.stdlib.BoundLogger = structlog.get_logger("nrp_neural")
         self.log.info(f"Engine Log Path: {self.run_paths.logs}")
 
-        self.master_config = MasterParams.from_runpaths(self.run_paths, USE_MUSIC=False)
+        self.master_config = MasterParams.from_runpaths(
+            self.run_paths, USE_MUSIC=False, PLOT_AFTER_SIMULATE=False
+        )
         with open(self.run_paths.params_json, "w") as f:
             f.write(self.master_config.model_dump_json(indent=2))
         self.log.info("MasterParams loaded and dumped successfully.")
 
-        setup_environment()
+        setup_environment(self.master_config)
         setup_nest_kernel(
             self.master_config,
             self.run_paths.data_nest,
         )
         self.log.info("Environment and NEST kernel setup complete.")
 
-        trj, motor_commands = generate_signals(
-            self.master_config.experiment, self.master_config.simulation
-        )
-        self.log.info("Input data (trajectory, motor_commands) generated.")
-
-        self.controllers = create_controllers(
-            self.master_config,
-            trj,
-            motor_commands,
-        )
+        self.controllers = create_controllers(self.master_config)
         self.log.info(f"Created {len(self.controllers)} controllers.")
         self.sensory_profile = Profile()
         self.sim_profile = Profile()
@@ -75,7 +67,7 @@ class Script(GrpcEngineScript):
         # joint_pos_rad (datapack<Double>)
         self._registerDataPack("joint_pos_rad", wrappers_pb2.DoubleValue)
         proto_wrapper = wrappers_pb2.DoubleValue()
-        proto_wrapper.value = self.master_config.experiment.init_joint_angle
+        proto_wrapper.value = self.master_config.simulation.oracle.init_joint_angle
         self._setDataPack("joint_pos_rad", proto_wrapper)
         # control_cmd (datapack<Double[]>)
         self._registerDataPack("control_cmd", nrpgenericproto_pb2.ArrayDouble)

@@ -7,11 +7,10 @@ import pybullet as p
 import structlog
 from config.plant_config import PlantConfig
 from nrp_core.engines.python_grpc import GrpcEngineScript
+from nrp_protobuf import nrpgenericproto_pb2, wrappers_pb2
 from plant.plant_plotting import plot_plant_outputs
 from plant.plant_simulator import PlantSimulator
 from utils_common.profile import Profile
-
-from nrp_protobuf import nrpgenericproto_pb2, wrappers_pb2
 
 
 class Script(GrpcEngineScript):
@@ -43,7 +42,9 @@ class Script(GrpcEngineScript):
         # joint_pos_rad (datapack<Double>)
         self._registerDataPack("joint_pos_rad", wrappers_pb2.DoubleValue)
         proto_wrapper = wrappers_pb2.DoubleValue()
-        proto_wrapper.value = self.config.master_config.experiment.init_joint_angle
+        proto_wrapper.value = (
+            self.config.master_config.simulation.oracle.init_joint_angle
+        )
         self._setDataPack("joint_pos_rad", proto_wrapper)
         # control_cmd (datapack<Double[]>)
         self._registerDataPack("control_cmd", nrpgenericproto_pb2.ArrayDouble)

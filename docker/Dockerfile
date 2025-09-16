@@ -1,7 +1,6 @@
 ARG PYTHON_MAJOR=3
 ARG PYTHON_MINOR=10
 
-# FROM python:${PYTHON_MAJOR}.${PYTHON_MINOR}-slim-bookworm AS base
 FROM ubuntu:jammy AS base
 
 ARG PYTHON_MAJOR
@@ -93,6 +92,7 @@ ENV CEREBELLUM_PATH=/sim/cerebellum
 ENV LD_LIBRARY_PATH="${MUSIC_INSTALL_DIR}/lib"
 
 RUN mkdir -p $INSTALL_DIR $DEPS_DIR $NEST_INSTALL_DIR $MUSIC_INSTALL_DIR
+COPY ./docker/constraints.txt /tmp/constraints.txt
 
 # openmpi, music and nest
 FROM base AS builder
@@ -145,15 +145,13 @@ RUN tar xfz $OMPI_GZ \
 
 ENV CFLAGS=-O2
 # ^ for https://github.com/mpi4py/mpi4py/issues/652
-COPY ./docker/requirements_base.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements_base.txt
+    pip install cython mpilock mpi4py -c /tmp/constraints.txt
 ENV CFLAGS=
 
-####################### MUSIC #######################
-# Install MUSIC - pinned to last commit to ensure compatibility
 WORKDIR $DEPS_DIR
 
+####################### MUSIC #######################
 RUN git clone https://github.com/INCF/MUSIC \
     && cd MUSIC \
     && git checkout 6d12edf7094e1dbb473dd55f6fcbd0825f30b811 \
@@ -170,7 +168,6 @@ WORKDIR $DEPS_DIR
 RUN git clone --depth 1 --branch v${NEST_VERSION} https://github.com/nest/nest-simulator/
 WORKDIR ${DEPS_DIR}/nest-simulator
 
-# RUN pip install -r requirements_pynest.txt
 RUN mkdir -p nest-build \
     && cd nest-build \
     && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NEST_INSTALL_DIR \
@@ -187,14 +184,12 @@ RUN mkdir -p nest-build \
     && make -j$(nproc) \
     && make install
 
-## atch nest-server
+# patch nest-server
 RUN sed -i 's/jsonify(response)/jsonify(nest.serialize_data(response))/' "${NEST_PYTHON_MODULE_PATH}"/server/hl_api_server.py
 COPY ./docker/hl_api_types.py "${NEST_PYTHON_MODULE_PATH}"/lib/hl_api_types.py
 
 
-# # nrp
-# FROM base AS builder-nrp
-
+####################### NRP #######################
 ENV NRP_INSTALL_DIR=${INSTALL_DIR}/nrp
 ENV NRP_DEPS_INSTALL_DIR=${INSTALL_DIR}/nrp_deps
 
@@ -219,7 +214,7 @@ RUN git clone https://github.com/eclipse/paho.mqtt.cpp \
 
 COPY ./docker/requirements_nrp.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements_nrp.txt
+    pip install -r requirements_nrp.txt -c /tmp/constraints.txt
 
 ENV NRP_SRC_DIR=/tmp/nrp-core-src
 RUN mkdir -p /tmp/nrp-core-src
@@ -238,15 +233,29 @@ COPY --chown=${USERNAME}:${USERNAME} nrp-core/.ci/20-build.sh ${NRP_SRC_DIR}/.ci
 RUN cd ${NRP_SRC_DIR} && ls -al && bash .ci/11-prepare-build.sh && bash .ci/20-build.sh
 
 
-# # cerebellum model
+####################### CEREBELLUM+MODELS #######################
 RUN git clone https://github.com/near-nes/cerebellar-models $CEREBELLUM_PATH \
     && cd $CEREBELLUM_PATH \
-    && git checkout 53656eea5c5dd671371ff3b4f1ac0be9cadf32e9\
+    && git checkout 06974a57c233ac5efad6cfae560d2b7eb509027d\
     && cd custom_stdp \
     && cmake . \
     && make \
     && make install
 
+# parallelize slow pip installs    
+FROM base AS core_reqs
+WORKDIR ${DEPS_DIR}
+COPY ./docker/requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt -c /tmp/constraints.txt
+
+FROM base AS planner_reqs
+WORKDIR ${DEPS_DIR}
+# split from reqs to download CPU only
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install gle-code -c /tmp/constraints.txt
 
 # final runtime image
 FROM base AS runtime
@@ -255,46 +264,29 @@ ENV NRP_INSTALL_DIR=${INSTALL_DIR}/nrp
 ENV NRP_DEPS_INSTALL_DIR=${INSTALL_DIR}/nrp_deps
 
 ENV PATH="${VIRTUAL_ENV}/bin:${NRP_INSTALL_DIR}/bin:${MUSIC_INSTALL_DIR}/bin:${NEST_INSTALL_DIR}/bin:${OMPI_INSTALL_DIR}/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${OMPI_INSTALL_DIR}/lib64:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH=${NRP_INSTALL_DIR}/lib:${NRP_DEPS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH="${OMPI_INSTALL_DIR}/lib64:${NRP_INSTALL_DIR}/lib:${NRP_DEPS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}"
 
 COPY --from=builder ${INSTALL_DIR} ${INSTALL_DIR}
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY --from=builder ${CEREBELLUM_PATH} ${CEREBELLUM_PATH}
+COPY --from=core_reqs ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+COPY --from=planner_reqs ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 # openMPI needs this if no ssh/rsh available
 ENV OMPI_MCA_plm=^rsh
 
 # suppress nest startup message
 ENV PYNEST_QUIET=1
 
-ENV BULLET_MUSCLE_DIR=$DEPS_DIR/bullet_muscle_sim
-ENV SDF_MODELS_DIR=/sim/embodiment_sdf_models
-RUN mkdir -p $BULLET_MUSCLE_DIR $SDF_MODELS_DIR
-
 # cerebellum
 ENV COMPRESSED_BSB_NETWORK_FILE=${CONTROLLER_DIR}/artifacts/cerebellum_plastic_base.hdf5.gz
 ENV BSB_NETWORK_FILE=${CONTROLLER_DIR}/artifacts/cerebellum_plastic_base.hdf5
 
-
-# Install bullet muscle simulation and skeleton models
-
-RUN git clone https://github.com/near-nes/bullet_muscle_sim.git $BULLET_MUSCLE_DIR \
-    && git clone https://github.com/near-nes/embodiment_sdf_models.git $SDF_MODELS_DIR
-
-
-
-WORKDIR ${DEPS_DIR}
-COPY ./docker/requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
-
 ENV PYTHON_MAJOR_MINOR="python${PYTHON_MAJOR}.${PYTHON_MINOR}"
 
+# point nest to nest installation
 RUN echo ${NEST_INSTALL_DIR}/lib/${PYTHON_MAJOR_MINOR}/site-packages >> ${VIRTUAL_ENV}/lib/${PYTHON_MAJOR_MINOR}/site-packages/nest.pth
-
-
-
-ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${BULLET_MUSCLE_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+# pythonpath construction
+ENV PYTHONPATH="${NRP_INSTALL_DIR}/lib/python${PYTHON_MAJOR}.${PYTHON_MINOR}/site-packages:${CONTROLLER_DIR}:${CEREBELLUM_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 WORKDIR /sim
@@ -303,15 +295,10 @@ WORKDIR /sim
 EXPOSE 5901
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
 
-RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-    libgomp1
-
 USER 0
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 # >>>>>>>>>> VNC SETUP >>>>>>>>>>>>>>
-ARG VNC_PASSWORD="vncpass"
-ENV VNC_PASSWORD=${VNC_PASSWORD}
 ENV VNC_DISPLAY=":1"
 ENV DISPLAY="${VNC_DISPLAY}"
 COPY scripts/services/start-vnc.sh /usr/local/bin/start-vnc.sh
@@ -320,6 +307,8 @@ RUN chmod +x /usr/local/bin/start-vnc.sh
 RUN mkdir -p /home/simuser/.vnc
 COPY scripts/services/xstartup /home/simuser/.vnc/xstartup
 RUN chmod 700 /home/$USERNAME/.vnc/xstartup
+RUN chown -R simuser:simuser /home/$USERNAME/.vnc
+RUN chmod 777 -R  /home/$USERNAME/.vnc
 
 # ensure env is loaded for all shells
 # login shells
@@ -340,8 +329,19 @@ RUN echo "export DISPLAY=${VNC_DISPLAY}" >> /etc/bash.bashrc
 FROM runtime AS dev
 # In dev, the controller directory is mounted from the host and the user is the same as the host user.
 ENV SIMULATION_MODE=dev
+ENV SUBMODULES_PATH=${CONTROLLER_DIR}/submodules
+ENV PYTHONPATH="${SUBMODULES_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV SDF_MODELS_DIR=${SUBMODULES_PATH}/embodiment_sdf_models
+RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
 
 FROM runtime AS hpc
+# >>>>>>>tmp, move to git-installable packages asap TODO
+ENV SUBMODULES_PATH=${CONTROLLER_DIR}/submodules
+ENV PYTHONPATH="${SUBMODULES_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
+ENV SDF_MODELS_DIR=${SUBMODULES_PATH}/embodiment_sdf_models
+RUN echo "Constructed PYTHONPATH: ${PYTHONPATH}"
+# <<<<<<<
+
 # In HPC, the controller directory is copied into the image and the user is the default simuser.
 ENV SIMULATION_MODE=hpc
 # On HPC do not mount anythin on top of artifacts folder, so that the archive is not overwritten

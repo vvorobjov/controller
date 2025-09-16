@@ -8,9 +8,10 @@ import structlog
 from config.MasterParams import MasterParams
 from config.paths import RunPaths
 from config.plant_config import PlantConfig
-from draw_schema import draw_schema
 from pydantic import BaseModel
-from utils_common.generate_analog_signals import generate_signals
+
+from complete_control.utils_common.draw_schema import draw_schema
+from complete_control.utils_common.generate_signals import PlannerData
 
 from .plant_utils import JointData
 
@@ -241,16 +242,15 @@ def plot_plant_outputs(run_paths: RunPaths):
 
     # For now, plotting is only supported for the first joint
     joint_data = plant_data.joint_data[0]
+    with open(run_paths.trajectory, "r") as f:
+        planner_data: PlannerData = PlannerData.model_validate_json(f.read())
 
     # Generate plots
     plot_joint_space(
         config=config,
         time_vector_s=config.time_vector_total_s,
         pos_j_rad_actual=joint_data.pos_rad,
-        desired_trj_joint_rad=generate_signals(
-            config.master_config.experiment,
-            config.master_config.simulation,
-        )[0],
+        desired_trj_joint_rad=planner_data.trajectory,
     )
     plot_ee_space(
         config=config,

@@ -26,8 +26,8 @@ class MasterParams(BaseModel):
     run_paths: RunPaths
 
     PLOT_AFTER_SIMULATE: bool = True
-    USE_CEREBELLUM: bool = True
-    GUI_PYBULLET: bool = False
+    USE_CEREBELLUM: bool = False
+    GUI_PYBULLET: bool = True
     USE_MUSIC: bool = False
 
     NJT: int = 1

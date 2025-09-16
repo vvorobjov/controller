@@ -1,21 +1,26 @@
+import os
 import random
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
 import structlog
 from config.core_models import SimulationParams
 from config.MasterParams import MasterParams
+from config.module_params import TrajGeneratorType
 from neural.Controller import Controller
 from neural.nest_adapter import nest
 
-# nest.set_verbosity("M_ERROR") # TOCHECK: Verbosity might be set by NEST server
-
 
 # --- Configuration and Setup ---
-def setup_environment():
+def setup_environment(master_config: MasterParams):
     log = structlog.get_logger("main.env_setup")
     """Sets up environment variables if needed (e.g., for NESTML)."""
+    os.environ["OMP_NUM_THREADS"] = str(
+        1 if master_config.USE_MUSIC else str(master_config.total_num_virtual_procs)
+    )
+
     try:
         # Check if module is already installed to prevent errors on reset
         if "eglif_cond_alpha_multisyn" not in nest.Models(mtype="nodes"):
@@ -64,8 +69,6 @@ def setup_nest_kernel(
 
 def create_controllers(
     master_config: MasterParams,
-    trj: np.ndarray,
-    motor_commands: np.ndarray,
     comm=None,  # if comm is None, Cerebellum will be loaded without MPI
 ) -> list[Controller]:
     log = structlog.get_logger("main.network_construction")
@@ -99,6 +102,10 @@ def create_controllers(
     music_cfg = (
         master_config.music if master_config.USE_MUSIC else None
     )  # TODO what is this man find a better solution
+    if master_config.modules.planner.trajgen_type != TrajGeneratorType.MOCKED:
+        log.debug("Reached initialization. Waiting for input image to be created...")
+        while not os.path.exists(master_config.run_paths.input_image):
+            time.sleep(1)
 
     controllers = []
     log.info(f"Constructing Network", dof=njt, N_neurons_pop=N)
@@ -109,8 +116,6 @@ def create_controllers(
             dof_id=j,
             N=N,
             total_time_vect=total_time_vect_concat,
-            trajectory_slice=trj,
-            motor_cmd_slice=motor_commands,
             mc_params=module_params.motor_cortex,
             plan_params=module_params.planner,
             spine_params=module_params.spine,

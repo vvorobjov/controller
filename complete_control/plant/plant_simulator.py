@@ -1,13 +1,22 @@
+import time
+from enum import Enum
 from typing import Any, List, Tuple
 
+import numpy as np
 import structlog
 from config.plant_config import PlantConfig
 from utils_common.log import tqdm
+
+from complete_control.config.core_models import TargetColor
 
 from . import plant_utils
 from .plant_models import PlantPlotData
 from .robotic_plant import RoboticPlant
 from .sensoryneuron import SensoryNeuron
+
+
+class TrialSection(Enum):
+    TIME_START, TIME_PREP, TIME_MOVE, TIME_POST, TIME_END_TRIAL = range(5)
 
 
 class PlantSimulator:
@@ -65,6 +74,17 @@ class PlantSimulator:
             [] for _ in range(self.config.NJT)
         ]
         self.errors_per_trial: List[float] = []  # Store final error of each trial
+        self.plant._capture_state_and_save(self.config.run_paths.input_image)
+        self.checked_proximity = False
+
+        # TODO this has to be saved from planner, and currently it's not. mock it!
+        if (
+            self.config.master_config.simulation.oracle.target_color
+            == TargetColor.BLUE_LEFT
+        ):
+            self.direction = 0.1
+        else:
+            self.direction = -0.1
 
         self.log.info("PlantSimulator initialization complete.")
 
@@ -195,29 +215,6 @@ class PlantSimulator:
         time_in_trial = current_sim_time_s % self.config.TIME_TRIAL_S
         return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < time_in_trial
 
-    def _should_lock_joint_post(self, current_sim_time_s: float) -> bool:
-        time_in_trial = current_sim_time_s % self.config.TIME_TRIAL_S
-        # joint is locked in two situations:
-        # 1. during TIME_POST: we keep the joint locked at his arrival place
-        # 2. during TIME_PREP: state needs time to adapt to sensory
-        return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < time_in_trial
-
-    def _should_lock_joint_pre(self, current_sim_time_s: float) -> bool:
-        time_in_trial = current_sim_time_s % self.config.TIME_TRIAL_S
-        # joint is locked in two situations:
-        # 1. during TIME_POST: we keep the joint locked at his arrival place
-        # 2. during TIME_PREP: state needs time to adapt to sensory
-        return time_in_trial < self.config.TIME_PREP_S
-
-    def _set_joint_torque(self, joint_torque: float, current_sim_time_s: float) -> bool:
-        if self._should_lock_joint_pre(current_sim_time_s):
-            self.plant.lock_joint_pre()
-            return
-        if self._should_lock_joint_post(current_sim_time_s):
-            self.plant.lock_joint_post()
-            return
-        self.plant.set_joint_torques([joint_torque])
-
     def music_end_step(
         self, joint_pos_rad: float, current_sim_time_s: float, music_runtime
     ) -> None:
@@ -252,6 +249,37 @@ class PlantSimulator:
 
         return rate_pos_hz, rate_neg_hz
 
+    def _move_shoulder_if_target_close(self, direction):
+        if not self.checked_proximity:
+            self.log.debug(
+                "In TIME_POST. Verifying whether EE is in range for attachment..."
+            )
+            self.checked_proximity = True
+            if self.plant.check_target_proximity():
+                self.log.debug("EE is in range. Attaching and moving shoulder...")
+                self.target_attached = True
+                self.plant.move_shoulder(direction)
+            else:
+                self.target_attached = False
+                self.log.debug(
+                    "EE is not in range. not attaching and not moving shoulder."
+                )
+        if self.target_attached:
+            self.plant.update_ball_position()
+
+    def get_current_section(self, curr_time_s: float):
+        if curr_time_s == 0:
+            return TrialSection.TIME_START
+        elif 0 <= (curr_time_s % self.config.TIME_TRIAL_S) < self.config.RESOLUTION_S:
+            return TrialSection.TIME_END_TRIAL
+        time_in_trial = curr_time_s % self.config.TIME_TRIAL_S
+        if time_in_trial <= self.config.TIME_PREP_S:
+            return TrialSection.TIME_PREP
+        elif time_in_trial <= self.config.TIME_MOVE_S + self.config.TIME_PREP_S:
+            return TrialSection.TIME_MOVE
+        else:
+            return TrialSection.TIME_POST
+
     def run_simulation_step(
         self,
         rate_pos_hz: float,
@@ -268,6 +296,7 @@ class PlantSimulator:
         """
         joint_pos_rad, joint_vel_rad_s = self.plant.get_joint_state()
         ee_pos_m, ee_vel_m_list = self.plant.get_ee_pose_and_velocity()
+        curr_section = self.get_current_section(current_sim_time_s)
 
         if step >= self.num_total_steps:
             self.log.warning(
@@ -289,8 +318,18 @@ class PlantSimulator:
         self.plant.update_stats()
         # Enable perturbation/gravity
         self._check_gravity(current_sim_time_s)
-        # Apply motor command to plant
-        self._set_joint_torque(input_torque, current_sim_time_s)
+
+        if (
+            curr_section == TrialSection.TIME_PREP
+            or curr_section == TrialSection.TIME_POST
+        ):
+            self.plant.lock_elbow_joint()
+        else:
+            self.plant.set_elbow_joint_torque([input_torque])
+
+        if curr_section == TrialSection.TIME_POST:
+            self._move_shoulder_if_target_close(self.direction)
+
         # Step PyBullet simulation
         self.plant.simulate_step(self.config.RESOLUTION_S)
         # Record data for this step (For NJT=1)
@@ -307,8 +346,7 @@ class PlantSimulator:
         )
 
         # Trial end logic (reset plant if needed)
-        is_trial_end_time = self._check_trial_end(current_sim_time_s)
-        if is_trial_end_time:
+        if curr_section == TrialSection.TIME_END_TRIAL:
             final_error_rad = joint_pos_rad - self.config.target_joint_pos_rad
             self.errors_per_trial.append(final_error_rad)
             self.log.info(
@@ -317,7 +355,10 @@ class PlantSimulator:
                 sim_time_s=current_sim_time_s,
                 final_error_rad=final_error_rad,
             )
+            self.checked_proximity = False
+            self.target_attached = False
             self.plant.reset_plant()
+            self.plant.reset_target()
 
         return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list
 
@@ -335,30 +376,6 @@ class PlantSimulator:
                 and current_trial > exp_params.gravity_trial_end
             ):
                 self.plant.set_gravity(False)
-
-    def _check_trial_end(self, current_sim_time_s: float) -> bool:
-        """Check if current step is at the end of a trial.
-
-        Args:
-            current_sim_time_s: Current simulation time in seconds
-
-        Returns:
-            True if this is the end of a trial, False otherwise
-        """
-
-        # Check if current_sim_time_s is (almost) a multiple of TIME_TRIAL_S
-        # Or if it's the last step of the simulation
-        if abs(current_sim_time_s % self.config.TIME_TRIAL_S) < (
-            self.config.RESOLUTION_S / 2.0
-        ) or abs(
-            current_sim_time_s
-            - (self.config.TOTAL_SIM_DURATION_S - self.config.RESOLUTION_S)
-        ) < (
-            self.config.RESOLUTION_S / 2.0
-        ):
-            if not (abs(current_sim_time_s) < self.config.RESOLUTION_S / 2.0):
-                return True
-        return False
 
     def run_simulation(self) -> None:
         """Runs the main simulation loop. **NJT==1**"""

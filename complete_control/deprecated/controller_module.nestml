@@ -348,6 +348,7 @@ model rb_neuron:
     parameters:
         kp real = 1.0 # Gain
         base_rate Hz = 0 Hz # Base firing rate
+        max_peak_rate Hz = 300 Hz # Maximum peak output firing rate
         buffer_size ms = 100 ms # Size of the sliding window
         simulation_steps integer = 1000 # Number of simulation steps (simulation_time/resolution())
         sdev real = 1.0 # Parameter for the RBF
@@ -389,7 +390,7 @@ model rb_neuron:
             
         # Compute input and output firing rate
         in_rate = (kp * spike_count_in)/buffer_size # Compute the input firing rate
-        out_rate = base_rate + 300 * exp(-((desired - in_rate) / sdev)**2) * Hz # Compute the output firing rate
+        out_rate = base_rate + max_peak_rate * exp(-((desired - in_rate) / sdev)**2) # Compute the output firing rate
         
         # Set the new parameter for the Poisson distribution
         lambda_poisson = out_rate * resolution() * 0.001
@@ -399,6 +400,7 @@ model rb_neuron:
         # If probability not null, emit spike
         if spike_count_out > 0:
             emit_spike()
+
 model tracking_neuron_planner:
     state:
         out_rate real = 0.0
