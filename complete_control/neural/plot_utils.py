@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -12,8 +13,6 @@ from mpi4py import MPI
 from complete_control.neural.neural_models import SynapseBlock
 
 from .neural_models import PopulationSpikes
-
-import matplotlib.gridspec as gridspec
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 FIGURE_EXT = "png"
