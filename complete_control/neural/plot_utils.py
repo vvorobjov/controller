@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,6 +12,8 @@ from mpi4py import MPI
 from complete_control.neural.neural_models import SynapseBlock
 
 from .neural_models import PopulationSpikes
+
+import matplotlib.gridspec as gridspec
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 FIGURE_EXT = "png"
@@ -93,8 +94,8 @@ def plot_rate(time_v, ts, pop_size, buffer_sz, ax, title="", **kwargs):
     if title:
         ax.set_ylabel(title, fontsize=15)
     ax.set_xlabel("Time [ms]")
-    ax.set_xlim(left=0, right=time_end)
-    ax.set_ylim(bottom=0)
+    # ax.set_xlim(left=0, right=time_end)
+    # ax.set_ylim(bottom=0)
 
     # add return for keep max_value to scale the plot (if rate_sm is not empty)
     if rate_sm.size > 0:
@@ -131,8 +132,8 @@ def plot_population(
     gs = gridspec.GridSpec(4, 1, height_ratios=[3, 3, 1, 5], hspace=0.065)
     ax = [None] * 3
     ax[0] = fig.add_subplot(gs[0])
-    ax[1] = fig.add_subplot(gs[1], sharex=ax[0])
-    ax[2] = fig.add_subplot(gs[3], sharex=ax[0])
+    ax[1] = fig.add_subplot(gs[1])
+    ax[2] = fig.add_subplot(gs[3])
 
     # Raster plot
     ax[0].scatter(ts_p, y_p, marker=".", s=1, c="r", label="Positive")
@@ -197,7 +198,14 @@ def plot_population(
 
     # scale PSTH plot
     max_y = max(max_p, max_n)
-    ax[2].set_ylim(top=max_y + 1)
+    ax[2].set_ylim(bottom=0, top=max_y + 1)
+
+    # Align plot on x-axis
+    time_end = time_v[-1] if len(time_v) > 0 else 0
+    for i, axs in enumerate(ax):
+        axs.set_xlim(left=0, right=time_end)
+    ax[1].tick_params(labelbottom=True)
+    ax[2].tick_params(labelbottom=True)
 
     if filepath:
         fig.savefig(filepath)
@@ -224,6 +232,7 @@ def plot_population_single(
     ax[0].set_ylabel("raster", fontsize=15)
     ax[0].set_title(title, fontsize=16)
     ax[0].set_ylim(bottom=0, top=pop_data.population_size + 1)
+    ax[0].tick_params(labelbottom=True)
 
     for i, axs in enumerate(ax):
         axs.spines["top"].set_visible(False)
@@ -252,7 +261,7 @@ def plot_population_single(
         color="r",
         title="PSTH (Hz)",
     )
-    ax[1].set_ylim(top=max_y + 1)
+    ax[1].set_ylim(bottom=0, top=max_y + 1)
     fig.tight_layout()
 
     if filepath:
@@ -382,3 +391,4 @@ def plot_controller_outputs(run_paths: RunPaths):
             _log.warning(f"Failed to plot synaptic weights from {json_file}: {e}")
 
     _log.debug("Plot generation finished.")
+
