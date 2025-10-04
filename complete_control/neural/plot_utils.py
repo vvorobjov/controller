@@ -14,6 +14,7 @@ from complete_control.neural.neural_models import SynapseBlock
 from .neural_models import PopulationSpikes
 
 import matplotlib.gridspec as gridspec
+from PIL import Image
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 FIGURE_EXT = "png"
@@ -94,8 +95,6 @@ def plot_rate(time_v, ts, pop_size, buffer_sz, ax, title="", **kwargs):
     if title:
         ax.set_ylabel(title, fontsize=15)
     ax.set_xlabel("Time [ms]")
-    # ax.set_xlim(left=0, right=time_end)
-    # ax.set_ylim(bottom=0)
 
     # add return for keep max_value to scale the plot (if rate_sm is not empty)
     if rate_sm.size > 0:
@@ -110,24 +109,17 @@ def global_to_local_ids(x: PopulationSpikes, hist_logscale=False):
     return np.array([old2newid[i] for i in x.senders])
 
 
-def plot_population(
+def generate_plot_fig(
     time_v,
-    pop_p_path: Path,
-    pop_n_path: Path,
-    title="",
-    buffer_size=15,
-    filepath=None,
+    pop_p_data,
+    pop_n_data,
+    title,
+    buffer_size,
+    ts_p,
+    ts_n,
+    y_p,
+    y_n,
 ):
-    """Plots raster and PSTH for a population pair from data files."""
-    pop_p_data = load_spike_data_from_file(pop_p_path)
-    pop_n_data = load_spike_data_from_file(pop_n_path)
-
-    ts_p = pop_p_data.times
-    ts_n = pop_n_data.times
-
-    y_p = global_to_local_ids(pop_p_data)
-    y_n = -global_to_local_ids(pop_n_data)
-
     fig = plt.figure(figsize=(10, 6))
     gs = gridspec.GridSpec(4, 1, height_ratios=[3, 3, 1, 5], hspace=0.065)
     ax = [None] * 3
@@ -207,6 +199,39 @@ def plot_population(
     ax[1].tick_params(labelbottom=True)
     ax[2].tick_params(labelbottom=True)
 
+    return fig, ax
+
+
+def plot_population(
+    time_v,
+    pop_p_path: Path,
+    pop_n_path: Path,
+    title="",
+    buffer_size=15,
+    filepath=None,
+):
+    """Plots raster and PSTH for a population pair from data files."""
+    pop_p_data = load_spike_data_from_file(pop_p_path)
+    pop_n_data = load_spike_data_from_file(pop_n_path)
+
+    ts_p = pop_p_data.times
+    ts_n = pop_n_data.times
+
+    y_p = global_to_local_ids(pop_p_data)
+    y_n = -global_to_local_ids(pop_n_data)
+
+    fig, ax = generate_plot_fig(
+        time_v,
+        pop_p_data,
+        pop_n_data,
+        title,
+        buffer_size,
+        ts_p,
+        ts_n,
+        y_p,
+        y_n,
+    )
+
     if filepath:
         fig.savefig(filepath)
         _log.debug(f"Saved plot at {filepath}")
@@ -272,6 +297,46 @@ def plot_population_single(
     return fig, ax
 
 
+def plot_population_trial(
+    nt,
+    time_s,
+    time_trial,
+    pop_p_path: Path,
+    pop_n_path: Path,
+    title="",
+    buffer_size=15,
+):
+    """Plots raster and PSTH for a population pair from data files."""
+    pop_p_data = load_spike_data_from_file(pop_p_path)
+    pop_n_data = load_spike_data_from_file(pop_n_path)
+
+    t0 = nt * time_trial
+    t1 = (nt + 1) * time_trial
+
+    mask_p = (pop_p_data.times >= t0) & (pop_p_data.times < t1)
+    mask_n = (pop_n_data.times >= t0) & (pop_n_data.times < t1)
+
+    ts_p = pop_p_data.times[mask_p] - t0
+    ts_n = pop_n_data.times[mask_n] - t0
+
+    y_p = global_to_local_ids(pop_p_data)[mask_p]
+    y_n = -global_to_local_ids(pop_n_data)[mask_n]
+
+    fig, ax = generate_plot_fig(
+        time_s,
+        pop_p_data,
+        pop_n_data,
+        title,
+        buffer_size,
+        ts_p,
+        ts_n,
+        y_p,
+        y_n,
+    )
+
+    return fig, ax
+
+
 def plot_controller_outputs(run_paths: RunPaths):
     """Plots outputs for various populations from a simulation run directory."""
 
@@ -288,6 +353,7 @@ def plot_controller_outputs(run_paths: RunPaths):
 
     # Get parameters from config
     njt = master_config.NJT
+    N_trials = master_config.simulation.n_trials
     # pop_size = master_config.brain.population_size # No longer needed, obtained from PopulationSpikes
     res = master_config.simulation.resolution
     total_sim_duration = master_config.simulation.total_duration_all_trials_ms
@@ -295,6 +361,13 @@ def plot_controller_outputs(run_paths: RunPaths):
         0,
         total_sim_duration,
         num=int(np.round(total_sim_duration / res)),
+        endpoint=True,
+    )
+    single_trial_duration = master_config.simulation.duration_single_trial_ms
+    single_trial_time_vect_concat = np.linspace(
+        0,
+        single_trial_duration,
+        num=int(np.round(single_trial_duration / res)),
         endpoint=True,
     )
 
@@ -376,6 +449,70 @@ def plot_controller_outputs(run_paths: RunPaths):
             filepath=path_fig / f"{plot_name}_{i}.{FIGURE_EXT}",
         )
 
+    # PLOT PER TRIALS
+    populations_to_plot_trial = [
+        # "sensoryneur",
+        # "cereb_core_forw_dcnp",
+        # "cereb_core_forw_io",
+        # "cereb_core_forw_pc",
+        "cereb_feedback",
+        "cereb_error",
+        "pred",
+        "state",
+    ]
+
+    # Set trials to plot
+    trials2plot = "all"  # [1,15,30]
+    if trials2plot == "all":
+        trials2plot = list(range(N_trials))
+
+    for nt in trials2plot:
+        all_trial_imgs = []
+
+        for file_prefix in populations_to_plot_trial:
+            plot_name_t = file_prefix
+            _log.debug(f"Plotting trial {nt} for {plot_name_t}...")
+
+            pop_p_path_t = path_data / f"{file_prefix}_p.json"
+            pop_n_path_t = path_data / f"{file_prefix}_n.json"
+
+            fig_ipop, ax_ipop = plot_population_trial(
+                nt,
+                single_trial_time_vect_concat,
+                single_trial_duration,
+                pop_p_path_t,
+                pop_n_path_t,
+                title=f"{plot_name_t.replace('_', ' ').title()} {lgd} Trial {nt}",
+                buffer_size=15,
+            )
+
+            if path_fig:
+                trial_plot_path = path_fig / "Trials" / f"{plot_name_t}_{i}"
+                trial_plot_path.mkdir(parents=True, exist_ok=True)
+                fig_ipop.savefig(trial_plot_path / f"Trial_{nt}.{FIGURE_EXT}")
+                _log.debug(f"Saved plot at {trial_plot_path} / Trial_{nt}.{FIGURE_EXT}")
+                plt.close(fig_ipop)
+
+                # save img (no fig) for collage
+                trial_img = Image.open(trial_plot_path / f"Trial_{nt}.{FIGURE_EXT}")
+                all_trial_imgs.append(trial_img)
+
+        width, height = all_trial_imgs[0].size
+        collage = Image.new(
+            "RGB",
+            (width, height * len(populations_to_plot_trial)),
+            color=(255, 255, 255),
+        )
+
+        for im_idx in range(len(all_trial_imgs)):
+            collage.paste(all_trial_imgs[im_idx], (0, height * im_idx))
+
+        if path_fig:
+            collage_path = path_fig / "Collage"
+            collage_path.mkdir(parents=True, exist_ok=True)
+            collage.save(collage_path / f"Trial_{nt}_collage.{FIGURE_EXT}")
+            _log.debug(f"Saved plot at {collage_path}")
+
     for json_file in sorted(run_paths.data_nest.glob("weightrecord*.json")):
         try:
             fig_filename = (
@@ -391,4 +528,3 @@ def plot_controller_outputs(run_paths: RunPaths):
             _log.warning(f"Failed to plot synaptic weights from {json_file}: {e}")
 
     _log.debug("Plot generation finished.")
-
