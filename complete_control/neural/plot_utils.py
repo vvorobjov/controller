@@ -530,14 +530,28 @@ def plot_controller_outputs(run_paths: RunPaths):
 
     # PLOT PER TRIALS
     populations_to_plot_trial = [
-        # "sensoryneur",
-        # "cereb_core_forw_dcnp",
-        # "cereb_core_forw_io",
-        # "cereb_core_forw_pc",
-        "cereb_feedback",
-        "cereb_error",
-        "pred",
+        "planner",
+        "brainstem",
+        "mc_out",
+        "mc_m1",
+        "mc_ffwd",
+        "mc_fbk",
         "state",
+        "sensoryneur",
+        "cereb_core_forw_dcnp",
+        "cereb_core_forw_io",
+        "cereb_core_forw_pc",
+        "cereb_core_inv_dcnp",
+        "cereb_core_inv_io",
+        "cereb_core_inv_pc",
+        "cereb_error",
+        "cereb_error_inv",
+        "cereb_feedback",
+        "cereb_feedback_inv",
+        "cereb_motor_prediction",
+        "cereb_state_to_inv",
+        "fbk_smooth",
+        "pred",
     ]
 
     populations_to_collage = [
