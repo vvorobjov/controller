@@ -651,13 +651,13 @@ def plot_controller_outputs(run_paths: RunPaths):
     ]
 
     populations_to_overlay = [
-        # "planner",
-        "sensoryneur",
+        "planner",
+        # "sensoryneur",
         # "cereb_core_forw_dcnp",
         # "cereb_core_forw_io",
         # "cereb_core_forw_pc",
         "cereb_feedback",
-        "cereb_error",
+        # "cereb_error",
         "pred",
         "state",
     ]
