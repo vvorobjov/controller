@@ -163,7 +163,7 @@ RUN git clone https://github.com/INCF/MUSIC \
 ####################### NEST 3.7 #######################
 ENV NEST_VERSION=3.9
 
-# Install NEST 3.7
+# Install NEST 3.9
 WORKDIR $DEPS_DIR
 RUN git clone --depth 1 --branch v${NEST_VERSION} https://github.com/nest/nest-simulator/
 WORKDIR ${DEPS_DIR}/nest-simulator
