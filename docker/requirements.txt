@@ -11,6 +11,8 @@ structlog
 pydantic
 Pillow
 jupyter
+ffmpeg
+ffmpeg-python
 # nest-server:
 Flask
 flask-cors

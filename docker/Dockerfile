@@ -9,6 +9,7 @@ ARG PYTHON_MINOR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
+    ffmpeg \
     # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
     gsl-bin \
     libgsl27 \
