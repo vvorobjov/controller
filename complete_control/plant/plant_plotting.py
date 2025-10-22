@@ -367,6 +367,33 @@ def plot_plant_outputs(
         config,
         plant_data,
     )
+
+    framerate = 25
+    video_duration = 5
+    if animated_task:
+        if (
+            master_params.plotting.CAPTURE_VIDEO is None
+            or len(master_params.plotting.CAPTURE_VIDEO) == 0
+        ):
+            log.warning(
+                "Asked to generate task video but no frames were generated during run. Animated plots will use default time."
+            )
+        else:
+            for ax in master_params.plotting.CAPTURE_VIDEO:
+                video_duration = int(
+                    len(config.time_vector_single_trial_s)
+                    / master_params.plotting.NUM_STEPS_CAPTURE_VIDEO
+                    / framerate
+                )
+                import ffmpeg
+
+                ffmpeg.input(
+                    f"{run_paths.video_frames / ax}/*.jpg",
+                    pattern_type="glob",
+                    framerate=framerate,
+                    loglevel="warning",
+                ).output(str((run_paths.figures / f"task_{ax}.mp4").absolute())).run()
+
     plot_joint_space_animated(
         config=config,
         time_vector_s=config.time_vector_total_s,

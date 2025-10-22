@@ -115,10 +115,17 @@ class RoboticPlant:
     def _capture_state_and_save(self, image_path: Path, axis="y") -> None:
         from PIL import Image
 
-        self.log.debug("setting up camera...")
-
-        camera_target_position = [0.3, 0.3, 1.5]
-        camera_position = [0, -1, 1.7]
+        if axis == "y":
+            camera_target_position = [0.3, 0.3, 1.5]
+            camera_position = [0, -1, 1.7]
+        elif axis == "x":
+            camera_target_position = [0, 0, 1.5]
+            camera_position = [1, 0, 1.7]
+        elif axis == "z":
+            camera_target_position = [0, 0, -1]
+            camera_position = [0.1, 0, 2.5]
+        else:
+            raise ValueError("axis possible values: [x,y,z]")
         up_vector = [0, 0, 1]
         width = 1024
         height = 768
@@ -130,7 +137,7 @@ class RoboticPlant:
         view_matrix = self.p.computeViewMatrix(
             camera_position, camera_target_position, up_vector
         )
-        self.log.debug("getting image...")
+        # self.log.debug("getting image...")
         img_arr = self.p.getCameraImage(
             width,
             height,
@@ -139,11 +146,11 @@ class RoboticPlant:
             renderer=self.p.ER_BULLET_HARDWARE_OPENGL,
         )
 
-        self.log.debug("saving image...")
+        # self.log.debug("saving image...")
         rgb_buffer = np.array(img_arr[2])
         rgb = rgb_buffer[:, :, :3]  # drop alpha
         Image.fromarray(rgb.astype(np.uint8)).save(image_path)
-        self.log.info(f"saved input image at {str(image_path)}")
+        # self.log.info(f"saved input image at {str(image_path)}")
 
     def _test_init_tgt_positions(self) -> None:
         self.init_hand_pos_ee = self._set_rad_elbow(self.initial_joint_position_rad)
