@@ -399,3 +399,94 @@ def plot_plant_outputs(
     draw_schema(run_paths, scale_factor=0.005)
 
     log.info("Plant plots generated.")
+
+
+def generate_video_from_existing_result_single_trial(
+    plant_config: PlantConfig,
+    plant_data: PlantPlotData,
+    framerate: int = 25,
+    trial=0,
+    AXES_TO_CAPTURE: list[str] = ["y"],
+    complete_video_filename: str = "complete.mp4",
+):
+    """Creates animated video from AXES_TO_CAPTURE angles for a single trial
+
+    Uses the series of JointStates recorded in plotting data to step through a
+    single trial's worth of screenshots, every NUM_STEPS_CAPTURE_VIDEO. Has no
+     reset capabilities, so it only generates a single trial (`trial`). Generated
+     screenshots are included in `plant_config.run_paths.figures_receiver/{axis}`
+
+    If multiple axes are provided, composite video is generated in
+    `plant_config.run_paths.figures_receiver/{complete_video_filename}`
+    """
+    import ffmpeg
+    import pybullet
+    from plant.robotic_plant import RoboticPlant
+
+    images_path = plant_config.run_paths.figures_receiver
+
+    plant = RoboticPlant(plant_config, pybullet)
+    data = plant_data.joint_data
+    steps_single_trial = int(
+        plant_config.master_config.simulation.duration_single_trial_ms
+        / plant_config.master_config.simulation.resolution
+    )
+    start = trial * steps_single_trial
+    end = (trial + 1) * steps_single_trial
+    steps = start - end
+    len_max_frame_name = len(str(steps))
+    [
+        (images_path / axis).mkdir(parents=True, exist_ok=True)
+        for axis in AXES_TO_CAPTURE
+    ]
+    for step in tqdm.tqdm(
+        range(
+            start,
+            end,
+            plant_config.master_config.plotting.NUM_STEPS_CAPTURE_VIDEO,
+        ),
+        desc="Frame generation:",
+    ):
+        state = JointStates(
+            shoulder=JointState(data[0].pos_rad[step], data[0].vel_rad_s[step]),
+            elbow=JointState(data[1].pos_rad[step], data[1].vel_rad_s[step]),
+            hand=JointState(data[2].pos_rad[step], data[2].vel_rad_s[step]),
+        )
+        plant._set_pos_all_joints(state)
+
+        for axis in AXES_TO_CAPTURE:
+            image_path: Path = (
+                images_path / axis / f"<{step:0{len_max_frame_name}d}>.jpg"
+            )
+            plant._capture_state_and_save(image_path, axis)
+        if step > plant_config.master_config.simulation.neural_control_steps:
+            plant.update_ball_position()
+
+    plant.p.resetSimulation()
+    plant.p.disconnect()
+
+    single_axis_videos = []
+    for axis in AXES_TO_CAPTURE:
+        axis_path = images_path / axis
+        video_path = axis_path / "task.mp4"
+        single_axis_videos.append(video_path)
+        ffmpeg.input(
+            f"{axis_path}/*.jpg",
+            pattern_type="glob",
+            framerate=framerate,
+            loglevel="warning",
+        ).output(str(video_path.absolute())).run()
+
+    if len(AXES_TO_CAPTURE) > 1:
+        with open(images_path / "inputs.txt", "w", encoding="utf-8") as f:
+            for path in single_axis_videos:
+                f.write(f"file '{path.absolute()}'\n")
+
+        ffmpeg.input(
+            images_path / "inputs.txt",
+            format="concat",
+            safe=0,
+            loglevel="quiet",
+        ).output(
+            str((images_path / complete_video_filename).absolute()), c="copy"
+        ).run()
