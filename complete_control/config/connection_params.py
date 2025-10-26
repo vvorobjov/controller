@@ -13,23 +13,23 @@ class SingleSynapseParams(BaseModel):
 class ConnectionsParams(BaseModel):
     model_config: ClassVar = {"frozen": True}
 
-    sensory_delay: float = 100
+    sensory_delay: float = 150
 
     dcn_forw_prediction: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.0055,
+            weight=0.55,
             delay=0.1,
         )
     )
     pred_state: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1.0,
+            weight=1,
             receptor_type=1,
         )
     )
     fbk_smoothed_state: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1.10,
+            weight=0.6317663917438847,
             receptor_type=2,
         )
     )
@@ -71,7 +71,7 @@ class ConnectionsParams(BaseModel):
     )
     error_io_f: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.04,
+            weight=0.016,
             delay=0.1,
             receptor_type=1,
         )
@@ -156,9 +156,16 @@ class ConnectionsParams(BaseModel):
     )
     error_inv_io_i: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.9,
+            weight=0.8,
             delay=0.1,
             receptor_type=1,
+        )
+    )
+
+    feedback_error: SingleSynapseParams = Field(
+        default_factory=lambda: SingleSynapseParams(
+            weight=0.1,
+            delay=0.1,
         )
     )
 
@@ -170,9 +177,4 @@ class ConnectionsParams(BaseModel):
     @computed_field
     @property
     def dcn_f_error(self) -> SingleSynapseParams:
-        return SingleSynapseParams(weight=0.1, delay=self.sensory_delay)
-
-    @computed_field
-    @property
-    def feedback_error(self) -> SingleSynapseParams:
         return SingleSynapseParams(weight=0.1, delay=self.sensory_delay)
