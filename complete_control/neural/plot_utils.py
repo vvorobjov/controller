@@ -436,6 +436,7 @@ def plot_overlay(
     single_trial_time_vect_concat,
     time_trial,
     path_fig,
+    normalize=False,
 ):
 
     for nt in trials2plot:
@@ -467,7 +468,7 @@ def plot_overlay(
                 buffer_sz=15,
                 ax=ax_overl[0],
                 label=f"{plot_name_t}_p",
-                normalize=True,
+                normalize=normalize,
             )
 
             plot_rate(
@@ -477,12 +478,15 @@ def plot_overlay(
                 buffer_sz=15,
                 ax=ax_overl[1],
                 label=f"{plot_name_t}_p",
-                normalize=True,
+                normalize=normalize,
             )
 
         for ax in ax_overl:
             ax.legend(fontsize=8)
-            ax.set_ylabel("Normalized rate")
+            if normalize:
+                ax.set_ylabel("Normalized rate")
+            else:
+                ax.set_ylabel("Rate (Hz)")
 
         ax_overl[0].set_title("Overlayed positive populations (PSTH)")
         ax_overl[1].set_title("Overlayed negative populations (PSTH)")
@@ -491,8 +495,14 @@ def plot_overlay(
 
         if path_fig:
             overl_path = path_fig / "Overlayed plots"
+            if normalize:
+                overl_path = overl_path / "Normalized"
             overl_path.mkdir(parents=True, exist_ok=True)
-            fig_overl.savefig(overl_path / f"Trial_{nt}.{FIGURE_EXT}")
+
+            if normalize:
+                fig_overl.savefig(overl_path / f"Trial_{nt}_normalized.{FIGURE_EXT}")
+            else:
+                fig_overl.savefig(overl_path / f"Trial_{nt}.{FIGURE_EXT}")
             _log.debug(
                 f"Saved overlayed plot at {overl_path} / Trial_{nt}.{FIGURE_EXT}"
             )
@@ -684,6 +694,7 @@ def plot_controller_outputs(run_paths: RunPaths):
         path_fig,
     )
 
+    # plot both normalized and not normalized overlayed plots
     plot_overlay(
         trials2plot,
         populations_to_overlay,
@@ -691,6 +702,17 @@ def plot_controller_outputs(run_paths: RunPaths):
         single_trial_time_vect_concat,
         single_trial_duration,
         path_fig,
+        normalize=True,
+    )
+
+    plot_overlay(
+        trials2plot,
+        populations_to_overlay,
+        path_data,
+        single_trial_time_vect_concat,
+        single_trial_duration,
+        path_fig,
+        normalize=False,
     )
 
     for json_file in sorted(run_paths.data_nest.glob("weightrecord*.json")):

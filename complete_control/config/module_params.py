@@ -17,13 +17,13 @@ class GLETrajGeneratorConfig(BaseModel):
 
 class PlannerModuleConfig(BaseModel):
     model_config: ClassVar = {"frozen": True}
-    trajgen_type: TrajGeneratorType = Field(default=TrajGeneratorType.GLE)
+    trajgen_type: TrajGeneratorType = Field(default=TrajGeneratorType.MOCKED)
     gle_config: GLETrajGeneratorConfig = Field(
         default_factory=lambda: GLETrajGeneratorConfig()
     )
-    kp: float = 1255.0503631208485
+    kp: float = 100.0  # 1255.0503631208485
     kpl: float = 0.32504265346581107
-    base_rate: float = 10.0
+    base_rate: float = 5.0
 
 
 class M1MockConfig(BaseModel):
@@ -42,21 +42,21 @@ class MotorCortexModuleConfig(BaseModel):
     m1_mock_config: M1MockConfig = Field(default_factory=lambda: M1MockConfig())
     m1_eprop_config: M1EPropConfig = Field(default_factory=lambda: M1EPropConfig())
     fbk_base_rate: float = 0.0
-    fbk_kp: float = 0.20
+    fbk_kp: float = 1.0  # 0.20
     out_base_rate: float = 0.0
     out_kp: float = 1.25
-    wgt_ffwd_out: float = 0.90
-    wgt_fbk_out: float = 0.25
+    wgt_ffwd_out: float = 1.0
+    wgt_fbk_out: float = 0.1  # 2.0 0.25
     buf_sz: float = 50.0
 
 
 class SpineModuleConfig(BaseModel):
     model_config: ClassVar = {"frozen": True}
     wgt_motCtx_motNeur: float = 1.0625540740843757
-    wgt_sensNeur_spine: float = 1.6427161409427353
+    wgt_sensNeur_spine: float = 1.0  # 1.6427161409427353
     sensNeur_base_rate: float = 0.0
-    sensNeur_kp: float = 1200.0
-    fbk_delay: float = 0.1
+    sensNeur_kp: float = 35.0  # 1200.0
+    fbk_delay: float = 1.0  # ms
 
 
 class StateModuleConfig(BaseModel):

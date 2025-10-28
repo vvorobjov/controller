@@ -19,8 +19,8 @@ class PopulationsParams(BaseModel):
     model_config: ClassVar = {"frozen": True}
     prediction: SinglePopParams = Field(
         default_factory=lambda: SinglePopParams(
-            kp=4.0, buffer_size=20.0, base_rate=50.0
-        )
+            kp=4.0, buffer_size=20.0, base_rate=5.0
+        )  # 50
     )
     motor_commands: RBFPopParams = Field(
         default_factory=lambda: RBFPopParams(
@@ -35,7 +35,7 @@ class PopulationsParams(BaseModel):
     )
     fbk_smoothed: SinglePopParams = Field(
         default_factory=lambda: SinglePopParams(
-            kp=1.0, buffer_size=25.0, base_rate=100.0
+            kp=1.0, buffer_size=25.0, base_rate=5.0  # 100
         )
     )
     error: SinglePopParams = Field(
