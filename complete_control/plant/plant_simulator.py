@@ -76,7 +76,6 @@ class PlantSimulator:
         self.received_spikes_neg: List[List[Tuple[float, int]]] = [
             [] for _ in range(self.config.NJT)
         ]
-        self.errors_per_trial: List[float] = []  # Store final error of each trial
         self.plant._capture_state_and_save(self.config.run_paths.input_image)
         self.checked_proximity = False
         self.shoulder_moving = False
@@ -222,9 +221,8 @@ class PlantSimulator:
         )
 
     def _should_mask_sensory_info(self, current_sim_time_s: float) -> bool:
-        "mask sensory during TIME_BEFORE_NEXT"
-        time_in_trial = current_sim_time_s % self.config.TIME_TRIAL_S
-        return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < time_in_trial
+        "mask sensory during manual control"
+        return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < current_sim_time_s
 
     def music_end_step(
         self, joint_pos_rad: float, current_sim_time_s: float, music_runtime
@@ -285,17 +283,20 @@ class PlantSimulator:
     def get_current_section(self, curr_time_s: float):
         if curr_time_s == 0:
             return TrialSection.TIME_START
-        elif 0 <= (curr_time_s % self.config.TIME_TRIAL_S) < self.config.RESOLUTION_S:
-            return TrialSection.TIME_END_TRIAL
-        time_in_trial = curr_time_s % self.config.TIME_TRIAL_S
-        if time_in_trial <= self.config.TIME_PREP_S:
+        elif curr_time_s <= self.config.TIME_PREP_S:
             return TrialSection.TIME_PREP
-        elif time_in_trial <= (self.config.TIME_MOVE_S + self.config.TIME_PREP_S):
+        elif curr_time_s <= (self.config.TIME_MOVE_S + self.config.TIME_PREP_S):
             return TrialSection.TIME_MOVE
-        elif time_in_trial <= (
+        elif curr_time_s <= (
             self.config.TIME_MOVE_S + self.config.TIME_PREP_S + self.config.TIME_GRASP_S
         ):
             return TrialSection.TIME_GRASP
+        elif (
+            0
+            <= (curr_time_s - self.config.TOTAL_SIM_DURATION_S)
+            < self.config.RESOLUTION_S
+        ):
+            return TrialSection.TIME_END_TRIAL
         else:
             return TrialSection.TIME_POST
 
@@ -347,8 +348,6 @@ class PlantSimulator:
             )
 
         self.plant.update_stats()
-        # Enable perturbation/gravity
-        self._check_gravity(current_sim_time_s)
 
         if curr_section == TrialSection.TIME_MOVE:
             self.plant.set_elbow_joint_torque([elbow_torque])
@@ -373,37 +372,7 @@ class PlantSimulator:
 
         self.ee_data.record_step(step, ee_pos_m, ee_vel_m_list)
 
-        # Trial end logic (reset plant if needed)
-        if curr_section == TrialSection.TIME_END_TRIAL:
-            final_error_rad = joint_pos_rad - self.config.target_joint_pos_rad
-            self.errors_per_trial.append(final_error_rad)
-            self.log.info(
-                "Trial finished. Resetting plant.",
-                trial_num=len(self.errors_per_trial),
-                sim_time_s=current_sim_time_s,
-                final_error_rad=final_error_rad,
-            )
-            self.checked_proximity = False
-            self.target_attached = False
-            self.plant.reset_plant()
-            self.plant.reset_target()
-
         return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list, curr_section
-
-    def _check_gravity(self, current_sim_time_s: float):
-        """Check trial number and enable/disable gravity"""
-        exp_params = self.config.master_config.experiment
-
-        if exp_params.enable_gravity:
-            current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
-
-            if current_trial >= exp_params.gravity_trial_start:
-                self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
-            if (
-                exp_params.gravity_trial_end is not None
-                and current_trial > exp_params.gravity_trial_end
-            ):
-                self.plant.set_gravity(False)
 
     def run_simulation(self) -> None:
         """Runs the main simulation loop. **NJT==1**"""
@@ -443,16 +412,17 @@ class PlantSimulator:
         self.log.info("Simulation loop finished.")
 
         # After loop, finalize and save/plot
-        self._finalize_and_process_data()
+        self.finalize_and_process_data(joint_pos)
 
-    def _finalize_and_process_data(self) -> None:
+    def finalize_and_process_data(self, reached_joint_rad) -> None:
         """Saves all data required for post-simulation analysis and plotting."""
         self.log.info("Finalizing and saving simulation data...")
+        error = reached_joint_rad - self.config.target_joint_pos_rad
 
         plot_data = PlantPlotData(
             joint_data=self.joint_data,
             ee_data=self.ee_data,
-            errors_per_trial=self.errors_per_trial,
+            error=error,
             init_hand_pos_ee=list(self.plant.init_hand_pos_ee),
             trgt_hand_pos_ee=list(self.plant.trgt_hand_pos_ee),
         )

@@ -68,6 +68,10 @@ class RoboticPlant:
 
         self._test_init_tgt_positions()
         self.reset_plant()
+        self.set_gravity(
+            config.master_config.experiment.enable_gravity,
+            config.master_config.experiment.z_gravity_magnitude,
+        )
         self.log.info(
             "RoboticPlant initialized and reset to initial state",
             initial_pos_rad=self.initial_joint_position_rad,

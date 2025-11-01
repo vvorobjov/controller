@@ -83,8 +83,8 @@ def create_controllers(
     log.info("Input data (trajectory, motor_commands) generated.", dof=njt)
 
     res = master_config.simulation.resolution
-    time_span_per_trial = master_config.simulation.duration_single_trial_ms
-    total_sim_duration = master_config.simulation.total_duration_all_trials_ms
+    time_span_per_trial = master_config.simulation.duration_ms
+    total_sim_duration = master_config.simulation.duration_ms
 
     total_time_vect_concat = np.linspace(
         0,

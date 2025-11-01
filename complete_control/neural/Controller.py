@@ -157,7 +157,7 @@ class Controller:
 
         self.log.info("Controller initialization complete.")
 
-    def record_synaptic_weights(self, trial: int):
+    def record_synaptic_weights(self):
         PF_to_purkinje_conns = (
             self.cerebellum_handler.get_synapse_connections_PF_to_PC()
         )

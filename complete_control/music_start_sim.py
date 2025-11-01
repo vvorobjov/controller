@@ -40,10 +40,6 @@ def run_simulation(
     log: structlog.stdlib.BoundLogger = structlog.get_logger(
         "main.simulation_loop", log_all_ranks=True
     )
-    single_trial_ms = master_config.simulation.duration_single_trial_ms
-    n_trials = master_config.simulation.n_trials
-
-    # --- Prepare for Data Collapsing ---
     pop_views = []
     for controller in controllers:
         pop_views.extend(controller.get_all_recorded_views())
@@ -53,34 +49,18 @@ def run_simulation(
     log.info("Starting Simulation")
 
     nest.Prepare()
-    for trial in range(n_trials):
-        current_sim_start_time = nest.GetKernelStatus("biological_time")
-        log.info(
-            f"Starting Trial {trial + 1}/{n_trials}",
-            duration_ms=single_trial_ms,
-            current_sim_time_ms=current_sim_start_time,
-        )
-        log.info(f"Current simulation time: {current_sim_start_time} ms")
-        start_trial_time = timer()
+    current_sim_start_time = nest.GetKernelStatus("biological_time")
+    log.info(f"Current simulation time: {current_sim_start_time} ms")
 
-        nest.Run(single_trial_ms)
+    nest.Run(master_config.simulation.duration_ms)
 
-        if controller.use_cerebellum:
-            controller.record_synaptic_weights(trial)
+    if controller.use_cerebellum:
+        controller.record_synaptic_weights()
 
-        end_trial_time = timer()
-        trial_wall_time = datetime.timedelta(seconds=end_trial_time - start_trial_time)
-        log.info(
-            f"Finished Trial {trial + 1}/{n_trials}",
-            sim_time_end_ms=nest.GetKernelStatus("biological_time"),
-            wall_time=str(trial_wall_time),
-        )
     nest.Cleanup()
-    log.info("--- All Trials Finished ---")
     nest.SyncProcesses()
 
-    # --- Data Collapsing (after all trials) ---
-    log.info("Attempting data collapsing for all trials...")
+    log.info("Attempting data collapsing...")
     start_collapse_time = timer()
     collapse_files(
         path_data,
@@ -88,7 +68,7 @@ def run_simulation(
         comm,
     )
     if controller.use_cerebellum and master_config.SAVE_WEIGHTS_CEREB:
-        log.info("Saving recorded synapse weights for all trials started...")
+        log.info("Saving recorded synapse weights started...")
         save_conn_weights(
             controller.weights_history,
             path_data,
@@ -100,7 +80,7 @@ def run_simulation(
         seconds=end_collapse_time - start_collapse_time
     )
     log.info(
-        "Data collapsing for all trials finished",
+        "Data collapsing finished",
         wall_time=str(collapse_wall_time),
     )
 

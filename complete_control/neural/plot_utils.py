@@ -537,14 +537,14 @@ def plot_controller_outputs(run_paths: RunPaths):
     path_fig.mkdir(parents=True, exist_ok=True)
 
     res = master_config.simulation.resolution
-    total_sim_duration = master_config.simulation.total_duration_all_trials_ms
+    total_sim_duration = master_config.simulation.duration_ms
     total_time_vect_concat = np.linspace(
         0,
         total_sim_duration,
         num=int(np.round(total_sim_duration / res)),
         endpoint=True,
     )
-    single_trial_duration = master_config.simulation.duration_single_trial_ms
+    single_trial_duration = master_config.simulation.duration_ms
     single_trial_time_vect_concat = np.linspace(
         0,
         single_trial_duration,

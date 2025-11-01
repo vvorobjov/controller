@@ -28,7 +28,6 @@ def generate_trajectory_minjerk(sim: SimulationParams):
         np.ndarray: Trajectory array for the simulation
     """
     res = sim.resolution
-    n_trials = sim.n_trials
     time_sim = sim.time_move
     time_prep = sim.time_prep
     time_post = sim.time_grasp + sim.time_post
@@ -45,7 +44,7 @@ def generate_trajectory_minjerk(sim: SimulationParams):
 
     trj_prep = trj[0] * np.ones(int(time_prep / res))
     trj_post = 0 * np.ones(int(time_post / res))
-    trj = np.tile(np.concatenate((trj_prep, trj.flatten(), trj_post)), n_trials)
+    trj = np.concatenate((trj_prep, trj.flatten(), trj_post))
 
     return trj
 
@@ -57,7 +56,6 @@ def generate_motor_commands_minjerk(sim: SimulationParams):
         np.ndarray: Motor commands array for the simulation
     """
     res = sim.resolution
-    n_trials = sim.n_trials
     time_sim = sim.time_move
     time_prep = sim.time_prep
     time_post = sim.time_grasp + sim.time_post
@@ -131,9 +129,7 @@ def generate_motor_commands_minjerk(sim: SimulationParams):
     motorCommands = generateMotorCommands(init_pos, tgt_pos, time_sim_vec / 1e3)
     mc_prep = 0 * np.ones(int(time_prep / res))
     mc_post = 0 * np.ones(int(time_post / res))
-    motorCommands = np.tile(
-        np.concatenate((mc_prep, motorCommands.flatten(), mc_post)), n_trials
-    )
+    motorCommands = np.concatenate((mc_prep, motorCommands.flatten(), mc_post))
 
     return motorCommands
 
@@ -150,5 +146,5 @@ if __name__ == "__main__":
     print(f"Generated motor commands shape: {motorCommands.shape}")
     print(motorCommands)
     print(
-        f"expected length: {(sim_p.time_prep + sim_p.time_move + sim_p.time_post)*sim_p.n_trials/sim_p.resolution}"
+        f"expected length: {(sim_p.time_prep + sim_p.time_move + sim_p.time_post)/sim_p.resolution}"
     )

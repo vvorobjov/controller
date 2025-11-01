@@ -35,8 +35,6 @@ class RobotSpecParams(BaseModel, frozen=True):
 class ExperimentParams(BaseModel, frozen=True):
     enable_gravity: bool = False
     z_gravity_magnitude: float = 9.81  # m/s^2
-    gravity_trial_start: int = 0  # gravity turns ON at start of this trial
-    gravity_trial_end: int = 1  # gravity turns OFF at end of this trial
 
 
 class OracleData(BaseModel):
@@ -68,7 +66,6 @@ class SimulationParams(BaseModel, frozen=True):
     time_move: float = 500.0  # ms
     time_grasp: float = 100.0  # ms
     time_post: float = 250.0  # ms
-    n_trials: int = 2
 
     oracle: OracleData = Field(default_factory=lambda: OracleData())
 
@@ -76,13 +73,8 @@ class SimulationParams(BaseModel, frozen=True):
 
     @computed_field
     @property
-    def duration_single_trial_ms(self) -> float:
+    def duration_ms(self) -> float:
         return self.time_prep + self.time_move + self.time_grasp + self.time_post
-
-    @computed_field
-    @property
-    def total_duration_all_trials_ms(self) -> float:
-        return self.duration_single_trial_ms * self.n_trials
 
     @classmethod
     def get_default(cls, field_name: str):
@@ -95,7 +87,7 @@ class SimulationParams(BaseModel, frozen=True):
 
     @property
     def sim_steps(self) -> int:
-        return int(self.total_duration_all_trials_ms / self.resolution)
+        return int(self.duration_ms / self.resolution)
 
     @property
     def neural_control_steps(self) -> int:

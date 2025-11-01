@@ -363,14 +363,13 @@ def plot_plant_outputs(
     with open(run_paths.trajectory, "r") as f:
         planner_data: PlannerData = PlannerData.model_validate_json(f.read())
 
-    generate_video_from_existing_result_single_trial(
-        config,
-        plant_data,
-    )
-
     framerate = 25
     video_duration = 5
     if animated_task:
+        generate_video_from_existing_result_single_trial(
+            config,
+            plant_data,
+        )
         if (
             master_params.plotting.CAPTURE_VIDEO is None
             or len(master_params.plotting.CAPTURE_VIDEO) == 0
@@ -455,7 +454,7 @@ def generate_video_from_existing_result_single_trial(
     plant = RoboticPlant(plant_config, pybullet)
     data = plant_data.joint_data
     steps_single_trial = int(
-        plant_config.master_config.simulation.duration_single_trial_ms
+        plant_config.master_config.simulation.duration_ms
         / plant_config.master_config.simulation.resolution
     )
     start = trial * steps_single_trial

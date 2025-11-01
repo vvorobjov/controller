@@ -80,6 +80,5 @@ def generate_trajectory_gle(
     predicted_trajectory_padded = np.concatenate(
         [predicted_trajectory, np.zeros(sim.manual_control_steps)]
     )
-    traj_all_trials = np.tile(predicted_trajectory_padded, sim.n_trials)
 
-    return traj_all_trials, predicted_choice_idx
+    return predicted_trajectory_padded, predicted_choice_idx

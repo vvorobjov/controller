@@ -104,7 +104,7 @@ class PlantPlotData(BaseModel):
 
     joint_data: List[JointData]
     ee_data: EEData
-    errors_per_trial: List[float]
+    error: float
     init_hand_pos_ee: List[float]
     trgt_hand_pos_ee: List[float]
 

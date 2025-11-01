@@ -61,7 +61,7 @@ class Script(GrpcEngineScript):
         rate_pos, rate_neg = ctrl[0], ctrl[1]
 
         with self.pybullet_profile.time():
-            joint_pos_rad, joint_vel, ee_pos, ee_vel, curr_section = (
+            self.joint_pos_rad, joint_vel, ee_pos, ee_vel, curr_section = (
                 self.simulator.run_simulation_step(
                     rate_pos, rate_neg, self.current_sim_time_s, self.step
                 )
@@ -90,5 +90,5 @@ class Script(GrpcEngineScript):
 
     def shutdown(self):
         self.log.info("Simulation loop finished.")
-        self.simulator._finalize_and_process_data()
+        self.simulator.finalize_and_process_data(self.joint_pos_rad)
         print("Simulation End !!!")
