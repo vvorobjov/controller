@@ -1,8 +1,6 @@
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, TypeVar
 
-from neural.population_view import PopView
 from pydantic import BaseModel
 from utils_common.custom_types import NdArray
 
@@ -20,13 +18,6 @@ def convert_to_recording(
         if isinstance(v, PopView):
             setattr(dest, k, v.collect(path, comm))
     return dest
-
-
-@dataclass
-class PopulationBlocks:
-    controller: ConvertToRecording = None
-    cerebellum_handler: ConvertToRecording = None
-    cerebellum: ConvertToRecording = None
 
 
 class RecordingManifest(BaseModel):

@@ -3,14 +3,13 @@ from pathlib import Path
 import numpy as np
 import structlog
 from mpi4py.MPI import Comm
+from neural.Controller import PopulationBlocks
 from neural.nest_adapter import nest
 from neural.neural_models import (
-    PopulationBlocks,
     PopulationSpikes,
     SynapseBlock,
     SynapseRecording,
 )
-from neural.population_view import PopView
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
 
@@ -31,12 +30,17 @@ def collapse_files(dir: Path, pop_blocks: PopulationBlocks, comm: Comm = None):
     Files are processed only by rank 0 process. For each population, files starting with
     the population name are combined, duplicates are removed, and original files are deleted.
     """
-    rec = pop_blocks.controller.convert_to_recording()
-    _log.debug(f"result is type {type(rec)}")
+    rec = pop_blocks.controller.to_recording(dir, comm)
+    if comm is None or nest.Rank() == 0:
+        _log.debug(f"result is type {type(rec)}")
+        _log.debug(f"{rec.brainstem_n.population_spikes}")
+
     if pop_blocks.cerebellum_handler:
         pop_blocks.cerebellum
         pop_blocks.cerebellum_handler
 
+    if comm is not None:
+        nest.SyncProcesses()
     return
     for pop in pop_blocks:
         gids = nest.GetStatus(pop.pop, "global_id")
@@ -82,9 +86,6 @@ def collapse_files(dir: Path, pop_blocks: PopulationBlocks, comm: Comm = None):
             pop.filepath = complete_file
             for f in file_list:
                 f.unlink()
-
-    if comm is not None:
-        nest.SyncProcesses()
 
 
 def save_conn_weights(weights_history: dict, dir: Path, filename_prefix: str):

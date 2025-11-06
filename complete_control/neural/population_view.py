@@ -9,11 +9,11 @@ __version__ = "1.0.1"
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import structlog
+from neural.neural_models import PopulationSpikes, RecordingManifest
 from neural.nest_adapter import nest
+import numpy as np
 
 _log = structlog.get_logger(__name__)
 
@@ -68,12 +68,57 @@ class PopView:
         else:
             self.detector = self._create_connect_spike_detector(pop)
 
+        self.neuron_model = nest.GetStatus(pop, "model")[0]
+        self.gids = nest.GetStatus(pop, "global_id")
         self.total_n_events = 0
         self.rates_history = []
 
-    def collect(self):
-        # TODO!
+    def collect(self, dir: Path, comm=None):
         _log.debug(f"{self.label} collect called!")
+        if comm is None or nest.Rank() == 0:
+            name = self.label
+            file_list = [
+                i
+                for i in dir.iterdir()
+                if i.name.startswith(name) and i.suffix != ".json"
+            ]
+            senders = []
+            times = []
+            combined_data = []
+
+            for f in file_list:
+                with open(dir / f, "r") as fd:
+                    lines = fd.readlines()
+                    for line in lines:
+                        if line.startswith("#") or line.startswith("sender"):
+                            continue
+                        combined_data.append(line.strip())
+            unique_lines = list(set(combined_data))
+
+            for line in unique_lines:
+                sender, time = line.split()
+                senders.append(int(sender))
+                times.append(float(time))
+
+            pop_spikes = PopulationSpikes(
+                label=name,
+                gids=np.array(self.gids),
+                senders=np.array(senders),
+                times=np.array(times),
+                population_size=len(self.gids),
+                neuron_model=self.neuron_model,
+            )
+
+            complete_file = dir / (name + ".json")
+            with open(complete_file, "w") as wfd:
+                wfd.write(pop_spikes.model_dump_json(indent=4))
+
+            self.filepath = complete_file
+            for f in file_list:
+                f.unlink()
+            return RecordingManifest(population_spikes=self.filepath)
+        else:
+            return None
 
     def _create_connect_spike_detector(self, pop, **kwargs):
         spike_detector = nest.Create("spike_recorder")

@@ -1,8 +1,11 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
 import structlog
+from neural.CerebellumHandlerPopulations import CerebellumHandlerPopulations
+from neural.CerebellumPopulations import CerebellumPopulations
 from config.bsb_models import BSBConfigPaths
 from config.connection_params import ConnectionsParams
 from config.core_models import MusicParams, SimulationParams
@@ -15,7 +18,6 @@ from config.module_params import (
 )
 from config.population_params import PopulationsParams
 from neural.nest_adapter import nest
-from neural.neural_models import PopulationBlocks
 from plant.sensoryneuron import SensoryNeuron
 from utils_common.generate_signals import generate_traj
 
@@ -49,6 +51,13 @@ from .stateestimator import StateEstimator_mass
 #            └──────────────┘
 
 NJT = 1
+
+
+@dataclass
+class PopulationBlocks:
+    controller: ControllerPopulations = None
+    cerebellum_handler: CerebellumHandlerPopulations = None
+    cerebellum: CerebellumPopulations = None
 
 
 class Controller:
