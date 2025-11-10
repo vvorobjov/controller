@@ -398,6 +398,8 @@ class PlantSimulator:
             joint_pos, joint_vel, ee_pos, ee_vel, curr_section = (
                 self.run_simulation_step(rate_pos, rate_neg, current_sim_time_s, step)
             )
+            # Send sensory feedback through MUSIC
+            if s < self.num_total_steps - 1:
                 self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
 
             # Update progress
