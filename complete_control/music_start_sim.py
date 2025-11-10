@@ -51,22 +51,17 @@ def run_simulation(
         controller.record_synaptic_weights()
 
     nest.Cleanup()
-    nest.SyncProcesses()
 
     log.info("Attempting data collapsing...")
     start_collapse_time = timer()
-    collapse_files(
+    res = collapse_files(
         path_data,
         controller.collect_populations(),
         comm,
     )
-    if controller.use_cerebellum and master_config.SAVE_WEIGHTS_CEREB:
-        log.info("Saving recorded synapse weights started...")
-        save_conn_weights(
-            controller.weights_history,
-            path_data,
-            "weightrecord",
-        )
+
+    with open(master_config.run_paths.neural_result, "w") as f:
+        f.write(res.model_dump_json())
 
     end_collapse_time = timer()
     collapse_wall_time = datetime.timedelta(
