@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 class NeuralResultManifest(BaseModel):
     controller: ControllerPopulationsRecordings
-    cerebellum: CerebellumPopulationsRecordings
-    cerebellum_handler: CerebellumHandlerPopulationsRecordings
-    simulation_time: float
-    dt: float
+    cerebellum: CerebellumPopulationsRecordings | None
+    cerebellum_handler: CerebellumHandlerPopulationsRecordings | None
+    use_cerebellum: bool
