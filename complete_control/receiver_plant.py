@@ -24,6 +24,7 @@ def coordinate_with_simulation():
     shared_data = {
         "run_id": None,
         "paths": None,
+        "parent_id": None,
     }
     print("attempting to receive data via broadcast")
     return MPI.COMM_WORLD.bcast(shared_data, root=0)
@@ -51,7 +52,9 @@ def main():
 
     try:
         log.info("Initializing PlantSimulator...")
-        config = PlantConfig.from_runpaths(run_paths)
+        config = PlantConfig.from_runpaths(
+            run_paths, parent_id=shared_data["parent_id"]
+        )
         simulator = PlantSimulator(
             config=config,
             pybullet_instance=p,

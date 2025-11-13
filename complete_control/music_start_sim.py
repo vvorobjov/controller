@@ -12,7 +12,7 @@ initialize_nest("MUSIC")
 import structlog
 from config.MasterParams import MasterParams
 from utils_common.results import make_trial_id
-from config.ResultMeta import ResultMeta
+from config.ResultMeta import ResultMeta, extract_id
 from config.paths import RunPaths
 from mpi4py import MPI
 from neural.Controller import Controller
@@ -75,21 +75,16 @@ def run_simulation(
     result = ResultMeta.create(master_config)
     result.save(master_config.run_paths)
 
-    if controller.use_cerebellum and master_config.SAVE_WEIGHTS_CEREB:
-        log.info("Saving recorded synapse weights started...")
-        save_conn_weights(
-            controller.weights_history,
-            path_data,
-            "weightrecord",
-        )
-
     log.info("--- Simulation Finished ---")
 
 
-def coordinate_paths_with_receiver(label: str = "") -> tuple[str, RunPaths]:
+def coordinate_paths_with_receiver(
+    label: str = "", parent_id: str = ""
+) -> tuple[str, RunPaths]:
     shared_data = {
         "run_id": None,
         "paths": None,
+        "parent_id": None,
     }
     run_id = None
     if rank == 0:
@@ -98,6 +93,7 @@ def coordinate_paths_with_receiver(label: str = "") -> tuple[str, RunPaths]:
         )
         shared_data["run_id"] = run_id
         shared_data["paths"] = RunPaths.from_run_id(run_id)
+        shared_data["parent_id"] = parent_id
         print("sending paths to all processes...")
 
     shared_data = MPI.COMM_WORLD.bcast(shared_data, root=0)
@@ -108,12 +104,15 @@ def coordinate_paths_with_receiver(label: str = "") -> tuple[str, RunPaths]:
 
 
 if __name__ == "__main__":
+    parent_id = extract_id(os.environ.get("PARENT_ID") or "")
+    # 20251112_142047_7bri-singletrial
+
     comm = MPI.COMM_WORLD.Create_group(
         MPI.COMM_WORLD.group.Excl([MPI.COMM_WORLD.Get_size() - 1])
     )
     rank = comm.rank
     label = "singletrial"
-    run_id, run_paths = coordinate_paths_with_receiver(label)
+    run_id, run_paths = coordinate_paths_with_receiver(label, parent_id)
     run_paths = RunPaths.from_run_id(run_id)
 
     setup_logging(
@@ -140,7 +139,7 @@ if __name__ == "__main__":
 
     start_script_time = timer()
 
-    master_config = MasterParams.from_runpaths(run_paths, USE_MUSIC=True)
+    master_config = MasterParams.from_runpaths(run_paths, parent_id, USE_MUSIC=True)
     master_config.save_to_json(run_paths.params_json)
     main_log.info("MasterParams initialized in music_start_sim (MUSIC).")
 

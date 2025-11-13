@@ -74,7 +74,6 @@ class PopView:
         self.rates_history = []
 
     def collect(self, dir: Path, comm=None):
-        _log.debug(f"{self.label} collect called!")
         if comm is None or nest.Rank() == 0:
             name = self.label
             file_list = [

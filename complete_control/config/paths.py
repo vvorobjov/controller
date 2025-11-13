@@ -52,7 +52,7 @@ class RunPaths:
     video_frames: Path
 
     @classmethod
-    def from_run_id(cls, run_timestamp: str):
+    def from_run_id(cls, run_timestamp: str, create_if_not_present=True):
         """
         Sets up the directory structure for a single simulation run.
 
@@ -78,17 +78,17 @@ class RunPaths:
         input_image = run_dir / "input_image.bmp"
         trajectory = run_dir / "traj.npy"
 
-        # Create directories if they don't exist
-        for dir_path in [
-            run_dir,
-            data_nest_dir,
-            robot_result.parent,
-            figures_dir,
-            figures_receiver_dir,
-            video_frames,
-            logs_dir,
-        ]:
-            dir_path.mkdir(parents=True, exist_ok=True, mode=0o770)
+        if create_if_not_present:
+            for dir_path in [
+                run_dir,
+                data_nest_dir,
+                robot_result.parent,
+                figures_dir,
+                figures_receiver_dir,
+                video_frames,
+                logs_dir,
+            ]:
+                dir_path.mkdir(parents=True, exist_ok=True, mode=0o770)
 
         return cls(
             run=run_dir,
