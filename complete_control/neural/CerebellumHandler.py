@@ -106,6 +106,7 @@ class CerebellumHandler:
         self.cerebellum = Cerebellum(
             comm=comm,
             paths=cerebellum_paths,
+            conn_params=conn_params,
             total_time_vect=self.total_time_vect,
             label_prefix=f"{self.label_prefix}core_",
             weights=weights,
@@ -140,26 +141,8 @@ class CerebellumHandler:
         """
         Returns a dict of NEST connection handles for all PF→Purkinje non-static.
         """
-        conns = defaultdict(list)
-        pairs = self.cerebellum.plastic_pairs
-        tot_syn = 0
-        for pre_pop, post_pop in pairs:
-            c = nest.GetConnections(
-                source=pre_pop.pop,
-                target=post_pop.pop,
-            )
-            for ic in c:
-                if nest.GetStatus(c, "synapse_model") != "static_synapse":
-                    conns[(pre_pop.label, post_pop.label)].append(ic)
-                    tot_syn += 1
 
-            self.log.debug(
-                f"{pre_pop.label}>{post_pop.label} ({len(c)} synapses). done {tot_syn}",
-                log_all_ranks=True,
-            )
-
-        self.log.debug(f"total number of synapses: {tot_syn}", log_all_ranks=True)
-        return conns
+        return self.cerebellum.get_plastic_connections()
 
     def _create_interface_populations(self):
         """Creates the intermediate populations connecting to the cerebellum."""
@@ -764,25 +747,3 @@ class CerebellumHandler:
             "all_to_all",
             syn_spec=conn_spec_n_bs,
         )
-
-    # --- Methods to get interface populations (optional, for clarity) ---
-    # def get_forward_prediction_outputs( # Obsolete as prediction_p/n are now in Controller
-    #     self,
-    # ) -> tuple[Optional[PopView], Optional[PopView]]:
-    #     """Returns the forward model prediction output PopViews."""
-    #     return self.interface_pops.prediction_p, self.interface_pops.prediction_n
-
-    def get_inverse_prediction_outputs(
-        self,
-    ) -> tuple[Optional[PopView], Optional[PopView]]:
-        """Returns the inverse model prediction output PopViews."""
-        return (
-            self.interface_pops.motor_prediction_p,
-            self.interface_pops.motor_prediction_n,
-        )
-
-    # Add getters for input interface populations if needed by Controller
-    # e.g., get_motor_command_inputs(), get_planner_inputs(), etc.
-    # Example:
-    # def get_motor_command_inputs(self) -> tuple[Optional[PopView], Optional[PopView]]:
-    #     return self.interface_pops.motor_commands_p, self.interface_pops.motor_commands_n

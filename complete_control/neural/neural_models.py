@@ -44,7 +44,7 @@ class Synapse(BaseModel):
     source: int  # GID
     target: int  # GID
     syn_id: int
-    syn_type: str
+    synapse_model: str
     receptor_type: int
     delay: float
 

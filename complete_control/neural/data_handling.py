@@ -81,11 +81,11 @@ def merge_synapse_blocks(blocks: List[SynapseBlock]) -> SynapseBlock:
     )
 
 
-def save_conn_weights(
-    weights: list[SynapseBlock], dir: Path, filename_prefix: str, comm=None
-) -> list[Path]:
+def save_conn_weights(weights: list[SynapseBlock], dir: Path, comm=None) -> list[Path]:
+    from neural.Cerebellum import create_key_plastic_connection
 
     paths = []
+    _log.debug(f"saving weights...")
     for block in weights:
         if comm is not None:
             # gather all blocks and merge them in a single object
@@ -94,8 +94,10 @@ def save_conn_weights(
                 block = merge_synapse_blocks(gathered)
 
         if comm is None or comm.rank == 0:
-            label = f"{block.source_pop_label}>{block.target_pop_label}"
-            rec_path = dir / f"{filename_prefix}-{label}.json"
+            label = create_key_plastic_connection(
+                block.source_pop_label, block.target_pop_label
+            )
+            rec_path = dir / f"{label}.json"
             _log.debug(f"saving {label}, with {len(block.synapse_recordings)} synapses")
             with open(rec_path, "w") as f:
                 json_array = block.model_dump_json(indent=2)

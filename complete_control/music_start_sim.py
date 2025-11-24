@@ -11,9 +11,8 @@ initialize_nest("MUSIC")
 
 import structlog
 from config.MasterParams import MasterParams
-from utils_common.results import make_trial_id
-from config.ResultMeta import ResultMeta, extract_id
 from config.paths import RunPaths
+from config.ResultMeta import ResultMeta, extract_id
 from mpi4py import MPI
 from neural.Controller import Controller
 from neural.data_handling import collapse_files, save_conn_weights
@@ -24,6 +23,7 @@ from neural_simulation_lib import (
     setup_nest_kernel,
 )
 from utils_common.log import setup_logging
+from utils_common.results import make_trial_id
 
 
 def run_simulation(
@@ -50,7 +50,7 @@ def run_simulation(
     rec_paths = None
     if controller.use_cerebellum and master_config.SAVE_WEIGHTS_CEREB:
         w = controller.record_synaptic_weights()
-        rec_paths = save_conn_weights(w, path_data, f"synrec", comm)
+        rec_paths = save_conn_weights(w, path_data, comm)
 
     nest.Cleanup()
 
@@ -63,8 +63,9 @@ def run_simulation(
     )
     res.weights = rec_paths  # TODO move this somewhere less ugly
 
-    with open(master_config.run_paths.neural_result, "w") as f:
-        f.write(res.model_dump_json())
+    if rank == 0:
+        with open(master_config.run_paths.neural_result, "w") as f:
+            f.write(res.model_dump_json())
 
     end_collapse_time = timer()
     collapse_wall_time = datetime.timedelta(
@@ -75,8 +76,9 @@ def run_simulation(
         wall_time=str(collapse_wall_time),
     )
 
-    result = ResultMeta.create(master_config)
-    result.save(master_config.run_paths)
+    if rank == 0:
+        result = ResultMeta.create(master_config)
+        result.save(master_config.run_paths)
 
     log.info("--- Simulation Finished ---")
 
@@ -98,6 +100,7 @@ def coordinate_paths_with_receiver(
         shared_data["paths"] = RunPaths.from_run_id(run_id)
         shared_data["parent_id"] = parent_id
         print("sending paths to all processes...")
+        print(f"__SIMULATION_RUN_ID__:{run_id}", flush=True)
 
     shared_data = MPI.COMM_WORLD.bcast(shared_data, root=0)
     run_id = shared_data["run_id"]

@@ -1,25 +1,113 @@
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
+
 import numpy as np
 import structlog
+import tqdm
 from bsb import SimulationData, config, from_storage, get_simulation_adapter, options
 from bsb_nest.adapter import NestAdapter, NestResult
-import tqdm
+from config.bsb_models import BSBConfigPaths
+from config.connection_params import ConnectionsParams
+from mpi4py import MPI
 from neural.nest_adapter import nest
 from neural.neural_models import SynapseBlock
-from config.bsb_models import BSBConfigPaths
-from mpi4py import MPI
 
 from .CerebellumPopulations import CerebellumPopulations
 from .population_view import PopView
 
 SIMULATION_NAME_IN_YAML = "basal_activity"
+DUMMY_MODEL_NAME = "dummy_connection"
+PLASTICITY_TYPES = ("stdp_synapse_sinexp", "stdp_synapse_alpha")
+
+
+def create_key_plastic_connection(s: str, t: str):
+    return f"{s}>{t}"
 
 
 class Cerebellum:
+    def prepare_configurations(
+        self,
+        f: str,
+        i: str,
+        weights: list[Path] | None,
+    ):
+        forward: config.Configuration = config.parse_configuration_file(f)
+        inverse: config.Configuration = config.parse_configuration_file(i)
+        to_be_created_once_neurons_exist = []
+
+        if weights is None or len(weights) == 0:  # no parent, root execution
+            return forward, inverse, to_be_created_once_neurons_exist
+        # extract plastic layers
+        self.log.debug(f"received {len(weights)} weights!")
+
+        conn_to_connectionmodel = {
+            "cereb_core_forw_grc>cereb_core_forw_pc_n": (
+                "parallel_fiber_to_purkinje_minus",
+                forward,
+            ),
+            "cereb_core_forw_grc>cereb_core_forw_pc_p": (
+                "parallel_fiber_to_purkinje_plus",
+                forward,
+            ),
+            "cereb_core_inv_grc>cereb_core_inv_pc_n": (
+                "parallel_fiber_to_purkinje_minus",
+                inverse,
+            ),
+            "cereb_core_inv_grc>cereb_core_inv_pc_p": (
+                "parallel_fiber_to_purkinje_plus",
+                inverse,
+            ),
+        }
+        # iterate through all possible weights
+        for weight_label, (
+            yaml_label,
+            configuration,
+        ) in conn_to_connectionmodel.items():
+            self.log.debug(
+                f"looking for label {weight_label} in {[i.stem for i in weights]}"
+            )
+            path = next((i for i in weights if i.stem == weight_label), None)
+            # if the weights for this connection were not saved, do nothing
+            if path is None:
+                continue
+            # otherwise, stop conns from being created
+            current_model = (
+                configuration.simulations[SIMULATION_NAME_IN_YAML]
+                .connection_models[yaml_label]
+                .synapse.model
+            )
+            self.log.debug(
+                f"changing synapse model from {current_model} to {DUMMY_MODEL_NAME}"
+            )
+            configuration.simulations[SIMULATION_NAME_IN_YAML].connection_models[
+                yaml_label
+            ].synapse.model = DUMMY_MODEL_NAME
+            # and instead accumulate to create based on weights
+            to_be_created_once_neurons_exist.append(path)
+            weights.remove(path)
+        # if len(weights) + len(to_be_created_once_neurons_exist) > len(
+        #     conn_to_connectionmodel
+        # ):
+        #     self.log.error(
+        #         f"len(weights) + len(to_be_created_once_neurons_exist) > len(conn_to_connectionmodel): ({len(weights)}+{len(to_be_created_once_neurons_exist)}>{len(conn_to_connectionmodel)})"
+        #         "something has probably gone wrong"
+        #     )
+        #     raise ValueError("more weights than possible were expected.")
+
+        if len(weights) > 0:
+            self.log.error(
+                f"len(weights)>0 (={len(weights)}). something has probably gone wrong"
+            )
+            self.log.error(weights)
+            raise ValueError("some weight files were not consumed.")
+        return forward, inverse, to_be_created_once_neurons_exist
+
     def __init__(
         self,
         comm: MPI.Comm,
         paths: BSBConfigPaths,
+        conn_params: ConnectionsParams,
         total_time_vect: np.ndarray,
         label_prefix: str,
         weights: list[Path] | None,
@@ -29,22 +117,26 @@ class Cerebellum:
             0  # TODO how to we handle this verbosity? keep 0 for now but...
         )
         self.total_time_vect = total_time_vect
+        self.conn_params = conn_params
         self.label_prefix = label_prefix
         self.populations = CerebellumPopulations()
         self.forward_model = None
 
         adapter: NestAdapter = get_simulation_adapter("nest", comm)
-        # hdf5 uses relative paths from itself to find functions, so if we move it it won't work anymore
+
+        conf_forward, conf_inverse, weights_for_conn_to_create = (
+            self.prepare_configurations(
+                str(paths.forward_yaml), str(paths.inverse_yaml), weights
+            )
+        )
 
         self.forward_model = from_storage(str(paths.cerebellum_hdf5), comm)
-        conf_forward = config.parse_configuration_file(str(paths.forward_yaml))
         self.forward_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_forward.simulations[SIMULATION_NAME_IN_YAML]
         )
         self.log.debug("loaded forward model and its configuration")
 
         self.inverse_model = from_storage(str(paths.cerebellum_hdf5), comm)
-        conf_inverse = config.parse_configuration_file(str(paths.inverse_yaml))
         self.inverse_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_inverse.simulations[SIMULATION_NAME_IN_YAML]
         )
@@ -333,27 +425,37 @@ class Cerebellum:
             _inv_N_PC_minus_gids,
         )
 
-        # TODO make into dataclass, then use it to assign default params when running without parent
         self.plastic_pairs = [
             (
                 self.populations.forw_grc_view,
                 self.populations.forw_pc_p_view,
+                self._find_receptor_type(
+                    conf_forward, "parallel_fiber_to_purkinje_plus"
+                ),
             ),
             (
                 self.populations.forw_grc_view,
                 self.populations.forw_pc_n_view,
+                self._find_receptor_type(
+                    conf_forward, "parallel_fiber_to_purkinje_minus"
+                ),
             ),
             (
                 self.populations.inv_grc_view,
                 self.populations.inv_pc_p_view,
+                self._find_receptor_type(
+                    conf_inverse, "parallel_fiber_to_purkinje_plus"
+                ),
             ),
             (
                 self.populations.inv_grc_view,
                 self.populations.inv_pc_n_view,
+                self._find_receptor_type(
+                    conf_inverse, "parallel_fiber_to_purkinje_minus"
+                ),
             ),
         ]
-        self.log.warning("loading weights!!")
-        self._connect_plastic_pops(self.plastic_pairs, weights)
+        self._connect_plastic_pops(weights_for_conn_to_create)
 
     def _create_core_pop_views(
         self,
@@ -529,24 +631,53 @@ class Cerebellum:
             label=f"{self.label_prefix}inv_pc_n",
         )
 
-    def _connect_plastic_pops(self, pairs, weights):
-        if weights is None:
-            return
+    def _find_receptor_type(self, c: config.Configuration, connection_name: str):
+        return (
+            c.simulations[SIMULATION_NAME_IN_YAML]
+            .connection_models[connection_name]
+            .synapse.receptor_type
+        )
+
+    def get_plastic_connections(self):
+        conns = {}
+        pairs = self.plastic_pairs
+        tot_syn = 0
+        for pre_pop, post_pop, receptor_type in pairs:
+            c = []
+            for p in PLASTICITY_TYPES:
+                c.extend(
+                    nest.GetConnections(
+                        source=pre_pop.pop,
+                        target=post_pop.pop,
+                        synapse_model=p,
+                    )
+                    or []
+                )
+            # receptor_type saved because https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
+            conns[(pre_pop.label, post_pop.label)] = (c, receptor_type)
+            tot_syn += len(c)
+
+        self.log.debug(
+            f"total number of synapses (per process): {tot_syn}", log_all_ranks=True
+        )
+        return conns
+
+    def _connect_plastic_pops(self, weights: list[Path]):
         for path in weights:
             with open(path, "r") as f:
                 block = SynapseBlock.model_validate_json(f.read())
-            self.log.debug(
-                f"working on {block.source_pop_label}>{block.target_pop_label}"
-            )
-            for conn in tqdm.tqdm(block.synapse_recordings):
+            for conn in tqdm.tqdm(
+                block.synapse_recordings,
+                f"{block.source_pop_label}>{block.target_pop_label}",
+            ):
                 nest.Connect(
                     [conn.syn.source],
                     [conn.syn.target],
                     "one_to_one",
                     syn_spec={
-                        "synapse_model": conn.syn.syn_type,
+                        "synapse_model": conn.syn.synapse_model,
                         "weight": [conn.weight],
                         "delay": [conn.syn.delay],
-                        "receptor_type": [conn.syn.receptor_type],
+                        "receptor_type": conn.syn.receptor_type,
                     },
                 )

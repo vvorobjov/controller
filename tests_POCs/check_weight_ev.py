@@ -7,16 +7,19 @@ from complete_control.neural.neural_models import SynapseBlock
 from complete_control.neural.result_models import NeuralResultManifest
 from complete_control.config.ResultMeta import ResultMeta
 
-ids = [
-    "20251112_142047_7bri-singletrial",
-    "20251113_104618_uhx3-singletrial",
-    "20251113_113025_ukpm-singletrial",
-    "20251113_113319_99um-singletrial",
-]
+final_id = "20251120_173722_w82r-singletrial"
+
+
+def gather_ids(id):
+    meta = ResultMeta.from_id(id)
+    if meta.parent is None or len(meta.parent) == 0:
+        return []
+    return [id, *gather_ids(meta.parent)]
 
 
 def main():
-    for i in range(1):
+    ids = gather_ids(final_id)
+    for i in range(10):
         for id in ids:
             meta = ResultMeta.from_id(id)
             neural = meta.load_neural()
@@ -25,6 +28,7 @@ def main():
             print(
                 f"{meta.id}->{block.source_pop_label}-{block.target_pop_label}[0]:{block.synapse_recordings[i].weight}"
             )
+        print("\n")
 
 
 if __name__ == "__main__":

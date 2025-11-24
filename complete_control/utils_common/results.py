@@ -1,8 +1,12 @@
+import datetime
+import random
+import string
 from pathlib import Path
-import datetime, random, string
-from config.ResultMeta import ResultMeta
-from config.MasterParams import MasterParams
+
 from config import paths
+from config.MasterParams import MasterParams
+from config.ResultMeta import ResultMeta
+from plant.plant_models import PlantPlotData
 
 
 def make_trial_id(
@@ -24,7 +28,7 @@ def read_weights(master_params: MasterParams) -> list[Path] | None:
         return None
 
     p = [i for i in paths.RUNS_DIR.glob(f"{parent_id}*") if i.is_dir()]
-    if len(p) is not 1:
+    if len(p) != 1:
         raise ValueError(f"found {len(p)} parent(s) for key='{parent_id}'")
 
     rp = paths.RunPaths.from_run_id(p[0].name, create_if_not_present=False)

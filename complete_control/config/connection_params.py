@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, computed_field
 
 class SingleSynapseParams(BaseModel):
     model_config: ClassVar = {"frozen": True}
+
+    synapse_model: str = "static_synapse"
     weight: float
     delay: Optional[float] = None
     receptor_type: Optional[int] = None

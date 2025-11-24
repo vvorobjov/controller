@@ -176,8 +176,9 @@ class Controller:
     def record_synaptic_weights(self) -> list[SynapseBlock]:
         PF_to_purkinje_conns = self.cerebellum_handler.get_plastic_connections()
         blocks = []
-        for (pre_pop, post_pop), conns in PF_to_purkinje_conns.items():
+        for (pre_pop, post_pop), (conns, receptor_type) in PF_to_purkinje_conns.items():
             recs = []
+            self.log.debug(f"saving {pre_pop}>{post_pop}...")
             for conn in conns:
                 st = nest.GetStatus(
                     conn,
@@ -188,7 +189,7 @@ class Controller:
                         "delay",
                         "synapse_model",
                         "weight",
-                        "receptor",
+                        # "receptor", see https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
                     ],
                 )[0]
                 (
@@ -198,7 +199,7 @@ class Controller:
                     delay,
                     synapse_model,
                     weight,
-                    receptor_type,
+                    # receptor_type, see https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
                 ) = st
                 recs.append(
                     SynapseRecording(
@@ -206,7 +207,7 @@ class Controller:
                             source=source_neur,
                             target=target_neur,
                             syn_id=synapse_id,
-                            syn_type=synapse_model,
+                            synapse_model=synapse_model,
                             delay=delay,
                             receptor_type=receptor_type,
                         ),

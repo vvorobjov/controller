@@ -41,7 +41,7 @@ class ResultMeta(BaseModel):
     def from_id(cls, id: str):
         id = extract_id(id)
         p = [i for i in paths.RUNS_DIR.glob(f"{id}*") if i.is_dir()]
-        if len(p) is not 1:
+        if len(p) != 1:
             raise ValueError(f"found {len(p)} result(s) for key='{id}'")
 
         rp = paths.RunPaths.from_run_id(p[0].name, create_if_not_present=False)
