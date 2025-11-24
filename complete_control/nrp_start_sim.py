@@ -3,6 +3,7 @@ import os
 from timeit import default_timer as timer
 
 import structlog
+from config import ResultMeta
 from config.MasterParams import MasterParams
 from config.nrp_sim_config import SimulationConfig
 from config.paths import RunPaths
@@ -12,31 +13,35 @@ from nrp_protobuf import wrappers_pb2
 from plant.plant_plotting import plot_plant_outputs
 from tqdm import tqdm
 
+from utils_common.results import make_trial_id
 
-def main():
+
+def run_trial(parent_id: str | None = None) -> str:
     client_log = structlog.get_logger("nrp_client")
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    os.environ["EXEC_TIMESTAMP"] = timestamp
-    print(f"env['EXEC_TIMESTAMP']={os.environ.get('EXEC_TIMESTAMP')}")
 
-    run_paths = RunPaths.from_run_id(timestamp)
-    master_config = MasterParams.from_runpaths(run_paths=run_paths)
+    label = "singletrial"
+    run_id = make_trial_id(label=label)
 
-    time_prep = master_config.simulation.time_prep
-    time_move = master_config.simulation.time_move
-    time_post = master_config.simulation.time_post
-    n_trials = master_config.simulation.n_trials
-    resolution = master_config.simulation.resolution
+    os.environ["EXEC_TIMESTAMP"] = run_id
+    if parent_id:
+        os.environ["PARENT_ID"] = parent_id
+    else:
+        if "PARENT_ID" in os.environ:
+            del os.environ["PARENT_ID"]
 
-    SimConfig = SimulationConfig()
-    SimConfig.SimulationTimeout = int(
-        (time_prep + time_move + time_post) * n_trials / 1000
-    )
+    # print(f"env['EXEC_TIMESTAMP']={os.environ.get('EXEC_TIMESTAMP')}")
+
+    run_paths = RunPaths.from_run_id(run_id)
+    master_config = MasterParams.from_runpaths(run_paths=run_paths, parent_id=parent_id)
+
+    SimConfig = SimulationConfig.from_masterparams(master_config)
 
     simconfig_path = str(run_paths.params_json).replace(".json", "_simconfig.json")
     with open(simconfig_path, "w") as f:
         f.write(SimConfig.model_dump_json(indent=2))
-    client_log.debug("SimulationConfig loaded and dumped successfully.")
+    client_log.debug(
+        f"SimulationConfig loaded and dumped successfully. in {simconfig_path}"
+    )
 
     nrp = NrpCore(
         "0.0.0.0:5679",
@@ -51,32 +56,25 @@ def main():
     client_log.debug("Nrp server initialized successfully")
 
     loop_start_time = timer()
-    steps_trial = int((time_prep + time_move + time_post) / resolution)
-    steps_tot = steps_trial * n_trials
-
-    client_log.info(f"Start run loop. {n_trials} trials ({steps_tot} total iterations)")
+    steps_trial = master_config.simulation.sim_steps
+    client_log.info(f"Start run loop. 1 trial ({steps_trial} total iterations)")
 
     it_step = int(steps_trial / 100)
-    with tqdm(total=n_trials, desc="Total Simulation", unit="trial") as pbar_total:
-        for trial_idx in range(n_trials):
-            with tqdm(
-                total=steps_trial,
-                desc=f"Trial {trial_idx+1}",
-                unit="iter",
-                leave=False,
-            ) as pbar_trial:
+    with tqdm(
+        total=steps_trial,
+        desc=f"Simulation",
+        unit="iter",
+        leave=False,
+    ) as pbar_trial:
 
-                for i in range(int(steps_trial / it_step)):
-                    nrp.run_loop(it_step)
-                    pbar_trial.update(it_step)
-
-                pbar_total.update(1)
+        for i in range(int(steps_trial / it_step)):
+            nrp.run_loop(it_step)
+            pbar_trial.update(it_step)
 
     loop_end_time = timer()
     total_loop_time = datetime.timedelta(seconds=loop_end_time - loop_start_time)
     client_log.debug(f"Simulation time: {total_loop_time.total_seconds():.1f} s")
 
-    # shutdown nrp server
     nrp.shutdown()
 
     if master_config.plotting.PLOT_AFTER_SIMULATE:
@@ -94,6 +92,19 @@ def main():
     client_log.info(
         f"Simulation completed. Total execution time: {total_time.total_seconds():.1f} s"
     )
+
+    result = ResultMeta.create(master_config)
+    result.save(master_config.run_paths)
+
+    return run_id
+
+
+def main():
+    # For standalone execution, we still support reading PARENT_ID from env
+    # and printing the marker for the old runner if needed.
+    parent_id = ResultMeta.extract_id(os.environ.get("PARENT_ID") or "")
+    run_id = run_trial(parent_id)
+    print(f"__SIMULATION_RUN_ID__:{run_id}", flush=True)
 
 
 if __name__ == "__main__":

@@ -391,6 +391,7 @@ class PlantSimulator:
             unit="step",
             desc="Simulating",
         ):
+            current_sim_time_s = music_runtime.time()
             # Get commands from MUSIC
             rate_pos, rate_neg = self.music_prepare_step(current_sim_time_s)
 
@@ -402,11 +403,14 @@ class PlantSimulator:
             if s < self.num_total_steps - 1:
                 self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
 
-            # Update progress
-            current_sim_time_s += self.config.RESOLUTION_S
             step += 1
-        self.log.info("Simulation loop finished. Finalizing..")
-        # music_runtime.finalize() # you're supposed to call this, but it locks up
+        self.log.info(
+            "Simulation loop finished. Finalizing..", music_time=music_runtime.time()
+        )
+        # music_runtime.tick()
+        self.log.info("tried giving one last tick...", music_time=music_runtime.time())
+
+        # music_runtime.finalize()  # you're supposed to call this, but it locks up
 
         return self.finalize_and_process_data(joint_pos)
 

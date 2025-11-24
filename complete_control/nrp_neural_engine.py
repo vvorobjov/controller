@@ -37,12 +37,15 @@ class Script(GrpcEngineScript):
         self.step = 0
 
         run_timestamp_str = os.getenv("EXEC_TIMESTAMP")
+        parent_id = os.getenv("PARENT_ID")
 
         self.run_paths = RunPaths.from_run_id(run_timestamp_str)
         self.log: structlog.stdlib.BoundLogger = structlog.get_logger("nrp_neural")
         self.log.info(f"Engine Log Path: {self.run_paths.logs}")
 
-        self.master_config = MasterParams.from_runpaths(self.run_paths, USE_MUSIC=False)
+        self.master_config = MasterParams.from_runpaths(
+            self.run_paths, parent_id=parent_id, USE_MUSIC=False
+        )
         with open(self.run_paths.params_json, "w") as f:
             f.write(self.master_config.model_dump_json(indent=2))
         self.log.info("MasterParams loaded and dumped successfully.")
@@ -129,18 +132,18 @@ class Script(GrpcEngineScript):
             time_motor=str(self.motor_profile.total_time),
             time_rest=str(self.rest_profile.total_time),
         )
-        from neural.data_handling import collapse_files
+        from neural.data_handling import collapse_files, save_conn_weights
+
+        rec_paths = None
+        if self.controller.use_cerebellum and self.master_config.SAVE_WEIGHTS_CEREB:
+            w = self.controller.record_synaptic_weights()
+            rec_paths = save_conn_weights(w, self.run_paths.data_nest, comm=None)
 
         pop_views = self.controller.collect_populations()
-        collapse_files(self.run_paths.data_nest, pop_views)
+        res = collapse_files(self.run_paths.data_nest, pop_views)
+        res.weights = rec_paths
+
+        with open(self.master_config.run_paths.neural_result, "w") as f:
+            f.write(res.model_dump_json())
 
         # nest.Cleanup()
-
-    # def reset(self):
-    #     self.log.info("NRP Neural Engine: Resetting.")
-    #     self.nest_client.Cleanup()
-
-    #     if self.nest_client:
-    #         self.nest_client.ResetKernel()
-
-    #     self.initialize()
