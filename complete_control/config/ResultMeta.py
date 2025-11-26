@@ -1,11 +1,11 @@
 from pathlib import Path
-from pydantic import BaseModel
 
-from complete_control.config import paths
-from config.paths import RunPaths
+from config import paths
 from config.MasterParams import MasterParams
+from config.paths import RunPaths
 from neural.result_models import NeuralResultManifest
 from plant.plant_models import PlantPlotData
+from pydantic import BaseModel
 
 
 def extract_id(id: str):
@@ -32,6 +32,14 @@ class ResultMeta(BaseModel):
     def load_neural(self) -> NeuralResultManifest:
         with open(self.neural, "r") as f:
             return NeuralResultManifest.model_validate_json(f.read())
+
+    def load_robotic(self) -> PlantPlotData:
+        with open(self.robotic, "r") as f:
+            return PlantPlotData.model_validate_json(f.read())
+
+    def load_params(self) -> MasterParams:
+        with open(self.params, "r") as f:
+            return MasterParams.model_validate_json(f.read())
 
     def save(self, paths: RunPaths) -> None:
         with open(paths.meta_result, "w") as f:

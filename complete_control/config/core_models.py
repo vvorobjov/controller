@@ -76,6 +76,11 @@ class SimulationParams(BaseModel, frozen=True):
     def duration_ms(self) -> float:
         return self.time_prep + self.time_move + self.time_grasp + self.time_post
 
+    @computed_field
+    @property
+    def duration_s(self) -> float:
+        return self.duration_ms / 1000
+
     @classmethod
     def get_default(cls, field_name: str):
         """Get default value for any field"""

@@ -1,20 +1,19 @@
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar, List
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import structlog
 import tqdm
-from config.MasterParams import MasterParams
 from config.paths import RunPaths
 from config.plant_config import PlantConfig
+from config.ResultMeta import ResultMeta
 from matplotlib.animation import FuncAnimation
 from matplotlib.lines import Line2D
-from pydantic import BaseModel
-
-from complete_control.utils_common.draw_schema import draw_schema
-from complete_control.utils_common.generate_signals import PlannerData
+from utils_common.draw_schema import draw_schema
+from utils_common.generate_signals import PlannerData
+from utils_common.results import extract_and_merge_plant_results
 
 from .plant_models import JointState, JointStates, PlantPlotData
 
@@ -204,7 +203,7 @@ def plot_errors_per_trial(
 
 
 def plot_joint_space_animated(
-    config: PlantConfig,
+    pth_fig_receiver: Path,
     time_vector_s: np.ndarray,
     pos_j_rad_actual: np.ndarray,
     desired_trj_joint_rad: np.ndarray,
@@ -215,7 +214,6 @@ def plot_joint_space_animated(
 ) -> None:
     """Plots joint space position (actual vs desired)."""
     plt.rcParams.update({"font.size": 13})
-    pth_fig_receiver = config.run_paths.figures_receiver
 
     x = time_vector_s
     y1 = pos_j_rad_actual
@@ -342,46 +340,51 @@ def plot_desired(
 
 
 def plot_plant_outputs(
-    run_paths: RunPaths,
+    metas: list[ResultMeta],
     animated_task: bool = False,
     animated_plots: bool = False,
 ):
     """Loads all plant-related data and generates all plots."""
     log.info("Generating plant plots...")
 
-    with open(run_paths.params_json, "r") as f:
-        master_params = MasterParams.model_validate_json(f.read())
-    config = PlantConfig(master_params)
-    config.run_paths = run_paths
-    plant_data = PlantPlotData.load(run_paths.robot_result)
-
-    if not plant_data.joint_data:
-        log.error("No joint data found.")
-        return
-
+    run_paths = [RunPaths.from_run_id(m.id) for m in metas]
+    plant_data = extract_and_merge_plant_results(metas)
+    params = [i.load_params() for i in metas]
+    ref_mp = params[0]
+    time_vector_total_s = np.arange(
+        0,
+        sum(p.simulation.duration_s for p in params),
+        params[0].simulation.resolution / 1000,
+    )
+    log.debug(time_vector_total_s)
+    ref_plant_config = PlantConfig(ref_mp)
     joint_data = plant_data.joint_data[ELBOW]
-    with open(run_paths.trajectory, "r") as f:
-        planner_data: PlannerData = PlannerData.model_validate_json(f.read())
+    trjs = []
+    for rp in run_paths:
+        with open(rp.trajectory, "r") as f:
+            planner_data: PlannerData = PlannerData.model_validate_json(f.read())
+            trjs.append(planner_data.trajectory)
+    desired_trajectory = np.concatenate(trjs, axis=0)
 
     framerate = 25
     video_duration = 5
     if animated_task:
         generate_video_from_existing_result_single_trial(
-            config,
+            ref_plant_config,
             plant_data,
         )
         if (
-            master_params.plotting.CAPTURE_VIDEO is None
-            or len(master_params.plotting.CAPTURE_VIDEO) == 0
+            ref_mp.plotting.CAPTURE_VIDEO is None
+            or len(ref_mp.plotting.CAPTURE_VIDEO) == 0
         ):
             log.warning(
                 "Asked to generate task video but no frames were generated during run. Animated plots will use default time."
             )
         else:
-            for ax in master_params.plotting.CAPTURE_VIDEO:
+            for ax in ref_mp.plotting.CAPTURE_VIDEO:
                 video_duration = int(
-                    len(config.time_vector_single_trial_s)
-                    / master_params.plotting.NUM_STEPS_CAPTURE_VIDEO
+                    len(ref_plant_config.time_vector_single_trial_s)
+                    / ref_mp.plotting.NUM_STEPS_CAPTURE_VIDEO
                     / framerate
                 )
                 import ffmpeg
@@ -394,31 +397,33 @@ def plot_plant_outputs(
                 ).output(str((run_paths.figures / f"task_{ax}.mp4").absolute())).run()
 
     plot_joint_space_animated(
-        config=config,
-        time_vector_s=config.time_vector_total_s,
+        pth_fig_receiver=run_paths[0].figures_receiver,
+        time_vector_s=time_vector_total_s,
         pos_j_rad_actual=joint_data.pos_rad,
-        desired_trj_joint_rad=planner_data.trajectory,
+        desired_trj_joint_rad=desired_trajectory,
         animated=animated_plots,
         video_duration=video_duration,
         fps=framerate,
     )
     plot_ee_space(
-        config=config,
+        config=ref_plant_config,
         desired_start_ee=np.array(plant_data.init_hand_pos_ee),
         desired_end_ee=np.array(plant_data.trgt_hand_pos_ee),
         actual_traj_ee=plant_data.ee_data.pos_ee,
     )
     plot_motor_commands(
-        config=config,
-        time_vector_s=config.time_vector_total_s,
+        config=ref_plant_config,
+        time_vector_s=ref_plant_config.time_vector_total_s,
         input_cmd_torque_actual=joint_data.input_cmd_torque,
     )
     if plant_data.errors_per_trial:
-        plot_errors_per_trial(config=config, errors_list=plant_data.errors_per_trial)
+        plot_errors_per_trial(
+            config=ref_plant_config, errors_list=plant_data.errors_per_trial
+        )
 
     plot_desired(
-        config=config,
-        time_vector_s=config.time_vector_total_s,
+        config=ref_plant_config,
+        time_vector_s=ref_plant_config.time_vector_total_s,
         pos_j_rad_actual=joint_data.pos_rad,
         desired_trj_joint_rad=planner_data.trajectory,
     )

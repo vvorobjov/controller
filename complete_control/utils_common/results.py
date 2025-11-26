@@ -3,10 +3,11 @@ import random
 import string
 from pathlib import Path
 
+import numpy as np
 from config import paths
 from config.MasterParams import MasterParams
 from config.ResultMeta import ResultMeta
-from plant.plant_models import PlantPlotData
+from plant.plant_models import EEData, JointData, PlantPlotData
 
 
 def make_trial_id(
@@ -42,3 +43,35 @@ def read_weights(master_params: MasterParams) -> list[Path] | None:
 
     neural = res.load_neural()
     return neural.weights
+
+
+def gather_metas(id: str):
+    meta = ResultMeta.from_id(id)
+    if meta.parent is None or len(meta.parent) == 0:
+        return [meta]
+    return [meta, *gather_metas(meta.parent)]
+
+
+def extract_and_merge_plant_results(results: list[ResultMeta]):
+    data = [r.load_robotic() for r in results]
+    if not data:
+        raise ValueError("Empty results")
+    return PlantPlotData(
+        joint_data=[
+            JointData(
+                pos_rad=np.concatenate([d.joint_data[i].pos_rad for d in data]),
+                vel_rad_s=np.concatenate([d.joint_data[i].vel_rad_s for d in data]),
+                input_cmd_torque=np.concatenate(
+                    [d.joint_data[i].input_cmd_torque for d in data]
+                ),
+            )
+            for i in range(len(data[0].joint_data))
+        ],
+        ee_data=EEData(
+            pos_ee=np.concatenate([d.ee_data.pos_ee for d in data]),
+            vel_ee=np.concatenate([d.ee_data.vel_ee for d in data]),
+        ),
+        error=data[0].error,
+        init_hand_pos_ee=data[0].init_hand_pos_ee,
+        trgt_hand_pos_ee=data[0].trgt_hand_pos_ee,
+    )
