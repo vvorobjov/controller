@@ -113,8 +113,8 @@ class CerebellumHandler:
         )
         self.log.info("Core Cerebellum object instantiated.")
         # Get N_mossy counts from the Cerebellum object
-        self.N_mossy_forw = self.cerebellum.N_mossy_forw
-        self.N_mossy_inv = self.cerebellum.N_mossy_inv
+        self.N_mossy_forw = len(self.cerebellum.populations.forw_mf_view.pop)
+        self.N_mossy_inv = len(self.cerebellum.populations.inv_mf_view.pop)
         self.log.info(
             "Mossy fiber counts", N_forw=self.N_mossy_forw, N_inv=self.N_mossy_inv
         )
@@ -128,14 +128,6 @@ class CerebellumHandler:
         self._connect_interfaces_to_core()
 
         self.log.info("CerebellumHandler initialization complete.")
-
-    def _create_pop_view(
-        self, nest_pop: nest.NodeCollection, base_label: str
-    ) -> PopView:
-        """Helper to create PopView instance."""
-        full_label = f"{self.label_prefix}{base_label}"
-        # Use path_data implicitly if to_file=True
-        return PopView(nest_pop, self.total_time_vect, to_file=True, label=full_label)
 
     def get_plastic_connections(self):
         """
@@ -161,10 +153,10 @@ class CerebellumHandler:
             "basic_neuron_nestml", self.N
         )  # Using basic_neuron like brain.py
         nest.SetStatus(feedback_p, {**pop_params, "pos": True})
-        self.interface_pops.feedback_p = self._create_pop_view(feedback_p, "feedback_p")
+        self.interface_pops.feedback_p = self._pop_view(feedback_p)
         feedback_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(feedback_n, {**pop_params, "pos": False})
-        self.interface_pops.feedback_n = self._create_pop_view(feedback_n, "feedback_n")
+        self.interface_pops.feedback_n = self._pop_view(feedback_n)
 
         # Motor Commands Relay (Input to Fwd MFs) - Size N_mossy_forw
         params: RBFPopParams = self.pops_params.motor_commands
@@ -182,9 +174,7 @@ class CerebellumHandler:
         nest.SetStatus(motor_commands, pop_params)
         for i, neuron in enumerate(motor_commands):
             nest.SetStatus(neuron, {"desired": signal_sensibility[i]})
-        self.interface_pops.motor_commands = self._create_pop_view(
-            motor_commands, "motor_commands"
-        )
+        self.interface_pops.motor_commands = self._pop_view(motor_commands)
 
         # Forward Error Calculation (Input to Fwd IO)
         params = self.pops_params.error
@@ -196,10 +186,10 @@ class CerebellumHandler:
         }
         error_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(error_p, {**pop_params, "pos": True})
-        self.interface_pops.error_p = self._create_pop_view(error_p, "error_p")
+        self.interface_pops.error_p = self._pop_view(error_p)
         error_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(error_n, {**pop_params, "pos": False})
-        self.interface_pops.error_n = self._create_pop_view(error_n, "error_n")
+        self.interface_pops.error_n = self._pop_view(error_n)
 
         # Planner Relay (Input to Inv MFs) - Size N_mossy_inv
         params = self.pops_params.plan_to_inv
@@ -217,9 +207,7 @@ class CerebellumHandler:
         for i, neuron in enumerate(plan_to_inv):
             nest.SetStatus(neuron, {"desired": signal_sensibility[i]})
 
-        self.interface_pops.plan_to_inv = self._create_pop_view(
-            plan_to_inv, "plan_to_inv"
-        )
+        self.interface_pops.plan_to_inv = self._pop_view(plan_to_inv)
 
         # State Estimator Relay (Input to Inv Error Calc)
         params = self.pops_params.state_to_inv
@@ -231,14 +219,10 @@ class CerebellumHandler:
         }
         state_to_inv_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(state_to_inv_p, {**pop_params, "pos": True})
-        self.interface_pops.state_to_inv_p = self._create_pop_view(
-            state_to_inv_p, "state_to_inv_p"
-        )
+        self.interface_pops.state_to_inv_p = self._pop_view(state_to_inv_p)
         state_to_inv_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(state_to_inv_n, {**pop_params, "pos": False})
-        self.interface_pops.state_to_inv_n = self._create_pop_view(
-            state_to_inv_n, "state_to_inv_n"
-        )
+        self.interface_pops.state_to_inv_n = self._pop_view(state_to_inv_n)
 
         # Inverse Error Calculation (Input to Inv IO)
         params = self.pops_params.error_i
@@ -250,14 +234,10 @@ class CerebellumHandler:
         }
         error_inv_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(error_inv_p, {**pop_params, "pos": True})
-        self.interface_pops.error_inv_p = self._create_pop_view(
-            error_inv_p, "error_inv_p"
-        )
+        self.interface_pops.error_inv_p = self._pop_view(error_inv_p)
         error_inv_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(error_inv_n, {**pop_params, "pos": False})
-        self.interface_pops.error_inv_n = self._create_pop_view(
-            error_inv_n, "error_inv_n"
-        )
+        self.interface_pops.error_inv_n = self._pop_view(error_inv_n)
 
         # Motor Prediction Scaling (Output from Inv DCN)
         params = self.pops_params.motor_pred
@@ -269,14 +249,10 @@ class CerebellumHandler:
         }
         motor_prediction_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(motor_prediction_p, {**pop_params, "pos": True})
-        self.interface_pops.motor_prediction_p = self._create_pop_view(
-            motor_prediction_p, "motor_prediction_p"
-        )
+        self.interface_pops.motor_prediction_p = self._pop_view(motor_prediction_p)
         motor_prediction_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(motor_prediction_n, {**pop_params, "pos": False})
-        self.interface_pops.motor_prediction_n = self._create_pop_view(
-            motor_prediction_n, "motor_prediction_n"
-        )
+        self.interface_pops.motor_prediction_n = self._pop_view(motor_prediction_n)
 
         # Feedback Inverse Scaling (Input to Inv Error Calc?) - Check necessity
         params = self.pops_params.feedback_inv
@@ -288,14 +264,14 @@ class CerebellumHandler:
         }
         feedback_inv_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(feedback_inv_p, {**pop_params, "pos": True})
-        self.interface_pops.feedback_inv_p = self._create_pop_view(
-            feedback_inv_p, "feedback_inv_p"
-        )
+        self.interface_pops.feedback_inv_p = self._pop_view(feedback_inv_p)
         feedback_inv_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(feedback_inv_n, {**pop_params, "pos": False})
-        self.interface_pops.feedback_inv_n = self._create_pop_view(
-            feedback_inv_n, "feedback_inv_n"
-        )
+        self.interface_pops.feedback_inv_n = self._pop_view(feedback_inv_n)
+
+    def _pop_view(self, nest_pop) -> PopView:
+        """Always creates with no label and to_file True to trigger auto naming"""
+        return PopView(nest_pop, to_file=True)
 
     def _connect_interfaces_to_core(self):
         """Connects interface populations to the core cerebellum model."""

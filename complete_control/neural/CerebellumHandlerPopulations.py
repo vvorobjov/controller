@@ -1,9 +1,6 @@
 from typing import Generic, Optional, TypeVar
 
-from neural.neural_models import (
-    RecordingManifest,
-    convert_to_recording,
-)
+from neural.neural_models import RecordingManifest, convert_to_recording
 from pydantic import BaseModel
 
 from .population_view import PopView
@@ -66,3 +63,13 @@ class CerebellumHandlerPopulations(CerebellumHandlerPopulationsGeneric[PopView])
         return convert_to_recording(
             self, CerebellumHandlerPopulationsRecordings, *args, **kwargs
         )
+
+    def __setattr__(self, name, value):
+        # Auto-label PopView instances when assigned
+        if (
+            isinstance(value, PopView)
+            and name in CerebellumHandlerPopulations.model_fields
+        ):
+            if value.label is None:
+                value.label = name  # This will trigger detector initialization
+        super().__setattr__(name, value)

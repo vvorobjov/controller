@@ -102,427 +102,46 @@ class Cerebellum:
         adapter.create_devices(simulation_inv)
         self.log.debug("created cerebellum devices")
 
-        ### FORWARD MODEL
-        # Mossy fibers
-        self.forw_Nest_Mf = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "mossy_fibers"
-        )
-        self.N_mossy_forw = len(self.forw_Nest_Mf)
+        # Forward Model
+        fwd = adapter.simdata[simulation_forw]
+        inv = adapter.simdata[simulation_inv]
+        self.populations.forw_mf_view = self._find_popview(fwd, "mossy_fibers")
+        self.populations.forw_glom_view = self._find_popview(fwd, "glomerulus")
+        self.populations.forw_grc_view = self._find_popview(fwd, "granule_cell")
+        self.populations.forw_goc_view = self._find_popview(fwd, "golgi_cell")
+        self.populations.forw_bc_view = self._find_popview(fwd, "basket_cell")
+        self.populations.forw_sc_view = self._find_popview(fwd, "stellate_cell")
+        self.populations.forw_io_p_view = self._find_popview(fwd, "io_plus")
+        self.populations.forw_io_n_view = self._find_popview(fwd, "io_minus")
+        self.populations.forw_dcnp_p_view = self._find_popview(fwd, "dcn_p_plus")
+        self.populations.forw_dcnp_n_view = self._find_popview(fwd, "dcn_p_minus")
+        self.populations.forw_pc_p_view = self._find_popview(fwd, "purkinje_cell_plus")
+        self.populations.forw_pc_n_view = self._find_popview(fwd, "purkinje_cell_minus")
 
-        # Glomerulus
-        _forw_N_Glom_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "glomerulus"
-        )
-        # Granule cells
-        _forw_N_GrC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "granule_cell"
-        )
-        # Golgi cells
-        _forw_N_GoC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "golgi_cell"
-        )
-        # Basket cells
-        _forw_N_BC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "basket_cell"
-        )
-        # Stellate cells
-        _forw_N_SC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "stellate_cell"
-        )
-        # IO
-        _forw_N_IO_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "io_plus"
-        )
-        _forw_N_IO_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "io_minus"
-        )
-        # DCN
-        _forw_N_DCNp_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_p_plus"
-        )
-        _forw_N_DCNp_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_p_minus"
-        )
-        _forw_N_DCNi_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_i_plus"
-        )
-        _forw_N_DCNi_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_i_minus"
-        )
-        # PC
-        _forw_N_PC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_plus"
-        )
-        _forw_N_PC_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_minus"
-        )
-
-        ### INVERSE MODEL
-        # Mossy fibers
-        self.inv_Nest_Mf = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "mossy_fibers"
-        )
-        self.N_mossy_inv = len(self.inv_Nest_Mf)
-
-        # Glomerulus
-        _inv_N_Glom_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "glomerulus"
-        )
-        # Granule cells
-        _inv_N_GrC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "granule_cell"
-        )
-        # Golgi cells
-        _inv_N_GoC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "golgi_cell"
-        )
-        # Basket cells
-        _inv_N_BC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "basket_cell"
-        )
-        # Stellate cells
-        _inv_N_SC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "stellate_cell"
-        )
-        # IO
-        _inv_N_IO_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "io_plus"
-        )
-        _inv_N_IO_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "io_minus"
-        )
-        # DCN
-        _inv_N_DCNp_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_p_plus"
-        )
-        _inv_N_DCNp_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_p_minus"
-        )
-        _inv_N_DCNi_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_i_plus"
-        )
-        _inv_N_DCNi_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_i_minus"
-        )
-        # PC
-        _inv_N_PC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_plus"
-        )
-        _inv_N_PC_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_minus"
-        )
-
-        self._create_core_pop_views(
-            _forw_N_Glom_gids,
-            _forw_N_GrC_gids,
-            _forw_N_GoC_gids,
-            _forw_N_BC_gids,
-            _forw_N_SC_gids,
-            _forw_N_IO_plus_gids,
-            _forw_N_IO_minus_gids,
-            _forw_N_DCNp_plus_gids,
-            _forw_N_DCNp_minus_gids,
-            _forw_N_PC_gids,
-            _forw_N_PC_minus_gids,
-            _inv_N_Glom_gids,
-            _inv_N_GrC_gids,
-            _inv_N_GoC_gids,
-            _inv_N_BC_gids,
-            _inv_N_SC_gids,
-            _inv_N_IO_plus_gids,
-            _inv_N_IO_minus_gids,
-            _inv_N_DCNp_plus_gids,
-            _inv_N_DCNp_minus_gids,
-            _inv_N_PC_gids,
-            _inv_N_PC_minus_gids,
-        )
+        # Inverse Model
+        self.populations.inv_mf_view = self._find_popview(inv, "mossy_fibers")
+        self.populations.inv_glom_view = self._find_popview(inv, "glomerulus")
+        self.populations.inv_grc_view = self._find_popview(inv, "granule_cell")
+        self.populations.inv_goc_view = self._find_popview(inv, "golgi_cell")
+        self.populations.inv_bc_view = self._find_popview(inv, "basket_cell")
+        self.populations.inv_sc_view = self._find_popview(inv, "stellate_cell")
+        self.populations.inv_io_p_view = self._find_popview(inv, "io_plus")
+        self.populations.inv_io_n_view = self._find_popview(inv, "io_minus")
+        self.populations.inv_dcnp_p_view = self._find_popview(inv, "dcn_p_plus")
+        self.populations.inv_dcnp_n_view = self._find_popview(inv, "dcn_p_minus")
+        self.populations.inv_pc_p_view = self._find_popview(inv, "purkinje_cell_plus")
+        self.populations.inv_pc_n_view = self._find_popview(inv, "purkinje_cell_minus")
 
         self._update_weight_plastic_pops(weights)
 
-    def _create_core_pop_views(
-        self,
-        _forw_N_Glom_gids,
-        _forw_N_GrC_gids,
-        _forw_N_GoC_gids,
-        _forw_N_BC_gids,
-        _forw_N_SC_gids,
-        _forw_N_IO_plus_gids,
-        _forw_N_IO_minus_gids,
-        _forw_N_DCNp_plus_gids,
-        _forw_N_DCNp_minus_gids,
-        _forw_N_PC_gids,
-        _forw_N_PC_minus_gids,
-        _inv_N_Glom_gids,
-        _inv_N_GrC_gids,
-        _inv_N_GoC_gids,
-        _inv_N_BC_gids,
-        _inv_N_SC_gids,
-        _inv_N_IO_plus_gids,
-        _inv_N_IO_minus_gids,
-        _inv_N_DCNp_plus_gids,
-        _inv_N_DCNp_minus_gids,
-        _inv_N_PC_gids,
-        _inv_N_PC_minus_gids,
-    ):
-        """Creates PopView instances for all core NEST populations."""
-        # Forward Model PopViews
-        self.populations.forw_mf_view = PopView(
-            self.forw_Nest_Mf,
-            self.total_time_vect,
+    def _find_popview(self, simdata, model_name):
+        return PopView(
+            next(
+                gids
+                for neuron_model, gids in simdata.populations.items()
+                if neuron_model.name == model_name
+            ),
             to_file=True,
-            label=f"{self.label_prefix}forw_mf",
-        )
-        self.populations.forw_glom_view = PopView(
-            _forw_N_Glom_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_glom",
-        )
-        self.populations.forw_grc_view = PopView(
-            _forw_N_GrC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_grc",
-        )
-        self.populations.forw_goc_view = PopView(
-            _forw_N_GoC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_goc",
-        )
-        self.populations.forw_bc_view = PopView(
-            _forw_N_BC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_bc",
-        )
-        self.populations.forw_sc_view = PopView(
-            _forw_N_SC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_sc",
-        )
-        self.populations.forw_io_p_view = PopView(
-            _forw_N_IO_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_io_p",
-        )
-        self.populations.forw_io_n_view = PopView(
-            _forw_N_IO_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_io_n",
-        )
-        self.populations.forw_dcnp_p_view = PopView(
-            _forw_N_DCNp_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_dcnp_p",
-        )
-        self.populations.forw_dcnp_n_view = PopView(
-            _forw_N_DCNp_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_dcnp_n",
-        )
-        self.populations.forw_pc_p_view = PopView(
-            _forw_N_PC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_pc_p",
-        )
-        self.populations.forw_pc_n_view = PopView(
-            _forw_N_PC_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_pc_n",
-        )
-
-        # Inverse Model PopViews
-        self.populations.inv_mf_view = PopView(
-            self.inv_Nest_Mf,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_mf",
-        )
-        self.populations.inv_glom_view = PopView(
-            _inv_N_Glom_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_glom",
-        )
-        self.populations.inv_grc_view = PopView(
-            _inv_N_GrC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_grc",
-        )
-        self.populations.inv_goc_view = PopView(
-            _inv_N_GoC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_goc",
-        )
-        self.populations.inv_bc_view = PopView(
-            _inv_N_BC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_bc",
-        )
-        self.populations.inv_sc_view = PopView(
-            _inv_N_SC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_sc",
-        )
-        self.populations.inv_io_p_view = PopView(
-            _inv_N_IO_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_io_p",
-        )
-        self.populations.inv_io_n_view = PopView(
-            _inv_N_IO_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_io_n",
-        )
-        self.populations.inv_dcnp_p_view = PopView(
-            _inv_N_DCNp_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_dcnp_p",
-        )
-        self.populations.inv_dcnp_n_view = PopView(
-            _inv_N_DCNp_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_dcnp_n",
-        )
-        self.populations.inv_pc_p_view = PopView(
-            _inv_N_PC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_pc_p",
-        )
-        self.populations.inv_pc_n_view = PopView(
-            _inv_N_PC_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_pc_n",
         )
 
     def get_plastic_connections(self):

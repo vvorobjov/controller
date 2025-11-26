@@ -260,32 +260,27 @@ class Controller:
     def _create_blocks(self):
         """Creates all neuron populations using PopView for this DoF."""
         self.log.debug("Building planner block")
-        self._build_planner(to_file=True)
+        self._build_planner()
         self.log.debug("Building motor cortex block")
-        self._build_motor_cortex(to_file=True)
+        self._build_motor_cortex()
         self.log.debug("Building state estimator block")
-        self._build_state_estimator(to_file=True)
+        self._build_state_estimator()
         self.log.debug("Building sensory neurons block")
-        self._build_sensory_neurons(to_file=True)
+        self._build_sensory_neurons()
         self.log.debug(
             "Building prediction neurons block"
         )  # These are the scaling neurons for cerebellar fwd output or other prediction source
-        self._build_prediction_neurons(to_file=True)
+        self._build_prediction_neurons()
         self.log.debug("Building feedback smoothed neurons block")
-        self._build_fbk_smoothed_neurons(to_file=True)
+        self._build_fbk_smoothed_neurons()
         self.log.debug("Building brainstem block")
-        self._build_brainstem(to_file=True)
+        self._build_brainstem()
 
-    # --- Helper for PopView Creation ---
-    def _create_pop_view(self, nest_pop, base_label: str, to_file: bool) -> PopView:
-        """Creates a PopView instance with appropriate label."""
-        full_label = f"{self.label}{base_label}" if to_file else ""
-        return PopView(
-            nest_pop, self.total_time_vect, to_file=to_file, label=full_label
-        )
+    def _pop_view(self, nest_pop) -> PopView:
+        """Always creates with no label and to_file True to trigger auto naming"""
+        return PopView(nest_pop, to_file=True)
 
-    # --- Build Methods ---
-    def _build_planner(self, to_file=False):
+    def _build_planner(self):
         p_params = self.plan_params
         N = self.N
         trajectory = generate_traj(
@@ -326,10 +321,10 @@ class Controller:
                 "simulation_steps": self.sim_params.sim_steps,
             },
         )
-        self.pops.planner_p = self._create_pop_view(tmp_pop_p, "planner_p", to_file)
-        self.pops.planner_n = self._create_pop_view(tmp_pop_n, "planner_n", to_file)
+        self.pops.planner_p = self._pop_view(tmp_pop_p)
+        self.pops.planner_n = self._pop_view(tmp_pop_n)
 
-    def _build_motor_cortex(self, to_file=False):
+    def _build_motor_cortex(self):
         self.log.debug(
             "Initializing MotorCortex sub-module",
             N=self.N,
@@ -344,7 +339,7 @@ class Controller:
         self.pops.mc_out_p = self.mc.out_p
         self.pops.mc_out_n = self.mc.out_n
 
-    def _build_state_estimator(self, to_file=False):
+    def _build_state_estimator(self):
         buf_sz = self.state_params.buffer_size
         N = self.N
 
@@ -374,14 +369,14 @@ class Controller:
         self.pops.state_p = self.stEst.pops_p[0]
         self.pops.state_n = self.stEst.pops_n[0]
 
-    def _build_sensory_neurons(self, to_file=False):
+    def _build_sensory_neurons(self):
         """Parrot neurons for sensory feedback input"""
         pop_p = nest.Create("parrot_neuron", self.N)
-        self.pops.sn_p = self._create_pop_view(pop_p, "sensoryneur_p", to_file)
+        self.pops.sn_p = self._pop_view(pop_p)
         pop_n = nest.Create("parrot_neuron", self.N)
-        self.pops.sn_n = self._create_pop_view(pop_n, "sensoryneur_n", to_file)
+        self.pops.sn_n = self._pop_view(pop_n)
 
-    def _build_prediction_neurons(self, to_file=False):
+    def _build_prediction_neurons(self):
         """
         Builds internal prediction neurons (diff_neuron_nestml).
         These neurons always exist to 'scale' the prediction signal before it goes to the State Estimator.
@@ -399,13 +394,13 @@ class Controller:
 
         pop_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.pred_p = self._create_pop_view(pop_p, "pred_p", to_file)
+        self.pops.pred_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.pred_n = self._create_pop_view(pop_n, "pred_n", to_file)
+        self.pops.pred_n = self._pop_view(pop_n)
 
-    def _build_fbk_smoothed_neurons(self, to_file=False):
+    def _build_fbk_smoothed_neurons(self):
         """Neurons for smoothing feedback"""
         params = self.pops_params.fbk_smoothed
         pop_params = {
@@ -418,13 +413,13 @@ class Controller:
 
         pop_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.fbk_smooth_p = self._create_pop_view(pop_p, "fbk_smooth_p", to_file)
+        self.pops.fbk_smooth_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.fbk_smooth_n = self._create_pop_view(pop_n, "fbk_smooth_n", to_file)
+        self.pops.fbk_smooth_n = self._pop_view(pop_n)
 
-    def _build_brainstem(self, to_file=False):
+    def _build_brainstem(self):
         """Basic neurons for output stage"""
         params = self.pops_params.brain_stem
         pop_params = {
@@ -437,11 +432,11 @@ class Controller:
 
         pop_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.brainstem_p = self._create_pop_view(pop_p, "brainstem_p", to_file)
+        self.pops.brainstem_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.brainstem_n = self._create_pop_view(pop_n, "brainstem_n", to_file)
+        self.pops.brainstem_n = self._pop_view(pop_n)
 
     # --- 2. Block Connection ---
     def _connect_blocks_controller(self):
@@ -763,9 +758,7 @@ class Controller:
             res=self.sim_params.resolution,
         )
         self.proxy_in_gen = nest.Create("inhomogeneous_poisson_generator", 2)
-        self.proxy_in_gen_view = self._create_pop_view(
-            self.proxy_in_gen, "proxy_in_NRP", True
-        )
+        self.proxy_in_gen_view = PopView(self.proxy_in_gen, True, "proxy_in_NRP")
 
         self.log.info(
             "Sensory neurons created and connected",
