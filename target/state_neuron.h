@@ -19,7 +19,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Generated from NESTML 8.2.0 at time: 2025-11-13 19:20:20.490868
+ *  Generated from NESTML 8.2.0 at time: 2025-11-28 13:54:04.968976
 **/
 #ifndef STATE_NEURON
 #define STATE_NEURON
@@ -72,17 +72,29 @@ namespace state_neuron_names
     const Name _var_pred( "var_pred" );
     const Name _CV_fbk( "CV_fbk" );
     const Name _CV_pred( "CV_pred" );
+    const Name _current_error_input( "current_error_input" );
+    const Name _error_buffer( "error_buffer" );
+    const Name _err_pos_count( "err_pos_count" );
+    const Name _error_counts( "error_counts" );
+    const Name _error_rate( "error_rate" );
+    const Name _fbk_rate( "fbk_rate" );
+    const Name _w_fbk( "w_fbk" );
+    const Name _w_pred( "w_pred" );
     const Name _total_CV( "total_CV" );
     const Name _lambda_poisson( "lambda_poisson" );
     const Name _kp( "kp" );
     const Name _pos( "pos" );
     const Name _base_rate( "base_rate" );
     const Name _buffer_size( "buffer_size" );
+    const Name _buffer_size_error( "buffer_size_error" );
     const Name _simulation_steps( "simulation_steps" );
     const Name _N_fbk( "N_fbk" );
     const Name _N_pred( "N_pred" );
+    const Name _N_error( "N_error" );
+    const Name _C_error( "C_error" );
     const Name _fbk_bf_size( "fbk_bf_size" );
     const Name _pred_bf_size( "pred_bf_size" );
+    const Name _error_bf_size( "error_bf_size" );
     const Name _time_wait( "time_wait" );
     const Name _time_trial( "time_trial" );
 
@@ -131,6 +143,7 @@ var_fbk [real]  Variance of sensory feedback
 var_pred [real]  Variance of sensory prediction
 CV_fbk [real]  Coefficient of variation of sensory feedback
 CV_pred [real]  Coefficient of variation of sensory prediction
+current_error_input [real] ################
 lambda_poisson [real]  Parameter of the Poisson distribution defining generator behavior
 
 
@@ -373,6 +386,86 @@ public:
     S_.CV_pred = __v;
   }
 
+  inline double get_current_error_input() const
+  {
+    return S_.current_error_input;
+  }
+
+  inline void set_current_error_input(const double __v)
+  {
+    S_.current_error_input = __v;
+  }
+
+  inline std::vector< double >  get_error_buffer() const
+  {
+    return S_.error_buffer;
+  }
+
+  inline void set_error_buffer(const std::vector< double >  __v)
+  {
+    S_.error_buffer = __v;
+  }
+
+  inline long get_err_pos_count() const
+  {
+    return S_.err_pos_count;
+  }
+
+  inline void set_err_pos_count(const long __v)
+  {
+    S_.err_pos_count = __v;
+  }
+
+  inline double get_error_counts() const
+  {
+    return S_.error_counts;
+  }
+
+  inline void set_error_counts(const double __v)
+  {
+    S_.error_counts = __v;
+  }
+
+  inline double get_error_rate() const
+  {
+    return S_.error_rate;
+  }
+
+  inline void set_error_rate(const double __v)
+  {
+    S_.error_rate = __v;
+  }
+
+  inline double get_fbk_rate() const
+  {
+    return S_.fbk_rate;
+  }
+
+  inline void set_fbk_rate(const double __v)
+  {
+    S_.fbk_rate = __v;
+  }
+
+  inline double get_w_fbk() const
+  {
+    return S_.w_fbk;
+  }
+
+  inline void set_w_fbk(const double __v)
+  {
+    S_.w_fbk = __v;
+  }
+
+  inline double get_w_pred() const
+  {
+    return S_.w_pred;
+  }
+
+  inline void set_w_pred(const double __v)
+  {
+    S_.w_pred = __v;
+  }
+
   inline double get_total_CV() const
   {
     return S_.total_CV;
@@ -438,6 +531,16 @@ public:
     P_.buffer_size = __v;
   }
 
+  inline double get_buffer_size_error() const
+  {
+    return P_.buffer_size_error;
+  }
+
+  inline void set_buffer_size_error(const double __v)
+  {
+    P_.buffer_size_error = __v;
+  }
+
   inline long get_simulation_steps() const
   {
     return P_.simulation_steps;
@@ -468,6 +571,26 @@ public:
     P_.N_pred = __v;
   }
 
+  inline long get_N_error() const
+  {
+    return P_.N_error;
+  }
+
+  inline void set_N_error(const long __v)
+  {
+    P_.N_error = __v;
+  }
+
+  inline double get_C_error() const
+  {
+    return P_.C_error;
+  }
+
+  inline void set_C_error(const double __v)
+  {
+    P_.C_error = __v;
+  }
+
   inline long get_fbk_bf_size() const
   {
     return P_.fbk_bf_size;
@@ -486,6 +609,16 @@ public:
   inline void set_pred_bf_size(const long __v)
   {
     P_.pred_bf_size = __v;
+  }
+
+  inline long get_error_bf_size() const
+  {
+    return P_.error_bf_size;
+  }
+
+  inline void set_error_bf_size(const long __v)
+  {
+    P_.error_bf_size = __v;
   }
 
   inline double get_time_wait() const
@@ -557,6 +690,15 @@ public:
   inline void set_wait_steps(const long __v)
   {
     V_.wait_steps = __v;
+  }
+  inline long get_buffer_error_steps() const
+  {
+    return V_.buffer_error_steps;
+  }
+
+  inline void set_buffer_error_steps(const long __v)
+  {
+    V_.buffer_error_steps = __v;
   }
 
 
@@ -787,607 +929,208 @@ private:
     FBK_SPIKES_197 = 198,
     FBK_SPIKES_198 = 199,
     FBK_SPIKES_199 = 200,
-    FBK_SPIKES_200 = 201,
-    FBK_SPIKES_201 = 202,
-    FBK_SPIKES_202 = 203,
-    FBK_SPIKES_203 = 204,
-    FBK_SPIKES_204 = 205,
-    FBK_SPIKES_205 = 206,
-    FBK_SPIKES_206 = 207,
-    FBK_SPIKES_207 = 208,
-    FBK_SPIKES_208 = 209,
-    FBK_SPIKES_209 = 210,
-    FBK_SPIKES_210 = 211,
-    FBK_SPIKES_211 = 212,
-    FBK_SPIKES_212 = 213,
-    FBK_SPIKES_213 = 214,
-    FBK_SPIKES_214 = 215,
-    FBK_SPIKES_215 = 216,
-    FBK_SPIKES_216 = 217,
-    FBK_SPIKES_217 = 218,
-    FBK_SPIKES_218 = 219,
-    FBK_SPIKES_219 = 220,
-    FBK_SPIKES_220 = 221,
-    FBK_SPIKES_221 = 222,
-    FBK_SPIKES_222 = 223,
-    FBK_SPIKES_223 = 224,
-    FBK_SPIKES_224 = 225,
-    FBK_SPIKES_225 = 226,
-    FBK_SPIKES_226 = 227,
-    FBK_SPIKES_227 = 228,
-    FBK_SPIKES_228 = 229,
-    FBK_SPIKES_229 = 230,
-    FBK_SPIKES_230 = 231,
-    FBK_SPIKES_231 = 232,
-    FBK_SPIKES_232 = 233,
-    FBK_SPIKES_233 = 234,
-    FBK_SPIKES_234 = 235,
-    FBK_SPIKES_235 = 236,
-    FBK_SPIKES_236 = 237,
-    FBK_SPIKES_237 = 238,
-    FBK_SPIKES_238 = 239,
-    FBK_SPIKES_239 = 240,
-    FBK_SPIKES_240 = 241,
-    FBK_SPIKES_241 = 242,
-    FBK_SPIKES_242 = 243,
-    FBK_SPIKES_243 = 244,
-    FBK_SPIKES_244 = 245,
-    FBK_SPIKES_245 = 246,
-    FBK_SPIKES_246 = 247,
-    FBK_SPIKES_247 = 248,
-    FBK_SPIKES_248 = 249,
-    FBK_SPIKES_249 = 250,
-    FBK_SPIKES_250 = 251,
-    FBK_SPIKES_251 = 252,
-    FBK_SPIKES_252 = 253,
-    FBK_SPIKES_253 = 254,
-    FBK_SPIKES_254 = 255,
-    FBK_SPIKES_255 = 256,
-    FBK_SPIKES_256 = 257,
-    FBK_SPIKES_257 = 258,
-    FBK_SPIKES_258 = 259,
-    FBK_SPIKES_259 = 260,
-    FBK_SPIKES_260 = 261,
-    FBK_SPIKES_261 = 262,
-    FBK_SPIKES_262 = 263,
-    FBK_SPIKES_263 = 264,
-    FBK_SPIKES_264 = 265,
-    FBK_SPIKES_265 = 266,
-    FBK_SPIKES_266 = 267,
-    FBK_SPIKES_267 = 268,
-    FBK_SPIKES_268 = 269,
-    FBK_SPIKES_269 = 270,
-    FBK_SPIKES_270 = 271,
-    FBK_SPIKES_271 = 272,
-    FBK_SPIKES_272 = 273,
-    FBK_SPIKES_273 = 274,
-    FBK_SPIKES_274 = 275,
-    FBK_SPIKES_275 = 276,
-    FBK_SPIKES_276 = 277,
-    FBK_SPIKES_277 = 278,
-    FBK_SPIKES_278 = 279,
-    FBK_SPIKES_279 = 280,
-    FBK_SPIKES_280 = 281,
-    FBK_SPIKES_281 = 282,
-    FBK_SPIKES_282 = 283,
-    FBK_SPIKES_283 = 284,
-    FBK_SPIKES_284 = 285,
-    FBK_SPIKES_285 = 286,
-    FBK_SPIKES_286 = 287,
-    FBK_SPIKES_287 = 288,
-    FBK_SPIKES_288 = 289,
-    FBK_SPIKES_289 = 290,
-    FBK_SPIKES_290 = 291,
-    FBK_SPIKES_291 = 292,
-    FBK_SPIKES_292 = 293,
-    FBK_SPIKES_293 = 294,
-    FBK_SPIKES_294 = 295,
-    FBK_SPIKES_295 = 296,
-    FBK_SPIKES_296 = 297,
-    FBK_SPIKES_297 = 298,
-    FBK_SPIKES_298 = 299,
-    FBK_SPIKES_299 = 300,
-    FBK_SPIKES_300 = 301,
-    FBK_SPIKES_301 = 302,
-    FBK_SPIKES_302 = 303,
-    FBK_SPIKES_303 = 304,
-    FBK_SPIKES_304 = 305,
-    FBK_SPIKES_305 = 306,
-    FBK_SPIKES_306 = 307,
-    FBK_SPIKES_307 = 308,
-    FBK_SPIKES_308 = 309,
-    FBK_SPIKES_309 = 310,
-    FBK_SPIKES_310 = 311,
-    FBK_SPIKES_311 = 312,
-    FBK_SPIKES_312 = 313,
-    FBK_SPIKES_313 = 314,
-    FBK_SPIKES_314 = 315,
-    FBK_SPIKES_315 = 316,
-    FBK_SPIKES_316 = 317,
-    FBK_SPIKES_317 = 318,
-    FBK_SPIKES_318 = 319,
-    FBK_SPIKES_319 = 320,
-    FBK_SPIKES_320 = 321,
-    FBK_SPIKES_321 = 322,
-    FBK_SPIKES_322 = 323,
-    FBK_SPIKES_323 = 324,
-    FBK_SPIKES_324 = 325,
-    FBK_SPIKES_325 = 326,
-    FBK_SPIKES_326 = 327,
-    FBK_SPIKES_327 = 328,
-    FBK_SPIKES_328 = 329,
-    FBK_SPIKES_329 = 330,
-    FBK_SPIKES_330 = 331,
-    FBK_SPIKES_331 = 332,
-    FBK_SPIKES_332 = 333,
-    FBK_SPIKES_333 = 334,
-    FBK_SPIKES_334 = 335,
-    FBK_SPIKES_335 = 336,
-    FBK_SPIKES_336 = 337,
-    FBK_SPIKES_337 = 338,
-    FBK_SPIKES_338 = 339,
-    FBK_SPIKES_339 = 340,
-    FBK_SPIKES_340 = 341,
-    FBK_SPIKES_341 = 342,
-    FBK_SPIKES_342 = 343,
-    FBK_SPIKES_343 = 344,
-    FBK_SPIKES_344 = 345,
-    FBK_SPIKES_345 = 346,
-    FBK_SPIKES_346 = 347,
-    FBK_SPIKES_347 = 348,
-    FBK_SPIKES_348 = 349,
-    FBK_SPIKES_349 = 350,
-    FBK_SPIKES_350 = 351,
-    FBK_SPIKES_351 = 352,
-    FBK_SPIKES_352 = 353,
-    FBK_SPIKES_353 = 354,
-    FBK_SPIKES_354 = 355,
-    FBK_SPIKES_355 = 356,
-    FBK_SPIKES_356 = 357,
-    FBK_SPIKES_357 = 358,
-    FBK_SPIKES_358 = 359,
-    FBK_SPIKES_359 = 360,
-    FBK_SPIKES_360 = 361,
-    FBK_SPIKES_361 = 362,
-    FBK_SPIKES_362 = 363,
-    FBK_SPIKES_363 = 364,
-    FBK_SPIKES_364 = 365,
-    FBK_SPIKES_365 = 366,
-    FBK_SPIKES_366 = 367,
-    FBK_SPIKES_367 = 368,
-    FBK_SPIKES_368 = 369,
-    FBK_SPIKES_369 = 370,
-    FBK_SPIKES_370 = 371,
-    FBK_SPIKES_371 = 372,
-    FBK_SPIKES_372 = 373,
-    FBK_SPIKES_373 = 374,
-    FBK_SPIKES_374 = 375,
-    FBK_SPIKES_375 = 376,
-    FBK_SPIKES_376 = 377,
-    FBK_SPIKES_377 = 378,
-    FBK_SPIKES_378 = 379,
-    FBK_SPIKES_379 = 380,
-    FBK_SPIKES_380 = 381,
-    FBK_SPIKES_381 = 382,
-    FBK_SPIKES_382 = 383,
-    FBK_SPIKES_383 = 384,
-    FBK_SPIKES_384 = 385,
-    FBK_SPIKES_385 = 386,
-    FBK_SPIKES_386 = 387,
-    FBK_SPIKES_387 = 388,
-    FBK_SPIKES_388 = 389,
-    FBK_SPIKES_389 = 390,
-    FBK_SPIKES_390 = 391,
-    FBK_SPIKES_391 = 392,
-    FBK_SPIKES_392 = 393,
-    FBK_SPIKES_393 = 394,
-    FBK_SPIKES_394 = 395,
-    FBK_SPIKES_395 = 396,
-    FBK_SPIKES_396 = 397,
-    FBK_SPIKES_397 = 398,
-    FBK_SPIKES_398 = 399,
-    FBK_SPIKES_399 = 400,
-    PRED_SPIKES_0 = 401,
-    PRED_SPIKES_1 = 402,
-    PRED_SPIKES_2 = 403,
-    PRED_SPIKES_3 = 404,
-    PRED_SPIKES_4 = 405,
-    PRED_SPIKES_5 = 406,
-    PRED_SPIKES_6 = 407,
-    PRED_SPIKES_7 = 408,
-    PRED_SPIKES_8 = 409,
-    PRED_SPIKES_9 = 410,
-    PRED_SPIKES_10 = 411,
-    PRED_SPIKES_11 = 412,
-    PRED_SPIKES_12 = 413,
-    PRED_SPIKES_13 = 414,
-    PRED_SPIKES_14 = 415,
-    PRED_SPIKES_15 = 416,
-    PRED_SPIKES_16 = 417,
-    PRED_SPIKES_17 = 418,
-    PRED_SPIKES_18 = 419,
-    PRED_SPIKES_19 = 420,
-    PRED_SPIKES_20 = 421,
-    PRED_SPIKES_21 = 422,
-    PRED_SPIKES_22 = 423,
-    PRED_SPIKES_23 = 424,
-    PRED_SPIKES_24 = 425,
-    PRED_SPIKES_25 = 426,
-    PRED_SPIKES_26 = 427,
-    PRED_SPIKES_27 = 428,
-    PRED_SPIKES_28 = 429,
-    PRED_SPIKES_29 = 430,
-    PRED_SPIKES_30 = 431,
-    PRED_SPIKES_31 = 432,
-    PRED_SPIKES_32 = 433,
-    PRED_SPIKES_33 = 434,
-    PRED_SPIKES_34 = 435,
-    PRED_SPIKES_35 = 436,
-    PRED_SPIKES_36 = 437,
-    PRED_SPIKES_37 = 438,
-    PRED_SPIKES_38 = 439,
-    PRED_SPIKES_39 = 440,
-    PRED_SPIKES_40 = 441,
-    PRED_SPIKES_41 = 442,
-    PRED_SPIKES_42 = 443,
-    PRED_SPIKES_43 = 444,
-    PRED_SPIKES_44 = 445,
-    PRED_SPIKES_45 = 446,
-    PRED_SPIKES_46 = 447,
-    PRED_SPIKES_47 = 448,
-    PRED_SPIKES_48 = 449,
-    PRED_SPIKES_49 = 450,
-    PRED_SPIKES_50 = 451,
-    PRED_SPIKES_51 = 452,
-    PRED_SPIKES_52 = 453,
-    PRED_SPIKES_53 = 454,
-    PRED_SPIKES_54 = 455,
-    PRED_SPIKES_55 = 456,
-    PRED_SPIKES_56 = 457,
-    PRED_SPIKES_57 = 458,
-    PRED_SPIKES_58 = 459,
-    PRED_SPIKES_59 = 460,
-    PRED_SPIKES_60 = 461,
-    PRED_SPIKES_61 = 462,
-    PRED_SPIKES_62 = 463,
-    PRED_SPIKES_63 = 464,
-    PRED_SPIKES_64 = 465,
-    PRED_SPIKES_65 = 466,
-    PRED_SPIKES_66 = 467,
-    PRED_SPIKES_67 = 468,
-    PRED_SPIKES_68 = 469,
-    PRED_SPIKES_69 = 470,
-    PRED_SPIKES_70 = 471,
-    PRED_SPIKES_71 = 472,
-    PRED_SPIKES_72 = 473,
-    PRED_SPIKES_73 = 474,
-    PRED_SPIKES_74 = 475,
-    PRED_SPIKES_75 = 476,
-    PRED_SPIKES_76 = 477,
-    PRED_SPIKES_77 = 478,
-    PRED_SPIKES_78 = 479,
-    PRED_SPIKES_79 = 480,
-    PRED_SPIKES_80 = 481,
-    PRED_SPIKES_81 = 482,
-    PRED_SPIKES_82 = 483,
-    PRED_SPIKES_83 = 484,
-    PRED_SPIKES_84 = 485,
-    PRED_SPIKES_85 = 486,
-    PRED_SPIKES_86 = 487,
-    PRED_SPIKES_87 = 488,
-    PRED_SPIKES_88 = 489,
-    PRED_SPIKES_89 = 490,
-    PRED_SPIKES_90 = 491,
-    PRED_SPIKES_91 = 492,
-    PRED_SPIKES_92 = 493,
-    PRED_SPIKES_93 = 494,
-    PRED_SPIKES_94 = 495,
-    PRED_SPIKES_95 = 496,
-    PRED_SPIKES_96 = 497,
-    PRED_SPIKES_97 = 498,
-    PRED_SPIKES_98 = 499,
-    PRED_SPIKES_99 = 500,
-    PRED_SPIKES_100 = 501,
-    PRED_SPIKES_101 = 502,
-    PRED_SPIKES_102 = 503,
-    PRED_SPIKES_103 = 504,
-    PRED_SPIKES_104 = 505,
-    PRED_SPIKES_105 = 506,
-    PRED_SPIKES_106 = 507,
-    PRED_SPIKES_107 = 508,
-    PRED_SPIKES_108 = 509,
-    PRED_SPIKES_109 = 510,
-    PRED_SPIKES_110 = 511,
-    PRED_SPIKES_111 = 512,
-    PRED_SPIKES_112 = 513,
-    PRED_SPIKES_113 = 514,
-    PRED_SPIKES_114 = 515,
-    PRED_SPIKES_115 = 516,
-    PRED_SPIKES_116 = 517,
-    PRED_SPIKES_117 = 518,
-    PRED_SPIKES_118 = 519,
-    PRED_SPIKES_119 = 520,
-    PRED_SPIKES_120 = 521,
-    PRED_SPIKES_121 = 522,
-    PRED_SPIKES_122 = 523,
-    PRED_SPIKES_123 = 524,
-    PRED_SPIKES_124 = 525,
-    PRED_SPIKES_125 = 526,
-    PRED_SPIKES_126 = 527,
-    PRED_SPIKES_127 = 528,
-    PRED_SPIKES_128 = 529,
-    PRED_SPIKES_129 = 530,
-    PRED_SPIKES_130 = 531,
-    PRED_SPIKES_131 = 532,
-    PRED_SPIKES_132 = 533,
-    PRED_SPIKES_133 = 534,
-    PRED_SPIKES_134 = 535,
-    PRED_SPIKES_135 = 536,
-    PRED_SPIKES_136 = 537,
-    PRED_SPIKES_137 = 538,
-    PRED_SPIKES_138 = 539,
-    PRED_SPIKES_139 = 540,
-    PRED_SPIKES_140 = 541,
-    PRED_SPIKES_141 = 542,
-    PRED_SPIKES_142 = 543,
-    PRED_SPIKES_143 = 544,
-    PRED_SPIKES_144 = 545,
-    PRED_SPIKES_145 = 546,
-    PRED_SPIKES_146 = 547,
-    PRED_SPIKES_147 = 548,
-    PRED_SPIKES_148 = 549,
-    PRED_SPIKES_149 = 550,
-    PRED_SPIKES_150 = 551,
-    PRED_SPIKES_151 = 552,
-    PRED_SPIKES_152 = 553,
-    PRED_SPIKES_153 = 554,
-    PRED_SPIKES_154 = 555,
-    PRED_SPIKES_155 = 556,
-    PRED_SPIKES_156 = 557,
-    PRED_SPIKES_157 = 558,
-    PRED_SPIKES_158 = 559,
-    PRED_SPIKES_159 = 560,
-    PRED_SPIKES_160 = 561,
-    PRED_SPIKES_161 = 562,
-    PRED_SPIKES_162 = 563,
-    PRED_SPIKES_163 = 564,
-    PRED_SPIKES_164 = 565,
-    PRED_SPIKES_165 = 566,
-    PRED_SPIKES_166 = 567,
-    PRED_SPIKES_167 = 568,
-    PRED_SPIKES_168 = 569,
-    PRED_SPIKES_169 = 570,
-    PRED_SPIKES_170 = 571,
-    PRED_SPIKES_171 = 572,
-    PRED_SPIKES_172 = 573,
-    PRED_SPIKES_173 = 574,
-    PRED_SPIKES_174 = 575,
-    PRED_SPIKES_175 = 576,
-    PRED_SPIKES_176 = 577,
-    PRED_SPIKES_177 = 578,
-    PRED_SPIKES_178 = 579,
-    PRED_SPIKES_179 = 580,
-    PRED_SPIKES_180 = 581,
-    PRED_SPIKES_181 = 582,
-    PRED_SPIKES_182 = 583,
-    PRED_SPIKES_183 = 584,
-    PRED_SPIKES_184 = 585,
-    PRED_SPIKES_185 = 586,
-    PRED_SPIKES_186 = 587,
-    PRED_SPIKES_187 = 588,
-    PRED_SPIKES_188 = 589,
-    PRED_SPIKES_189 = 590,
-    PRED_SPIKES_190 = 591,
-    PRED_SPIKES_191 = 592,
-    PRED_SPIKES_192 = 593,
-    PRED_SPIKES_193 = 594,
-    PRED_SPIKES_194 = 595,
-    PRED_SPIKES_195 = 596,
-    PRED_SPIKES_196 = 597,
-    PRED_SPIKES_197 = 598,
-    PRED_SPIKES_198 = 599,
-    PRED_SPIKES_199 = 600,
-    PRED_SPIKES_200 = 601,
-    PRED_SPIKES_201 = 602,
-    PRED_SPIKES_202 = 603,
-    PRED_SPIKES_203 = 604,
-    PRED_SPIKES_204 = 605,
-    PRED_SPIKES_205 = 606,
-    PRED_SPIKES_206 = 607,
-    PRED_SPIKES_207 = 608,
-    PRED_SPIKES_208 = 609,
-    PRED_SPIKES_209 = 610,
-    PRED_SPIKES_210 = 611,
-    PRED_SPIKES_211 = 612,
-    PRED_SPIKES_212 = 613,
-    PRED_SPIKES_213 = 614,
-    PRED_SPIKES_214 = 615,
-    PRED_SPIKES_215 = 616,
-    PRED_SPIKES_216 = 617,
-    PRED_SPIKES_217 = 618,
-    PRED_SPIKES_218 = 619,
-    PRED_SPIKES_219 = 620,
-    PRED_SPIKES_220 = 621,
-    PRED_SPIKES_221 = 622,
-    PRED_SPIKES_222 = 623,
-    PRED_SPIKES_223 = 624,
-    PRED_SPIKES_224 = 625,
-    PRED_SPIKES_225 = 626,
-    PRED_SPIKES_226 = 627,
-    PRED_SPIKES_227 = 628,
-    PRED_SPIKES_228 = 629,
-    PRED_SPIKES_229 = 630,
-    PRED_SPIKES_230 = 631,
-    PRED_SPIKES_231 = 632,
-    PRED_SPIKES_232 = 633,
-    PRED_SPIKES_233 = 634,
-    PRED_SPIKES_234 = 635,
-    PRED_SPIKES_235 = 636,
-    PRED_SPIKES_236 = 637,
-    PRED_SPIKES_237 = 638,
-    PRED_SPIKES_238 = 639,
-    PRED_SPIKES_239 = 640,
-    PRED_SPIKES_240 = 641,
-    PRED_SPIKES_241 = 642,
-    PRED_SPIKES_242 = 643,
-    PRED_SPIKES_243 = 644,
-    PRED_SPIKES_244 = 645,
-    PRED_SPIKES_245 = 646,
-    PRED_SPIKES_246 = 647,
-    PRED_SPIKES_247 = 648,
-    PRED_SPIKES_248 = 649,
-    PRED_SPIKES_249 = 650,
-    PRED_SPIKES_250 = 651,
-    PRED_SPIKES_251 = 652,
-    PRED_SPIKES_252 = 653,
-    PRED_SPIKES_253 = 654,
-    PRED_SPIKES_254 = 655,
-    PRED_SPIKES_255 = 656,
-    PRED_SPIKES_256 = 657,
-    PRED_SPIKES_257 = 658,
-    PRED_SPIKES_258 = 659,
-    PRED_SPIKES_259 = 660,
-    PRED_SPIKES_260 = 661,
-    PRED_SPIKES_261 = 662,
-    PRED_SPIKES_262 = 663,
-    PRED_SPIKES_263 = 664,
-    PRED_SPIKES_264 = 665,
-    PRED_SPIKES_265 = 666,
-    PRED_SPIKES_266 = 667,
-    PRED_SPIKES_267 = 668,
-    PRED_SPIKES_268 = 669,
-    PRED_SPIKES_269 = 670,
-    PRED_SPIKES_270 = 671,
-    PRED_SPIKES_271 = 672,
-    PRED_SPIKES_272 = 673,
-    PRED_SPIKES_273 = 674,
-    PRED_SPIKES_274 = 675,
-    PRED_SPIKES_275 = 676,
-    PRED_SPIKES_276 = 677,
-    PRED_SPIKES_277 = 678,
-    PRED_SPIKES_278 = 679,
-    PRED_SPIKES_279 = 680,
-    PRED_SPIKES_280 = 681,
-    PRED_SPIKES_281 = 682,
-    PRED_SPIKES_282 = 683,
-    PRED_SPIKES_283 = 684,
-    PRED_SPIKES_284 = 685,
-    PRED_SPIKES_285 = 686,
-    PRED_SPIKES_286 = 687,
-    PRED_SPIKES_287 = 688,
-    PRED_SPIKES_288 = 689,
-    PRED_SPIKES_289 = 690,
-    PRED_SPIKES_290 = 691,
-    PRED_SPIKES_291 = 692,
-    PRED_SPIKES_292 = 693,
-    PRED_SPIKES_293 = 694,
-    PRED_SPIKES_294 = 695,
-    PRED_SPIKES_295 = 696,
-    PRED_SPIKES_296 = 697,
-    PRED_SPIKES_297 = 698,
-    PRED_SPIKES_298 = 699,
-    PRED_SPIKES_299 = 700,
-    PRED_SPIKES_300 = 701,
-    PRED_SPIKES_301 = 702,
-    PRED_SPIKES_302 = 703,
-    PRED_SPIKES_303 = 704,
-    PRED_SPIKES_304 = 705,
-    PRED_SPIKES_305 = 706,
-    PRED_SPIKES_306 = 707,
-    PRED_SPIKES_307 = 708,
-    PRED_SPIKES_308 = 709,
-    PRED_SPIKES_309 = 710,
-    PRED_SPIKES_310 = 711,
-    PRED_SPIKES_311 = 712,
-    PRED_SPIKES_312 = 713,
-    PRED_SPIKES_313 = 714,
-    PRED_SPIKES_314 = 715,
-    PRED_SPIKES_315 = 716,
-    PRED_SPIKES_316 = 717,
-    PRED_SPIKES_317 = 718,
-    PRED_SPIKES_318 = 719,
-    PRED_SPIKES_319 = 720,
-    PRED_SPIKES_320 = 721,
-    PRED_SPIKES_321 = 722,
-    PRED_SPIKES_322 = 723,
-    PRED_SPIKES_323 = 724,
-    PRED_SPIKES_324 = 725,
-    PRED_SPIKES_325 = 726,
-    PRED_SPIKES_326 = 727,
-    PRED_SPIKES_327 = 728,
-    PRED_SPIKES_328 = 729,
-    PRED_SPIKES_329 = 730,
-    PRED_SPIKES_330 = 731,
-    PRED_SPIKES_331 = 732,
-    PRED_SPIKES_332 = 733,
-    PRED_SPIKES_333 = 734,
-    PRED_SPIKES_334 = 735,
-    PRED_SPIKES_335 = 736,
-    PRED_SPIKES_336 = 737,
-    PRED_SPIKES_337 = 738,
-    PRED_SPIKES_338 = 739,
-    PRED_SPIKES_339 = 740,
-    PRED_SPIKES_340 = 741,
-    PRED_SPIKES_341 = 742,
-    PRED_SPIKES_342 = 743,
-    PRED_SPIKES_343 = 744,
-    PRED_SPIKES_344 = 745,
-    PRED_SPIKES_345 = 746,
-    PRED_SPIKES_346 = 747,
-    PRED_SPIKES_347 = 748,
-    PRED_SPIKES_348 = 749,
-    PRED_SPIKES_349 = 750,
-    PRED_SPIKES_350 = 751,
-    PRED_SPIKES_351 = 752,
-    PRED_SPIKES_352 = 753,
-    PRED_SPIKES_353 = 754,
-    PRED_SPIKES_354 = 755,
-    PRED_SPIKES_355 = 756,
-    PRED_SPIKES_356 = 757,
-    PRED_SPIKES_357 = 758,
-    PRED_SPIKES_358 = 759,
-    PRED_SPIKES_359 = 760,
-    PRED_SPIKES_360 = 761,
-    PRED_SPIKES_361 = 762,
-    PRED_SPIKES_362 = 763,
-    PRED_SPIKES_363 = 764,
-    PRED_SPIKES_364 = 765,
-    PRED_SPIKES_365 = 766,
-    PRED_SPIKES_366 = 767,
-    PRED_SPIKES_367 = 768,
-    PRED_SPIKES_368 = 769,
-    PRED_SPIKES_369 = 770,
-    PRED_SPIKES_370 = 771,
-    PRED_SPIKES_371 = 772,
-    PRED_SPIKES_372 = 773,
-    PRED_SPIKES_373 = 774,
-    PRED_SPIKES_374 = 775,
-    PRED_SPIKES_375 = 776,
-    PRED_SPIKES_376 = 777,
-    PRED_SPIKES_377 = 778,
-    PRED_SPIKES_378 = 779,
-    PRED_SPIKES_379 = 780,
-    PRED_SPIKES_380 = 781,
-    PRED_SPIKES_381 = 782,
-    PRED_SPIKES_382 = 783,
-    PRED_SPIKES_383 = 784,
-    PRED_SPIKES_384 = 785,
-    PRED_SPIKES_385 = 786,
-    PRED_SPIKES_386 = 787,
-    PRED_SPIKES_387 = 788,
-    PRED_SPIKES_388 = 789,
-    PRED_SPIKES_389 = 790,
-    PRED_SPIKES_390 = 791,
-    PRED_SPIKES_391 = 792,
-    PRED_SPIKES_392 = 793,
-    PRED_SPIKES_393 = 794,
-    PRED_SPIKES_394 = 795,
-    PRED_SPIKES_395 = 796,
-    PRED_SPIKES_396 = 797,
-    PRED_SPIKES_397 = 798,
-    PRED_SPIKES_398 = 799,
-    PRED_SPIKES_399 = 800,
-    MAX_SPIKE_RECEPTOR = 801
+    PRED_SPIKES_0 = 201,
+    PRED_SPIKES_1 = 202,
+    PRED_SPIKES_2 = 203,
+    PRED_SPIKES_3 = 204,
+    PRED_SPIKES_4 = 205,
+    PRED_SPIKES_5 = 206,
+    PRED_SPIKES_6 = 207,
+    PRED_SPIKES_7 = 208,
+    PRED_SPIKES_8 = 209,
+    PRED_SPIKES_9 = 210,
+    PRED_SPIKES_10 = 211,
+    PRED_SPIKES_11 = 212,
+    PRED_SPIKES_12 = 213,
+    PRED_SPIKES_13 = 214,
+    PRED_SPIKES_14 = 215,
+    PRED_SPIKES_15 = 216,
+    PRED_SPIKES_16 = 217,
+    PRED_SPIKES_17 = 218,
+    PRED_SPIKES_18 = 219,
+    PRED_SPIKES_19 = 220,
+    PRED_SPIKES_20 = 221,
+    PRED_SPIKES_21 = 222,
+    PRED_SPIKES_22 = 223,
+    PRED_SPIKES_23 = 224,
+    PRED_SPIKES_24 = 225,
+    PRED_SPIKES_25 = 226,
+    PRED_SPIKES_26 = 227,
+    PRED_SPIKES_27 = 228,
+    PRED_SPIKES_28 = 229,
+    PRED_SPIKES_29 = 230,
+    PRED_SPIKES_30 = 231,
+    PRED_SPIKES_31 = 232,
+    PRED_SPIKES_32 = 233,
+    PRED_SPIKES_33 = 234,
+    PRED_SPIKES_34 = 235,
+    PRED_SPIKES_35 = 236,
+    PRED_SPIKES_36 = 237,
+    PRED_SPIKES_37 = 238,
+    PRED_SPIKES_38 = 239,
+    PRED_SPIKES_39 = 240,
+    PRED_SPIKES_40 = 241,
+    PRED_SPIKES_41 = 242,
+    PRED_SPIKES_42 = 243,
+    PRED_SPIKES_43 = 244,
+    PRED_SPIKES_44 = 245,
+    PRED_SPIKES_45 = 246,
+    PRED_SPIKES_46 = 247,
+    PRED_SPIKES_47 = 248,
+    PRED_SPIKES_48 = 249,
+    PRED_SPIKES_49 = 250,
+    PRED_SPIKES_50 = 251,
+    PRED_SPIKES_51 = 252,
+    PRED_SPIKES_52 = 253,
+    PRED_SPIKES_53 = 254,
+    PRED_SPIKES_54 = 255,
+    PRED_SPIKES_55 = 256,
+    PRED_SPIKES_56 = 257,
+    PRED_SPIKES_57 = 258,
+    PRED_SPIKES_58 = 259,
+    PRED_SPIKES_59 = 260,
+    PRED_SPIKES_60 = 261,
+    PRED_SPIKES_61 = 262,
+    PRED_SPIKES_62 = 263,
+    PRED_SPIKES_63 = 264,
+    PRED_SPIKES_64 = 265,
+    PRED_SPIKES_65 = 266,
+    PRED_SPIKES_66 = 267,
+    PRED_SPIKES_67 = 268,
+    PRED_SPIKES_68 = 269,
+    PRED_SPIKES_69 = 270,
+    PRED_SPIKES_70 = 271,
+    PRED_SPIKES_71 = 272,
+    PRED_SPIKES_72 = 273,
+    PRED_SPIKES_73 = 274,
+    PRED_SPIKES_74 = 275,
+    PRED_SPIKES_75 = 276,
+    PRED_SPIKES_76 = 277,
+    PRED_SPIKES_77 = 278,
+    PRED_SPIKES_78 = 279,
+    PRED_SPIKES_79 = 280,
+    PRED_SPIKES_80 = 281,
+    PRED_SPIKES_81 = 282,
+    PRED_SPIKES_82 = 283,
+    PRED_SPIKES_83 = 284,
+    PRED_SPIKES_84 = 285,
+    PRED_SPIKES_85 = 286,
+    PRED_SPIKES_86 = 287,
+    PRED_SPIKES_87 = 288,
+    PRED_SPIKES_88 = 289,
+    PRED_SPIKES_89 = 290,
+    PRED_SPIKES_90 = 291,
+    PRED_SPIKES_91 = 292,
+    PRED_SPIKES_92 = 293,
+    PRED_SPIKES_93 = 294,
+    PRED_SPIKES_94 = 295,
+    PRED_SPIKES_95 = 296,
+    PRED_SPIKES_96 = 297,
+    PRED_SPIKES_97 = 298,
+    PRED_SPIKES_98 = 299,
+    PRED_SPIKES_99 = 300,
+    PRED_SPIKES_100 = 301,
+    PRED_SPIKES_101 = 302,
+    PRED_SPIKES_102 = 303,
+    PRED_SPIKES_103 = 304,
+    PRED_SPIKES_104 = 305,
+    PRED_SPIKES_105 = 306,
+    PRED_SPIKES_106 = 307,
+    PRED_SPIKES_107 = 308,
+    PRED_SPIKES_108 = 309,
+    PRED_SPIKES_109 = 310,
+    PRED_SPIKES_110 = 311,
+    PRED_SPIKES_111 = 312,
+    PRED_SPIKES_112 = 313,
+    PRED_SPIKES_113 = 314,
+    PRED_SPIKES_114 = 315,
+    PRED_SPIKES_115 = 316,
+    PRED_SPIKES_116 = 317,
+    PRED_SPIKES_117 = 318,
+    PRED_SPIKES_118 = 319,
+    PRED_SPIKES_119 = 320,
+    PRED_SPIKES_120 = 321,
+    PRED_SPIKES_121 = 322,
+    PRED_SPIKES_122 = 323,
+    PRED_SPIKES_123 = 324,
+    PRED_SPIKES_124 = 325,
+    PRED_SPIKES_125 = 326,
+    PRED_SPIKES_126 = 327,
+    PRED_SPIKES_127 = 328,
+    PRED_SPIKES_128 = 329,
+    PRED_SPIKES_129 = 330,
+    PRED_SPIKES_130 = 331,
+    PRED_SPIKES_131 = 332,
+    PRED_SPIKES_132 = 333,
+    PRED_SPIKES_133 = 334,
+    PRED_SPIKES_134 = 335,
+    PRED_SPIKES_135 = 336,
+    PRED_SPIKES_136 = 337,
+    PRED_SPIKES_137 = 338,
+    PRED_SPIKES_138 = 339,
+    PRED_SPIKES_139 = 340,
+    PRED_SPIKES_140 = 341,
+    PRED_SPIKES_141 = 342,
+    PRED_SPIKES_142 = 343,
+    PRED_SPIKES_143 = 344,
+    PRED_SPIKES_144 = 345,
+    PRED_SPIKES_145 = 346,
+    PRED_SPIKES_146 = 347,
+    PRED_SPIKES_147 = 348,
+    PRED_SPIKES_148 = 349,
+    PRED_SPIKES_149 = 350,
+    PRED_SPIKES_150 = 351,
+    PRED_SPIKES_151 = 352,
+    PRED_SPIKES_152 = 353,
+    PRED_SPIKES_153 = 354,
+    PRED_SPIKES_154 = 355,
+    PRED_SPIKES_155 = 356,
+    PRED_SPIKES_156 = 357,
+    PRED_SPIKES_157 = 358,
+    PRED_SPIKES_158 = 359,
+    PRED_SPIKES_159 = 360,
+    PRED_SPIKES_160 = 361,
+    PRED_SPIKES_161 = 362,
+    PRED_SPIKES_162 = 363,
+    PRED_SPIKES_163 = 364,
+    PRED_SPIKES_164 = 365,
+    PRED_SPIKES_165 = 366,
+    PRED_SPIKES_166 = 367,
+    PRED_SPIKES_167 = 368,
+    PRED_SPIKES_168 = 369,
+    PRED_SPIKES_169 = 370,
+    PRED_SPIKES_170 = 371,
+    PRED_SPIKES_171 = 372,
+    PRED_SPIKES_172 = 373,
+    PRED_SPIKES_173 = 374,
+    PRED_SPIKES_174 = 375,
+    PRED_SPIKES_175 = 376,
+    PRED_SPIKES_176 = 377,
+    PRED_SPIKES_177 = 378,
+    PRED_SPIKES_178 = 379,
+    PRED_SPIKES_179 = 380,
+    PRED_SPIKES_180 = 381,
+    PRED_SPIKES_181 = 382,
+    PRED_SPIKES_182 = 383,
+    PRED_SPIKES_183 = 384,
+    PRED_SPIKES_184 = 385,
+    PRED_SPIKES_185 = 386,
+    PRED_SPIKES_186 = 387,
+    PRED_SPIKES_187 = 388,
+    PRED_SPIKES_188 = 389,
+    PRED_SPIKES_189 = 390,
+    PRED_SPIKES_190 = 391,
+    PRED_SPIKES_191 = 392,
+    PRED_SPIKES_192 = 393,
+    PRED_SPIKES_193 = 394,
+    PRED_SPIKES_194 = 395,
+    PRED_SPIKES_195 = 396,
+    PRED_SPIKES_196 = 397,
+    PRED_SPIKES_197 = 398,
+    PRED_SPIKES_198 = 399,
+    PRED_SPIKES_199 = 400,
+    ERROR_SPIKES = 401,
+    MAX_SPIKE_RECEPTOR = 402
   };
 
   enum ContinuousInput
@@ -1456,14 +1199,18 @@ static std::vector< std::tuple< int, int > > rport_to_nestml_buffer_idx;
     double base_rate;
     //!  Size of the sliding window
     double buffer_size;
+    double buffer_size_error;
     //!  Number of simulation steps (simulation_time/resolution())
     long simulation_steps;
     //!  Population size for sensory feedback
     long N_fbk;
     //!  Population size for sensory prediction
     long N_pred;
+    long N_error;
+    double C_error;
     long fbk_bf_size;
     long pred_bf_size;
+    long error_bf_size;
     double time_wait;
     double time_trial;
 
@@ -1499,19 +1246,26 @@ enum StateVecVars {
     IN_RATE = 0,
     OUT_RATE = 1,
     CURRENT_FBK_INPUT = 2,
-    CURRENT_PRED_INPUT = 402,
-    FBK_BUFFER = 802,
-    PRED_BUFFER = 10802,
-    FBK_COUNTS = 20802,
-    PRED_COUNTS = 21202,
-    MEAN_FBK = 21602,
-    MEAN_PRED = 21603,
-    VAR_FBK = 21604,
-    VAR_PRED = 21605,
-    CV_FBK = 21606,
-    CV_PRED = 21607,
-    TOTAL_CV = 21608,
-    LAMBDA_POISSON = 21609,
+    CURRENT_PRED_INPUT = 202,
+    FBK_BUFFER = 402,
+    PRED_BUFFER = 30402,
+    FBK_COUNTS = 60402,
+    PRED_COUNTS = 60602,
+    MEAN_FBK = 60802,
+    MEAN_PRED = 60803,
+    VAR_FBK = 60804,
+    VAR_PRED = 60805,
+    CV_FBK = 60806,
+    CV_PRED = 60807,
+    CURRENT_ERROR_INPUT = 60808,
+    ERROR_BUFFER = 60809,
+    ERROR_COUNTS = 60834,
+    ERROR_RATE = 60835,
+    FBK_RATE = 60836,
+    W_FBK = 60837,
+    W_PRED = 60838,
+    TOTAL_CV = 60839,
+    LAMBDA_POISSON = 60840,
 };    
     //!  Input firing rate: to be computed from spikes
     double in_rate;
@@ -1544,6 +1298,15 @@ enum StateVecVars {
     double CV_fbk;
     //!  Coefficient of variation of sensory prediction
     double CV_pred;
+    //! ################
+    double current_error_input;
+    std::vector< double >  error_buffer;
+    long err_pos_count;
+    double error_counts;
+    double error_rate;
+    double fbk_rate;
+    double w_fbk;
+    double w_pred;
     double total_CV;
     //!  Parameter of the Poisson distribution defining generator behavior
     double lambda_poisson;
@@ -1573,6 +1336,7 @@ enum StateVecVars {
     long buffer_steps;
     long trial_steps;
     long wait_steps;
+    long buffer_error_steps;
   };
 
   /**
@@ -1826,6 +1590,41 @@ P_.N_pred)
       return S_.CV_pred;
     }
     else if
+    (elem == State_::CURRENT_ERROR_INPUT)
+    {
+      return S_.current_error_input;
+    }
+    else if(elem >= State_::ERROR_BUFFER and elem < State_::ERROR_BUFFER + 
+P_.error_bf_size)
+    {
+      return S_.error_buffer[ elem - State_::ERROR_BUFFER ];
+    }
+    else if
+    (elem == State_::ERROR_COUNTS)
+    {
+      return S_.error_counts;
+    }
+    else if
+    (elem == State_::ERROR_RATE)
+    {
+      return S_.error_rate;
+    }
+    else if
+    (elem == State_::FBK_RATE)
+    {
+      return S_.fbk_rate;
+    }
+    else if
+    (elem == State_::W_FBK)
+    {
+      return S_.w_fbk;
+    }
+    else if
+    (elem == State_::W_PRED)
+    {
+      return S_.w_pred;
+    }
+    else if
     (elem == State_::TOTAL_CV)
     {
       return S_.total_CV;
@@ -1882,11 +1681,15 @@ inline void state_neuron::get_status(DictionaryDatum &__d) const
   def< bool >(__d, nest::state_neuron_names::_pos, get_pos());
   def< double >(__d, nest::state_neuron_names::_base_rate, get_base_rate());
   def< double >(__d, nest::state_neuron_names::_buffer_size, get_buffer_size());
+  def< double >(__d, nest::state_neuron_names::_buffer_size_error, get_buffer_size_error());
   def< long >(__d, nest::state_neuron_names::_simulation_steps, get_simulation_steps());
   def< long >(__d, nest::state_neuron_names::_N_fbk, get_N_fbk());
   def< long >(__d, nest::state_neuron_names::_N_pred, get_N_pred());
+  def< long >(__d, nest::state_neuron_names::_N_error, get_N_error());
+  def< double >(__d, nest::state_neuron_names::_C_error, get_C_error());
   def< long >(__d, nest::state_neuron_names::_fbk_bf_size, get_fbk_bf_size());
   def< long >(__d, nest::state_neuron_names::_pred_bf_size, get_pred_bf_size());
+  def< long >(__d, nest::state_neuron_names::_error_bf_size, get_error_bf_size());
   def< double >(__d, nest::state_neuron_names::_time_wait, get_time_wait());
   def< double >(__d, nest::state_neuron_names::_time_trial, get_time_trial());
 
@@ -1908,6 +1711,14 @@ inline void state_neuron::get_status(DictionaryDatum &__d) const
   def< double >(__d, nest::state_neuron_names::_var_pred, get_var_pred());
   def< double >(__d, nest::state_neuron_names::_CV_fbk, get_CV_fbk());
   def< double >(__d, nest::state_neuron_names::_CV_pred, get_CV_pred());
+  def< double >(__d, nest::state_neuron_names::_current_error_input, get_current_error_input());
+  def< std::vector< double >  >(__d, nest::state_neuron_names::_error_buffer, get_error_buffer());
+  def< long >(__d, nest::state_neuron_names::_err_pos_count, get_err_pos_count());
+  def< double >(__d, nest::state_neuron_names::_error_counts, get_error_counts());
+  def< double >(__d, nest::state_neuron_names::_error_rate, get_error_rate());
+  def< double >(__d, nest::state_neuron_names::_fbk_rate, get_fbk_rate());
+  def< double >(__d, nest::state_neuron_names::_w_fbk, get_w_fbk());
+  def< double >(__d, nest::state_neuron_names::_w_pred, get_w_pred());
   def< double >(__d, nest::state_neuron_names::_total_CV, get_total_CV());
   def< double >(__d, nest::state_neuron_names::_lambda_poisson, get_lambda_poisson());
 
@@ -2113,606 +1924,207 @@ inline void state_neuron::get_status(DictionaryDatum &__d) const
     ( *__receptor_type )[ "FBK_SPIKES_197" ] = 198,
     ( *__receptor_type )[ "FBK_SPIKES_198" ] = 199,
     ( *__receptor_type )[ "FBK_SPIKES_199" ] = 200,
-    ( *__receptor_type )[ "FBK_SPIKES_200" ] = 201,
-    ( *__receptor_type )[ "FBK_SPIKES_201" ] = 202,
-    ( *__receptor_type )[ "FBK_SPIKES_202" ] = 203,
-    ( *__receptor_type )[ "FBK_SPIKES_203" ] = 204,
-    ( *__receptor_type )[ "FBK_SPIKES_204" ] = 205,
-    ( *__receptor_type )[ "FBK_SPIKES_205" ] = 206,
-    ( *__receptor_type )[ "FBK_SPIKES_206" ] = 207,
-    ( *__receptor_type )[ "FBK_SPIKES_207" ] = 208,
-    ( *__receptor_type )[ "FBK_SPIKES_208" ] = 209,
-    ( *__receptor_type )[ "FBK_SPIKES_209" ] = 210,
-    ( *__receptor_type )[ "FBK_SPIKES_210" ] = 211,
-    ( *__receptor_type )[ "FBK_SPIKES_211" ] = 212,
-    ( *__receptor_type )[ "FBK_SPIKES_212" ] = 213,
-    ( *__receptor_type )[ "FBK_SPIKES_213" ] = 214,
-    ( *__receptor_type )[ "FBK_SPIKES_214" ] = 215,
-    ( *__receptor_type )[ "FBK_SPIKES_215" ] = 216,
-    ( *__receptor_type )[ "FBK_SPIKES_216" ] = 217,
-    ( *__receptor_type )[ "FBK_SPIKES_217" ] = 218,
-    ( *__receptor_type )[ "FBK_SPIKES_218" ] = 219,
-    ( *__receptor_type )[ "FBK_SPIKES_219" ] = 220,
-    ( *__receptor_type )[ "FBK_SPIKES_220" ] = 221,
-    ( *__receptor_type )[ "FBK_SPIKES_221" ] = 222,
-    ( *__receptor_type )[ "FBK_SPIKES_222" ] = 223,
-    ( *__receptor_type )[ "FBK_SPIKES_223" ] = 224,
-    ( *__receptor_type )[ "FBK_SPIKES_224" ] = 225,
-    ( *__receptor_type )[ "FBK_SPIKES_225" ] = 226,
-    ( *__receptor_type )[ "FBK_SPIKES_226" ] = 227,
-    ( *__receptor_type )[ "FBK_SPIKES_227" ] = 228,
-    ( *__receptor_type )[ "FBK_SPIKES_228" ] = 229,
-    ( *__receptor_type )[ "FBK_SPIKES_229" ] = 230,
-    ( *__receptor_type )[ "FBK_SPIKES_230" ] = 231,
-    ( *__receptor_type )[ "FBK_SPIKES_231" ] = 232,
-    ( *__receptor_type )[ "FBK_SPIKES_232" ] = 233,
-    ( *__receptor_type )[ "FBK_SPIKES_233" ] = 234,
-    ( *__receptor_type )[ "FBK_SPIKES_234" ] = 235,
-    ( *__receptor_type )[ "FBK_SPIKES_235" ] = 236,
-    ( *__receptor_type )[ "FBK_SPIKES_236" ] = 237,
-    ( *__receptor_type )[ "FBK_SPIKES_237" ] = 238,
-    ( *__receptor_type )[ "FBK_SPIKES_238" ] = 239,
-    ( *__receptor_type )[ "FBK_SPIKES_239" ] = 240,
-    ( *__receptor_type )[ "FBK_SPIKES_240" ] = 241,
-    ( *__receptor_type )[ "FBK_SPIKES_241" ] = 242,
-    ( *__receptor_type )[ "FBK_SPIKES_242" ] = 243,
-    ( *__receptor_type )[ "FBK_SPIKES_243" ] = 244,
-    ( *__receptor_type )[ "FBK_SPIKES_244" ] = 245,
-    ( *__receptor_type )[ "FBK_SPIKES_245" ] = 246,
-    ( *__receptor_type )[ "FBK_SPIKES_246" ] = 247,
-    ( *__receptor_type )[ "FBK_SPIKES_247" ] = 248,
-    ( *__receptor_type )[ "FBK_SPIKES_248" ] = 249,
-    ( *__receptor_type )[ "FBK_SPIKES_249" ] = 250,
-    ( *__receptor_type )[ "FBK_SPIKES_250" ] = 251,
-    ( *__receptor_type )[ "FBK_SPIKES_251" ] = 252,
-    ( *__receptor_type )[ "FBK_SPIKES_252" ] = 253,
-    ( *__receptor_type )[ "FBK_SPIKES_253" ] = 254,
-    ( *__receptor_type )[ "FBK_SPIKES_254" ] = 255,
-    ( *__receptor_type )[ "FBK_SPIKES_255" ] = 256,
-    ( *__receptor_type )[ "FBK_SPIKES_256" ] = 257,
-    ( *__receptor_type )[ "FBK_SPIKES_257" ] = 258,
-    ( *__receptor_type )[ "FBK_SPIKES_258" ] = 259,
-    ( *__receptor_type )[ "FBK_SPIKES_259" ] = 260,
-    ( *__receptor_type )[ "FBK_SPIKES_260" ] = 261,
-    ( *__receptor_type )[ "FBK_SPIKES_261" ] = 262,
-    ( *__receptor_type )[ "FBK_SPIKES_262" ] = 263,
-    ( *__receptor_type )[ "FBK_SPIKES_263" ] = 264,
-    ( *__receptor_type )[ "FBK_SPIKES_264" ] = 265,
-    ( *__receptor_type )[ "FBK_SPIKES_265" ] = 266,
-    ( *__receptor_type )[ "FBK_SPIKES_266" ] = 267,
-    ( *__receptor_type )[ "FBK_SPIKES_267" ] = 268,
-    ( *__receptor_type )[ "FBK_SPIKES_268" ] = 269,
-    ( *__receptor_type )[ "FBK_SPIKES_269" ] = 270,
-    ( *__receptor_type )[ "FBK_SPIKES_270" ] = 271,
-    ( *__receptor_type )[ "FBK_SPIKES_271" ] = 272,
-    ( *__receptor_type )[ "FBK_SPIKES_272" ] = 273,
-    ( *__receptor_type )[ "FBK_SPIKES_273" ] = 274,
-    ( *__receptor_type )[ "FBK_SPIKES_274" ] = 275,
-    ( *__receptor_type )[ "FBK_SPIKES_275" ] = 276,
-    ( *__receptor_type )[ "FBK_SPIKES_276" ] = 277,
-    ( *__receptor_type )[ "FBK_SPIKES_277" ] = 278,
-    ( *__receptor_type )[ "FBK_SPIKES_278" ] = 279,
-    ( *__receptor_type )[ "FBK_SPIKES_279" ] = 280,
-    ( *__receptor_type )[ "FBK_SPIKES_280" ] = 281,
-    ( *__receptor_type )[ "FBK_SPIKES_281" ] = 282,
-    ( *__receptor_type )[ "FBK_SPIKES_282" ] = 283,
-    ( *__receptor_type )[ "FBK_SPIKES_283" ] = 284,
-    ( *__receptor_type )[ "FBK_SPIKES_284" ] = 285,
-    ( *__receptor_type )[ "FBK_SPIKES_285" ] = 286,
-    ( *__receptor_type )[ "FBK_SPIKES_286" ] = 287,
-    ( *__receptor_type )[ "FBK_SPIKES_287" ] = 288,
-    ( *__receptor_type )[ "FBK_SPIKES_288" ] = 289,
-    ( *__receptor_type )[ "FBK_SPIKES_289" ] = 290,
-    ( *__receptor_type )[ "FBK_SPIKES_290" ] = 291,
-    ( *__receptor_type )[ "FBK_SPIKES_291" ] = 292,
-    ( *__receptor_type )[ "FBK_SPIKES_292" ] = 293,
-    ( *__receptor_type )[ "FBK_SPIKES_293" ] = 294,
-    ( *__receptor_type )[ "FBK_SPIKES_294" ] = 295,
-    ( *__receptor_type )[ "FBK_SPIKES_295" ] = 296,
-    ( *__receptor_type )[ "FBK_SPIKES_296" ] = 297,
-    ( *__receptor_type )[ "FBK_SPIKES_297" ] = 298,
-    ( *__receptor_type )[ "FBK_SPIKES_298" ] = 299,
-    ( *__receptor_type )[ "FBK_SPIKES_299" ] = 300,
-    ( *__receptor_type )[ "FBK_SPIKES_300" ] = 301,
-    ( *__receptor_type )[ "FBK_SPIKES_301" ] = 302,
-    ( *__receptor_type )[ "FBK_SPIKES_302" ] = 303,
-    ( *__receptor_type )[ "FBK_SPIKES_303" ] = 304,
-    ( *__receptor_type )[ "FBK_SPIKES_304" ] = 305,
-    ( *__receptor_type )[ "FBK_SPIKES_305" ] = 306,
-    ( *__receptor_type )[ "FBK_SPIKES_306" ] = 307,
-    ( *__receptor_type )[ "FBK_SPIKES_307" ] = 308,
-    ( *__receptor_type )[ "FBK_SPIKES_308" ] = 309,
-    ( *__receptor_type )[ "FBK_SPIKES_309" ] = 310,
-    ( *__receptor_type )[ "FBK_SPIKES_310" ] = 311,
-    ( *__receptor_type )[ "FBK_SPIKES_311" ] = 312,
-    ( *__receptor_type )[ "FBK_SPIKES_312" ] = 313,
-    ( *__receptor_type )[ "FBK_SPIKES_313" ] = 314,
-    ( *__receptor_type )[ "FBK_SPIKES_314" ] = 315,
-    ( *__receptor_type )[ "FBK_SPIKES_315" ] = 316,
-    ( *__receptor_type )[ "FBK_SPIKES_316" ] = 317,
-    ( *__receptor_type )[ "FBK_SPIKES_317" ] = 318,
-    ( *__receptor_type )[ "FBK_SPIKES_318" ] = 319,
-    ( *__receptor_type )[ "FBK_SPIKES_319" ] = 320,
-    ( *__receptor_type )[ "FBK_SPIKES_320" ] = 321,
-    ( *__receptor_type )[ "FBK_SPIKES_321" ] = 322,
-    ( *__receptor_type )[ "FBK_SPIKES_322" ] = 323,
-    ( *__receptor_type )[ "FBK_SPIKES_323" ] = 324,
-    ( *__receptor_type )[ "FBK_SPIKES_324" ] = 325,
-    ( *__receptor_type )[ "FBK_SPIKES_325" ] = 326,
-    ( *__receptor_type )[ "FBK_SPIKES_326" ] = 327,
-    ( *__receptor_type )[ "FBK_SPIKES_327" ] = 328,
-    ( *__receptor_type )[ "FBK_SPIKES_328" ] = 329,
-    ( *__receptor_type )[ "FBK_SPIKES_329" ] = 330,
-    ( *__receptor_type )[ "FBK_SPIKES_330" ] = 331,
-    ( *__receptor_type )[ "FBK_SPIKES_331" ] = 332,
-    ( *__receptor_type )[ "FBK_SPIKES_332" ] = 333,
-    ( *__receptor_type )[ "FBK_SPIKES_333" ] = 334,
-    ( *__receptor_type )[ "FBK_SPIKES_334" ] = 335,
-    ( *__receptor_type )[ "FBK_SPIKES_335" ] = 336,
-    ( *__receptor_type )[ "FBK_SPIKES_336" ] = 337,
-    ( *__receptor_type )[ "FBK_SPIKES_337" ] = 338,
-    ( *__receptor_type )[ "FBK_SPIKES_338" ] = 339,
-    ( *__receptor_type )[ "FBK_SPIKES_339" ] = 340,
-    ( *__receptor_type )[ "FBK_SPIKES_340" ] = 341,
-    ( *__receptor_type )[ "FBK_SPIKES_341" ] = 342,
-    ( *__receptor_type )[ "FBK_SPIKES_342" ] = 343,
-    ( *__receptor_type )[ "FBK_SPIKES_343" ] = 344,
-    ( *__receptor_type )[ "FBK_SPIKES_344" ] = 345,
-    ( *__receptor_type )[ "FBK_SPIKES_345" ] = 346,
-    ( *__receptor_type )[ "FBK_SPIKES_346" ] = 347,
-    ( *__receptor_type )[ "FBK_SPIKES_347" ] = 348,
-    ( *__receptor_type )[ "FBK_SPIKES_348" ] = 349,
-    ( *__receptor_type )[ "FBK_SPIKES_349" ] = 350,
-    ( *__receptor_type )[ "FBK_SPIKES_350" ] = 351,
-    ( *__receptor_type )[ "FBK_SPIKES_351" ] = 352,
-    ( *__receptor_type )[ "FBK_SPIKES_352" ] = 353,
-    ( *__receptor_type )[ "FBK_SPIKES_353" ] = 354,
-    ( *__receptor_type )[ "FBK_SPIKES_354" ] = 355,
-    ( *__receptor_type )[ "FBK_SPIKES_355" ] = 356,
-    ( *__receptor_type )[ "FBK_SPIKES_356" ] = 357,
-    ( *__receptor_type )[ "FBK_SPIKES_357" ] = 358,
-    ( *__receptor_type )[ "FBK_SPIKES_358" ] = 359,
-    ( *__receptor_type )[ "FBK_SPIKES_359" ] = 360,
-    ( *__receptor_type )[ "FBK_SPIKES_360" ] = 361,
-    ( *__receptor_type )[ "FBK_SPIKES_361" ] = 362,
-    ( *__receptor_type )[ "FBK_SPIKES_362" ] = 363,
-    ( *__receptor_type )[ "FBK_SPIKES_363" ] = 364,
-    ( *__receptor_type )[ "FBK_SPIKES_364" ] = 365,
-    ( *__receptor_type )[ "FBK_SPIKES_365" ] = 366,
-    ( *__receptor_type )[ "FBK_SPIKES_366" ] = 367,
-    ( *__receptor_type )[ "FBK_SPIKES_367" ] = 368,
-    ( *__receptor_type )[ "FBK_SPIKES_368" ] = 369,
-    ( *__receptor_type )[ "FBK_SPIKES_369" ] = 370,
-    ( *__receptor_type )[ "FBK_SPIKES_370" ] = 371,
-    ( *__receptor_type )[ "FBK_SPIKES_371" ] = 372,
-    ( *__receptor_type )[ "FBK_SPIKES_372" ] = 373,
-    ( *__receptor_type )[ "FBK_SPIKES_373" ] = 374,
-    ( *__receptor_type )[ "FBK_SPIKES_374" ] = 375,
-    ( *__receptor_type )[ "FBK_SPIKES_375" ] = 376,
-    ( *__receptor_type )[ "FBK_SPIKES_376" ] = 377,
-    ( *__receptor_type )[ "FBK_SPIKES_377" ] = 378,
-    ( *__receptor_type )[ "FBK_SPIKES_378" ] = 379,
-    ( *__receptor_type )[ "FBK_SPIKES_379" ] = 380,
-    ( *__receptor_type )[ "FBK_SPIKES_380" ] = 381,
-    ( *__receptor_type )[ "FBK_SPIKES_381" ] = 382,
-    ( *__receptor_type )[ "FBK_SPIKES_382" ] = 383,
-    ( *__receptor_type )[ "FBK_SPIKES_383" ] = 384,
-    ( *__receptor_type )[ "FBK_SPIKES_384" ] = 385,
-    ( *__receptor_type )[ "FBK_SPIKES_385" ] = 386,
-    ( *__receptor_type )[ "FBK_SPIKES_386" ] = 387,
-    ( *__receptor_type )[ "FBK_SPIKES_387" ] = 388,
-    ( *__receptor_type )[ "FBK_SPIKES_388" ] = 389,
-    ( *__receptor_type )[ "FBK_SPIKES_389" ] = 390,
-    ( *__receptor_type )[ "FBK_SPIKES_390" ] = 391,
-    ( *__receptor_type )[ "FBK_SPIKES_391" ] = 392,
-    ( *__receptor_type )[ "FBK_SPIKES_392" ] = 393,
-    ( *__receptor_type )[ "FBK_SPIKES_393" ] = 394,
-    ( *__receptor_type )[ "FBK_SPIKES_394" ] = 395,
-    ( *__receptor_type )[ "FBK_SPIKES_395" ] = 396,
-    ( *__receptor_type )[ "FBK_SPIKES_396" ] = 397,
-    ( *__receptor_type )[ "FBK_SPIKES_397" ] = 398,
-    ( *__receptor_type )[ "FBK_SPIKES_398" ] = 399,
-    ( *__receptor_type )[ "FBK_SPIKES_399" ] = 400,
-    ( *__receptor_type )[ "PRED_SPIKES_0" ] = 401,
-    ( *__receptor_type )[ "PRED_SPIKES_1" ] = 402,
-    ( *__receptor_type )[ "PRED_SPIKES_2" ] = 403,
-    ( *__receptor_type )[ "PRED_SPIKES_3" ] = 404,
-    ( *__receptor_type )[ "PRED_SPIKES_4" ] = 405,
-    ( *__receptor_type )[ "PRED_SPIKES_5" ] = 406,
-    ( *__receptor_type )[ "PRED_SPIKES_6" ] = 407,
-    ( *__receptor_type )[ "PRED_SPIKES_7" ] = 408,
-    ( *__receptor_type )[ "PRED_SPIKES_8" ] = 409,
-    ( *__receptor_type )[ "PRED_SPIKES_9" ] = 410,
-    ( *__receptor_type )[ "PRED_SPIKES_10" ] = 411,
-    ( *__receptor_type )[ "PRED_SPIKES_11" ] = 412,
-    ( *__receptor_type )[ "PRED_SPIKES_12" ] = 413,
-    ( *__receptor_type )[ "PRED_SPIKES_13" ] = 414,
-    ( *__receptor_type )[ "PRED_SPIKES_14" ] = 415,
-    ( *__receptor_type )[ "PRED_SPIKES_15" ] = 416,
-    ( *__receptor_type )[ "PRED_SPIKES_16" ] = 417,
-    ( *__receptor_type )[ "PRED_SPIKES_17" ] = 418,
-    ( *__receptor_type )[ "PRED_SPIKES_18" ] = 419,
-    ( *__receptor_type )[ "PRED_SPIKES_19" ] = 420,
-    ( *__receptor_type )[ "PRED_SPIKES_20" ] = 421,
-    ( *__receptor_type )[ "PRED_SPIKES_21" ] = 422,
-    ( *__receptor_type )[ "PRED_SPIKES_22" ] = 423,
-    ( *__receptor_type )[ "PRED_SPIKES_23" ] = 424,
-    ( *__receptor_type )[ "PRED_SPIKES_24" ] = 425,
-    ( *__receptor_type )[ "PRED_SPIKES_25" ] = 426,
-    ( *__receptor_type )[ "PRED_SPIKES_26" ] = 427,
-    ( *__receptor_type )[ "PRED_SPIKES_27" ] = 428,
-    ( *__receptor_type )[ "PRED_SPIKES_28" ] = 429,
-    ( *__receptor_type )[ "PRED_SPIKES_29" ] = 430,
-    ( *__receptor_type )[ "PRED_SPIKES_30" ] = 431,
-    ( *__receptor_type )[ "PRED_SPIKES_31" ] = 432,
-    ( *__receptor_type )[ "PRED_SPIKES_32" ] = 433,
-    ( *__receptor_type )[ "PRED_SPIKES_33" ] = 434,
-    ( *__receptor_type )[ "PRED_SPIKES_34" ] = 435,
-    ( *__receptor_type )[ "PRED_SPIKES_35" ] = 436,
-    ( *__receptor_type )[ "PRED_SPIKES_36" ] = 437,
-    ( *__receptor_type )[ "PRED_SPIKES_37" ] = 438,
-    ( *__receptor_type )[ "PRED_SPIKES_38" ] = 439,
-    ( *__receptor_type )[ "PRED_SPIKES_39" ] = 440,
-    ( *__receptor_type )[ "PRED_SPIKES_40" ] = 441,
-    ( *__receptor_type )[ "PRED_SPIKES_41" ] = 442,
-    ( *__receptor_type )[ "PRED_SPIKES_42" ] = 443,
-    ( *__receptor_type )[ "PRED_SPIKES_43" ] = 444,
-    ( *__receptor_type )[ "PRED_SPIKES_44" ] = 445,
-    ( *__receptor_type )[ "PRED_SPIKES_45" ] = 446,
-    ( *__receptor_type )[ "PRED_SPIKES_46" ] = 447,
-    ( *__receptor_type )[ "PRED_SPIKES_47" ] = 448,
-    ( *__receptor_type )[ "PRED_SPIKES_48" ] = 449,
-    ( *__receptor_type )[ "PRED_SPIKES_49" ] = 450,
-    ( *__receptor_type )[ "PRED_SPIKES_50" ] = 451,
-    ( *__receptor_type )[ "PRED_SPIKES_51" ] = 452,
-    ( *__receptor_type )[ "PRED_SPIKES_52" ] = 453,
-    ( *__receptor_type )[ "PRED_SPIKES_53" ] = 454,
-    ( *__receptor_type )[ "PRED_SPIKES_54" ] = 455,
-    ( *__receptor_type )[ "PRED_SPIKES_55" ] = 456,
-    ( *__receptor_type )[ "PRED_SPIKES_56" ] = 457,
-    ( *__receptor_type )[ "PRED_SPIKES_57" ] = 458,
-    ( *__receptor_type )[ "PRED_SPIKES_58" ] = 459,
-    ( *__receptor_type )[ "PRED_SPIKES_59" ] = 460,
-    ( *__receptor_type )[ "PRED_SPIKES_60" ] = 461,
-    ( *__receptor_type )[ "PRED_SPIKES_61" ] = 462,
-    ( *__receptor_type )[ "PRED_SPIKES_62" ] = 463,
-    ( *__receptor_type )[ "PRED_SPIKES_63" ] = 464,
-    ( *__receptor_type )[ "PRED_SPIKES_64" ] = 465,
-    ( *__receptor_type )[ "PRED_SPIKES_65" ] = 466,
-    ( *__receptor_type )[ "PRED_SPIKES_66" ] = 467,
-    ( *__receptor_type )[ "PRED_SPIKES_67" ] = 468,
-    ( *__receptor_type )[ "PRED_SPIKES_68" ] = 469,
-    ( *__receptor_type )[ "PRED_SPIKES_69" ] = 470,
-    ( *__receptor_type )[ "PRED_SPIKES_70" ] = 471,
-    ( *__receptor_type )[ "PRED_SPIKES_71" ] = 472,
-    ( *__receptor_type )[ "PRED_SPIKES_72" ] = 473,
-    ( *__receptor_type )[ "PRED_SPIKES_73" ] = 474,
-    ( *__receptor_type )[ "PRED_SPIKES_74" ] = 475,
-    ( *__receptor_type )[ "PRED_SPIKES_75" ] = 476,
-    ( *__receptor_type )[ "PRED_SPIKES_76" ] = 477,
-    ( *__receptor_type )[ "PRED_SPIKES_77" ] = 478,
-    ( *__receptor_type )[ "PRED_SPIKES_78" ] = 479,
-    ( *__receptor_type )[ "PRED_SPIKES_79" ] = 480,
-    ( *__receptor_type )[ "PRED_SPIKES_80" ] = 481,
-    ( *__receptor_type )[ "PRED_SPIKES_81" ] = 482,
-    ( *__receptor_type )[ "PRED_SPIKES_82" ] = 483,
-    ( *__receptor_type )[ "PRED_SPIKES_83" ] = 484,
-    ( *__receptor_type )[ "PRED_SPIKES_84" ] = 485,
-    ( *__receptor_type )[ "PRED_SPIKES_85" ] = 486,
-    ( *__receptor_type )[ "PRED_SPIKES_86" ] = 487,
-    ( *__receptor_type )[ "PRED_SPIKES_87" ] = 488,
-    ( *__receptor_type )[ "PRED_SPIKES_88" ] = 489,
-    ( *__receptor_type )[ "PRED_SPIKES_89" ] = 490,
-    ( *__receptor_type )[ "PRED_SPIKES_90" ] = 491,
-    ( *__receptor_type )[ "PRED_SPIKES_91" ] = 492,
-    ( *__receptor_type )[ "PRED_SPIKES_92" ] = 493,
-    ( *__receptor_type )[ "PRED_SPIKES_93" ] = 494,
-    ( *__receptor_type )[ "PRED_SPIKES_94" ] = 495,
-    ( *__receptor_type )[ "PRED_SPIKES_95" ] = 496,
-    ( *__receptor_type )[ "PRED_SPIKES_96" ] = 497,
-    ( *__receptor_type )[ "PRED_SPIKES_97" ] = 498,
-    ( *__receptor_type )[ "PRED_SPIKES_98" ] = 499,
-    ( *__receptor_type )[ "PRED_SPIKES_99" ] = 500,
-    ( *__receptor_type )[ "PRED_SPIKES_100" ] = 501,
-    ( *__receptor_type )[ "PRED_SPIKES_101" ] = 502,
-    ( *__receptor_type )[ "PRED_SPIKES_102" ] = 503,
-    ( *__receptor_type )[ "PRED_SPIKES_103" ] = 504,
-    ( *__receptor_type )[ "PRED_SPIKES_104" ] = 505,
-    ( *__receptor_type )[ "PRED_SPIKES_105" ] = 506,
-    ( *__receptor_type )[ "PRED_SPIKES_106" ] = 507,
-    ( *__receptor_type )[ "PRED_SPIKES_107" ] = 508,
-    ( *__receptor_type )[ "PRED_SPIKES_108" ] = 509,
-    ( *__receptor_type )[ "PRED_SPIKES_109" ] = 510,
-    ( *__receptor_type )[ "PRED_SPIKES_110" ] = 511,
-    ( *__receptor_type )[ "PRED_SPIKES_111" ] = 512,
-    ( *__receptor_type )[ "PRED_SPIKES_112" ] = 513,
-    ( *__receptor_type )[ "PRED_SPIKES_113" ] = 514,
-    ( *__receptor_type )[ "PRED_SPIKES_114" ] = 515,
-    ( *__receptor_type )[ "PRED_SPIKES_115" ] = 516,
-    ( *__receptor_type )[ "PRED_SPIKES_116" ] = 517,
-    ( *__receptor_type )[ "PRED_SPIKES_117" ] = 518,
-    ( *__receptor_type )[ "PRED_SPIKES_118" ] = 519,
-    ( *__receptor_type )[ "PRED_SPIKES_119" ] = 520,
-    ( *__receptor_type )[ "PRED_SPIKES_120" ] = 521,
-    ( *__receptor_type )[ "PRED_SPIKES_121" ] = 522,
-    ( *__receptor_type )[ "PRED_SPIKES_122" ] = 523,
-    ( *__receptor_type )[ "PRED_SPIKES_123" ] = 524,
-    ( *__receptor_type )[ "PRED_SPIKES_124" ] = 525,
-    ( *__receptor_type )[ "PRED_SPIKES_125" ] = 526,
-    ( *__receptor_type )[ "PRED_SPIKES_126" ] = 527,
-    ( *__receptor_type )[ "PRED_SPIKES_127" ] = 528,
-    ( *__receptor_type )[ "PRED_SPIKES_128" ] = 529,
-    ( *__receptor_type )[ "PRED_SPIKES_129" ] = 530,
-    ( *__receptor_type )[ "PRED_SPIKES_130" ] = 531,
-    ( *__receptor_type )[ "PRED_SPIKES_131" ] = 532,
-    ( *__receptor_type )[ "PRED_SPIKES_132" ] = 533,
-    ( *__receptor_type )[ "PRED_SPIKES_133" ] = 534,
-    ( *__receptor_type )[ "PRED_SPIKES_134" ] = 535,
-    ( *__receptor_type )[ "PRED_SPIKES_135" ] = 536,
-    ( *__receptor_type )[ "PRED_SPIKES_136" ] = 537,
-    ( *__receptor_type )[ "PRED_SPIKES_137" ] = 538,
-    ( *__receptor_type )[ "PRED_SPIKES_138" ] = 539,
-    ( *__receptor_type )[ "PRED_SPIKES_139" ] = 540,
-    ( *__receptor_type )[ "PRED_SPIKES_140" ] = 541,
-    ( *__receptor_type )[ "PRED_SPIKES_141" ] = 542,
-    ( *__receptor_type )[ "PRED_SPIKES_142" ] = 543,
-    ( *__receptor_type )[ "PRED_SPIKES_143" ] = 544,
-    ( *__receptor_type )[ "PRED_SPIKES_144" ] = 545,
-    ( *__receptor_type )[ "PRED_SPIKES_145" ] = 546,
-    ( *__receptor_type )[ "PRED_SPIKES_146" ] = 547,
-    ( *__receptor_type )[ "PRED_SPIKES_147" ] = 548,
-    ( *__receptor_type )[ "PRED_SPIKES_148" ] = 549,
-    ( *__receptor_type )[ "PRED_SPIKES_149" ] = 550,
-    ( *__receptor_type )[ "PRED_SPIKES_150" ] = 551,
-    ( *__receptor_type )[ "PRED_SPIKES_151" ] = 552,
-    ( *__receptor_type )[ "PRED_SPIKES_152" ] = 553,
-    ( *__receptor_type )[ "PRED_SPIKES_153" ] = 554,
-    ( *__receptor_type )[ "PRED_SPIKES_154" ] = 555,
-    ( *__receptor_type )[ "PRED_SPIKES_155" ] = 556,
-    ( *__receptor_type )[ "PRED_SPIKES_156" ] = 557,
-    ( *__receptor_type )[ "PRED_SPIKES_157" ] = 558,
-    ( *__receptor_type )[ "PRED_SPIKES_158" ] = 559,
-    ( *__receptor_type )[ "PRED_SPIKES_159" ] = 560,
-    ( *__receptor_type )[ "PRED_SPIKES_160" ] = 561,
-    ( *__receptor_type )[ "PRED_SPIKES_161" ] = 562,
-    ( *__receptor_type )[ "PRED_SPIKES_162" ] = 563,
-    ( *__receptor_type )[ "PRED_SPIKES_163" ] = 564,
-    ( *__receptor_type )[ "PRED_SPIKES_164" ] = 565,
-    ( *__receptor_type )[ "PRED_SPIKES_165" ] = 566,
-    ( *__receptor_type )[ "PRED_SPIKES_166" ] = 567,
-    ( *__receptor_type )[ "PRED_SPIKES_167" ] = 568,
-    ( *__receptor_type )[ "PRED_SPIKES_168" ] = 569,
-    ( *__receptor_type )[ "PRED_SPIKES_169" ] = 570,
-    ( *__receptor_type )[ "PRED_SPIKES_170" ] = 571,
-    ( *__receptor_type )[ "PRED_SPIKES_171" ] = 572,
-    ( *__receptor_type )[ "PRED_SPIKES_172" ] = 573,
-    ( *__receptor_type )[ "PRED_SPIKES_173" ] = 574,
-    ( *__receptor_type )[ "PRED_SPIKES_174" ] = 575,
-    ( *__receptor_type )[ "PRED_SPIKES_175" ] = 576,
-    ( *__receptor_type )[ "PRED_SPIKES_176" ] = 577,
-    ( *__receptor_type )[ "PRED_SPIKES_177" ] = 578,
-    ( *__receptor_type )[ "PRED_SPIKES_178" ] = 579,
-    ( *__receptor_type )[ "PRED_SPIKES_179" ] = 580,
-    ( *__receptor_type )[ "PRED_SPIKES_180" ] = 581,
-    ( *__receptor_type )[ "PRED_SPIKES_181" ] = 582,
-    ( *__receptor_type )[ "PRED_SPIKES_182" ] = 583,
-    ( *__receptor_type )[ "PRED_SPIKES_183" ] = 584,
-    ( *__receptor_type )[ "PRED_SPIKES_184" ] = 585,
-    ( *__receptor_type )[ "PRED_SPIKES_185" ] = 586,
-    ( *__receptor_type )[ "PRED_SPIKES_186" ] = 587,
-    ( *__receptor_type )[ "PRED_SPIKES_187" ] = 588,
-    ( *__receptor_type )[ "PRED_SPIKES_188" ] = 589,
-    ( *__receptor_type )[ "PRED_SPIKES_189" ] = 590,
-    ( *__receptor_type )[ "PRED_SPIKES_190" ] = 591,
-    ( *__receptor_type )[ "PRED_SPIKES_191" ] = 592,
-    ( *__receptor_type )[ "PRED_SPIKES_192" ] = 593,
-    ( *__receptor_type )[ "PRED_SPIKES_193" ] = 594,
-    ( *__receptor_type )[ "PRED_SPIKES_194" ] = 595,
-    ( *__receptor_type )[ "PRED_SPIKES_195" ] = 596,
-    ( *__receptor_type )[ "PRED_SPIKES_196" ] = 597,
-    ( *__receptor_type )[ "PRED_SPIKES_197" ] = 598,
-    ( *__receptor_type )[ "PRED_SPIKES_198" ] = 599,
-    ( *__receptor_type )[ "PRED_SPIKES_199" ] = 600,
-    ( *__receptor_type )[ "PRED_SPIKES_200" ] = 601,
-    ( *__receptor_type )[ "PRED_SPIKES_201" ] = 602,
-    ( *__receptor_type )[ "PRED_SPIKES_202" ] = 603,
-    ( *__receptor_type )[ "PRED_SPIKES_203" ] = 604,
-    ( *__receptor_type )[ "PRED_SPIKES_204" ] = 605,
-    ( *__receptor_type )[ "PRED_SPIKES_205" ] = 606,
-    ( *__receptor_type )[ "PRED_SPIKES_206" ] = 607,
-    ( *__receptor_type )[ "PRED_SPIKES_207" ] = 608,
-    ( *__receptor_type )[ "PRED_SPIKES_208" ] = 609,
-    ( *__receptor_type )[ "PRED_SPIKES_209" ] = 610,
-    ( *__receptor_type )[ "PRED_SPIKES_210" ] = 611,
-    ( *__receptor_type )[ "PRED_SPIKES_211" ] = 612,
-    ( *__receptor_type )[ "PRED_SPIKES_212" ] = 613,
-    ( *__receptor_type )[ "PRED_SPIKES_213" ] = 614,
-    ( *__receptor_type )[ "PRED_SPIKES_214" ] = 615,
-    ( *__receptor_type )[ "PRED_SPIKES_215" ] = 616,
-    ( *__receptor_type )[ "PRED_SPIKES_216" ] = 617,
-    ( *__receptor_type )[ "PRED_SPIKES_217" ] = 618,
-    ( *__receptor_type )[ "PRED_SPIKES_218" ] = 619,
-    ( *__receptor_type )[ "PRED_SPIKES_219" ] = 620,
-    ( *__receptor_type )[ "PRED_SPIKES_220" ] = 621,
-    ( *__receptor_type )[ "PRED_SPIKES_221" ] = 622,
-    ( *__receptor_type )[ "PRED_SPIKES_222" ] = 623,
-    ( *__receptor_type )[ "PRED_SPIKES_223" ] = 624,
-    ( *__receptor_type )[ "PRED_SPIKES_224" ] = 625,
-    ( *__receptor_type )[ "PRED_SPIKES_225" ] = 626,
-    ( *__receptor_type )[ "PRED_SPIKES_226" ] = 627,
-    ( *__receptor_type )[ "PRED_SPIKES_227" ] = 628,
-    ( *__receptor_type )[ "PRED_SPIKES_228" ] = 629,
-    ( *__receptor_type )[ "PRED_SPIKES_229" ] = 630,
-    ( *__receptor_type )[ "PRED_SPIKES_230" ] = 631,
-    ( *__receptor_type )[ "PRED_SPIKES_231" ] = 632,
-    ( *__receptor_type )[ "PRED_SPIKES_232" ] = 633,
-    ( *__receptor_type )[ "PRED_SPIKES_233" ] = 634,
-    ( *__receptor_type )[ "PRED_SPIKES_234" ] = 635,
-    ( *__receptor_type )[ "PRED_SPIKES_235" ] = 636,
-    ( *__receptor_type )[ "PRED_SPIKES_236" ] = 637,
-    ( *__receptor_type )[ "PRED_SPIKES_237" ] = 638,
-    ( *__receptor_type )[ "PRED_SPIKES_238" ] = 639,
-    ( *__receptor_type )[ "PRED_SPIKES_239" ] = 640,
-    ( *__receptor_type )[ "PRED_SPIKES_240" ] = 641,
-    ( *__receptor_type )[ "PRED_SPIKES_241" ] = 642,
-    ( *__receptor_type )[ "PRED_SPIKES_242" ] = 643,
-    ( *__receptor_type )[ "PRED_SPIKES_243" ] = 644,
-    ( *__receptor_type )[ "PRED_SPIKES_244" ] = 645,
-    ( *__receptor_type )[ "PRED_SPIKES_245" ] = 646,
-    ( *__receptor_type )[ "PRED_SPIKES_246" ] = 647,
-    ( *__receptor_type )[ "PRED_SPIKES_247" ] = 648,
-    ( *__receptor_type )[ "PRED_SPIKES_248" ] = 649,
-    ( *__receptor_type )[ "PRED_SPIKES_249" ] = 650,
-    ( *__receptor_type )[ "PRED_SPIKES_250" ] = 651,
-    ( *__receptor_type )[ "PRED_SPIKES_251" ] = 652,
-    ( *__receptor_type )[ "PRED_SPIKES_252" ] = 653,
-    ( *__receptor_type )[ "PRED_SPIKES_253" ] = 654,
-    ( *__receptor_type )[ "PRED_SPIKES_254" ] = 655,
-    ( *__receptor_type )[ "PRED_SPIKES_255" ] = 656,
-    ( *__receptor_type )[ "PRED_SPIKES_256" ] = 657,
-    ( *__receptor_type )[ "PRED_SPIKES_257" ] = 658,
-    ( *__receptor_type )[ "PRED_SPIKES_258" ] = 659,
-    ( *__receptor_type )[ "PRED_SPIKES_259" ] = 660,
-    ( *__receptor_type )[ "PRED_SPIKES_260" ] = 661,
-    ( *__receptor_type )[ "PRED_SPIKES_261" ] = 662,
-    ( *__receptor_type )[ "PRED_SPIKES_262" ] = 663,
-    ( *__receptor_type )[ "PRED_SPIKES_263" ] = 664,
-    ( *__receptor_type )[ "PRED_SPIKES_264" ] = 665,
-    ( *__receptor_type )[ "PRED_SPIKES_265" ] = 666,
-    ( *__receptor_type )[ "PRED_SPIKES_266" ] = 667,
-    ( *__receptor_type )[ "PRED_SPIKES_267" ] = 668,
-    ( *__receptor_type )[ "PRED_SPIKES_268" ] = 669,
-    ( *__receptor_type )[ "PRED_SPIKES_269" ] = 670,
-    ( *__receptor_type )[ "PRED_SPIKES_270" ] = 671,
-    ( *__receptor_type )[ "PRED_SPIKES_271" ] = 672,
-    ( *__receptor_type )[ "PRED_SPIKES_272" ] = 673,
-    ( *__receptor_type )[ "PRED_SPIKES_273" ] = 674,
-    ( *__receptor_type )[ "PRED_SPIKES_274" ] = 675,
-    ( *__receptor_type )[ "PRED_SPIKES_275" ] = 676,
-    ( *__receptor_type )[ "PRED_SPIKES_276" ] = 677,
-    ( *__receptor_type )[ "PRED_SPIKES_277" ] = 678,
-    ( *__receptor_type )[ "PRED_SPIKES_278" ] = 679,
-    ( *__receptor_type )[ "PRED_SPIKES_279" ] = 680,
-    ( *__receptor_type )[ "PRED_SPIKES_280" ] = 681,
-    ( *__receptor_type )[ "PRED_SPIKES_281" ] = 682,
-    ( *__receptor_type )[ "PRED_SPIKES_282" ] = 683,
-    ( *__receptor_type )[ "PRED_SPIKES_283" ] = 684,
-    ( *__receptor_type )[ "PRED_SPIKES_284" ] = 685,
-    ( *__receptor_type )[ "PRED_SPIKES_285" ] = 686,
-    ( *__receptor_type )[ "PRED_SPIKES_286" ] = 687,
-    ( *__receptor_type )[ "PRED_SPIKES_287" ] = 688,
-    ( *__receptor_type )[ "PRED_SPIKES_288" ] = 689,
-    ( *__receptor_type )[ "PRED_SPIKES_289" ] = 690,
-    ( *__receptor_type )[ "PRED_SPIKES_290" ] = 691,
-    ( *__receptor_type )[ "PRED_SPIKES_291" ] = 692,
-    ( *__receptor_type )[ "PRED_SPIKES_292" ] = 693,
-    ( *__receptor_type )[ "PRED_SPIKES_293" ] = 694,
-    ( *__receptor_type )[ "PRED_SPIKES_294" ] = 695,
-    ( *__receptor_type )[ "PRED_SPIKES_295" ] = 696,
-    ( *__receptor_type )[ "PRED_SPIKES_296" ] = 697,
-    ( *__receptor_type )[ "PRED_SPIKES_297" ] = 698,
-    ( *__receptor_type )[ "PRED_SPIKES_298" ] = 699,
-    ( *__receptor_type )[ "PRED_SPIKES_299" ] = 700,
-    ( *__receptor_type )[ "PRED_SPIKES_300" ] = 701,
-    ( *__receptor_type )[ "PRED_SPIKES_301" ] = 702,
-    ( *__receptor_type )[ "PRED_SPIKES_302" ] = 703,
-    ( *__receptor_type )[ "PRED_SPIKES_303" ] = 704,
-    ( *__receptor_type )[ "PRED_SPIKES_304" ] = 705,
-    ( *__receptor_type )[ "PRED_SPIKES_305" ] = 706,
-    ( *__receptor_type )[ "PRED_SPIKES_306" ] = 707,
-    ( *__receptor_type )[ "PRED_SPIKES_307" ] = 708,
-    ( *__receptor_type )[ "PRED_SPIKES_308" ] = 709,
-    ( *__receptor_type )[ "PRED_SPIKES_309" ] = 710,
-    ( *__receptor_type )[ "PRED_SPIKES_310" ] = 711,
-    ( *__receptor_type )[ "PRED_SPIKES_311" ] = 712,
-    ( *__receptor_type )[ "PRED_SPIKES_312" ] = 713,
-    ( *__receptor_type )[ "PRED_SPIKES_313" ] = 714,
-    ( *__receptor_type )[ "PRED_SPIKES_314" ] = 715,
-    ( *__receptor_type )[ "PRED_SPIKES_315" ] = 716,
-    ( *__receptor_type )[ "PRED_SPIKES_316" ] = 717,
-    ( *__receptor_type )[ "PRED_SPIKES_317" ] = 718,
-    ( *__receptor_type )[ "PRED_SPIKES_318" ] = 719,
-    ( *__receptor_type )[ "PRED_SPIKES_319" ] = 720,
-    ( *__receptor_type )[ "PRED_SPIKES_320" ] = 721,
-    ( *__receptor_type )[ "PRED_SPIKES_321" ] = 722,
-    ( *__receptor_type )[ "PRED_SPIKES_322" ] = 723,
-    ( *__receptor_type )[ "PRED_SPIKES_323" ] = 724,
-    ( *__receptor_type )[ "PRED_SPIKES_324" ] = 725,
-    ( *__receptor_type )[ "PRED_SPIKES_325" ] = 726,
-    ( *__receptor_type )[ "PRED_SPIKES_326" ] = 727,
-    ( *__receptor_type )[ "PRED_SPIKES_327" ] = 728,
-    ( *__receptor_type )[ "PRED_SPIKES_328" ] = 729,
-    ( *__receptor_type )[ "PRED_SPIKES_329" ] = 730,
-    ( *__receptor_type )[ "PRED_SPIKES_330" ] = 731,
-    ( *__receptor_type )[ "PRED_SPIKES_331" ] = 732,
-    ( *__receptor_type )[ "PRED_SPIKES_332" ] = 733,
-    ( *__receptor_type )[ "PRED_SPIKES_333" ] = 734,
-    ( *__receptor_type )[ "PRED_SPIKES_334" ] = 735,
-    ( *__receptor_type )[ "PRED_SPIKES_335" ] = 736,
-    ( *__receptor_type )[ "PRED_SPIKES_336" ] = 737,
-    ( *__receptor_type )[ "PRED_SPIKES_337" ] = 738,
-    ( *__receptor_type )[ "PRED_SPIKES_338" ] = 739,
-    ( *__receptor_type )[ "PRED_SPIKES_339" ] = 740,
-    ( *__receptor_type )[ "PRED_SPIKES_340" ] = 741,
-    ( *__receptor_type )[ "PRED_SPIKES_341" ] = 742,
-    ( *__receptor_type )[ "PRED_SPIKES_342" ] = 743,
-    ( *__receptor_type )[ "PRED_SPIKES_343" ] = 744,
-    ( *__receptor_type )[ "PRED_SPIKES_344" ] = 745,
-    ( *__receptor_type )[ "PRED_SPIKES_345" ] = 746,
-    ( *__receptor_type )[ "PRED_SPIKES_346" ] = 747,
-    ( *__receptor_type )[ "PRED_SPIKES_347" ] = 748,
-    ( *__receptor_type )[ "PRED_SPIKES_348" ] = 749,
-    ( *__receptor_type )[ "PRED_SPIKES_349" ] = 750,
-    ( *__receptor_type )[ "PRED_SPIKES_350" ] = 751,
-    ( *__receptor_type )[ "PRED_SPIKES_351" ] = 752,
-    ( *__receptor_type )[ "PRED_SPIKES_352" ] = 753,
-    ( *__receptor_type )[ "PRED_SPIKES_353" ] = 754,
-    ( *__receptor_type )[ "PRED_SPIKES_354" ] = 755,
-    ( *__receptor_type )[ "PRED_SPIKES_355" ] = 756,
-    ( *__receptor_type )[ "PRED_SPIKES_356" ] = 757,
-    ( *__receptor_type )[ "PRED_SPIKES_357" ] = 758,
-    ( *__receptor_type )[ "PRED_SPIKES_358" ] = 759,
-    ( *__receptor_type )[ "PRED_SPIKES_359" ] = 760,
-    ( *__receptor_type )[ "PRED_SPIKES_360" ] = 761,
-    ( *__receptor_type )[ "PRED_SPIKES_361" ] = 762,
-    ( *__receptor_type )[ "PRED_SPIKES_362" ] = 763,
-    ( *__receptor_type )[ "PRED_SPIKES_363" ] = 764,
-    ( *__receptor_type )[ "PRED_SPIKES_364" ] = 765,
-    ( *__receptor_type )[ "PRED_SPIKES_365" ] = 766,
-    ( *__receptor_type )[ "PRED_SPIKES_366" ] = 767,
-    ( *__receptor_type )[ "PRED_SPIKES_367" ] = 768,
-    ( *__receptor_type )[ "PRED_SPIKES_368" ] = 769,
-    ( *__receptor_type )[ "PRED_SPIKES_369" ] = 770,
-    ( *__receptor_type )[ "PRED_SPIKES_370" ] = 771,
-    ( *__receptor_type )[ "PRED_SPIKES_371" ] = 772,
-    ( *__receptor_type )[ "PRED_SPIKES_372" ] = 773,
-    ( *__receptor_type )[ "PRED_SPIKES_373" ] = 774,
-    ( *__receptor_type )[ "PRED_SPIKES_374" ] = 775,
-    ( *__receptor_type )[ "PRED_SPIKES_375" ] = 776,
-    ( *__receptor_type )[ "PRED_SPIKES_376" ] = 777,
-    ( *__receptor_type )[ "PRED_SPIKES_377" ] = 778,
-    ( *__receptor_type )[ "PRED_SPIKES_378" ] = 779,
-    ( *__receptor_type )[ "PRED_SPIKES_379" ] = 780,
-    ( *__receptor_type )[ "PRED_SPIKES_380" ] = 781,
-    ( *__receptor_type )[ "PRED_SPIKES_381" ] = 782,
-    ( *__receptor_type )[ "PRED_SPIKES_382" ] = 783,
-    ( *__receptor_type )[ "PRED_SPIKES_383" ] = 784,
-    ( *__receptor_type )[ "PRED_SPIKES_384" ] = 785,
-    ( *__receptor_type )[ "PRED_SPIKES_385" ] = 786,
-    ( *__receptor_type )[ "PRED_SPIKES_386" ] = 787,
-    ( *__receptor_type )[ "PRED_SPIKES_387" ] = 788,
-    ( *__receptor_type )[ "PRED_SPIKES_388" ] = 789,
-    ( *__receptor_type )[ "PRED_SPIKES_389" ] = 790,
-    ( *__receptor_type )[ "PRED_SPIKES_390" ] = 791,
-    ( *__receptor_type )[ "PRED_SPIKES_391" ] = 792,
-    ( *__receptor_type )[ "PRED_SPIKES_392" ] = 793,
-    ( *__receptor_type )[ "PRED_SPIKES_393" ] = 794,
-    ( *__receptor_type )[ "PRED_SPIKES_394" ] = 795,
-    ( *__receptor_type )[ "PRED_SPIKES_395" ] = 796,
-    ( *__receptor_type )[ "PRED_SPIKES_396" ] = 797,
-    ( *__receptor_type )[ "PRED_SPIKES_397" ] = 798,
-    ( *__receptor_type )[ "PRED_SPIKES_398" ] = 799,
-    ( *__receptor_type )[ "PRED_SPIKES_399" ] = 800,
+    ( *__receptor_type )[ "PRED_SPIKES_0" ] = 201,
+    ( *__receptor_type )[ "PRED_SPIKES_1" ] = 202,
+    ( *__receptor_type )[ "PRED_SPIKES_2" ] = 203,
+    ( *__receptor_type )[ "PRED_SPIKES_3" ] = 204,
+    ( *__receptor_type )[ "PRED_SPIKES_4" ] = 205,
+    ( *__receptor_type )[ "PRED_SPIKES_5" ] = 206,
+    ( *__receptor_type )[ "PRED_SPIKES_6" ] = 207,
+    ( *__receptor_type )[ "PRED_SPIKES_7" ] = 208,
+    ( *__receptor_type )[ "PRED_SPIKES_8" ] = 209,
+    ( *__receptor_type )[ "PRED_SPIKES_9" ] = 210,
+    ( *__receptor_type )[ "PRED_SPIKES_10" ] = 211,
+    ( *__receptor_type )[ "PRED_SPIKES_11" ] = 212,
+    ( *__receptor_type )[ "PRED_SPIKES_12" ] = 213,
+    ( *__receptor_type )[ "PRED_SPIKES_13" ] = 214,
+    ( *__receptor_type )[ "PRED_SPIKES_14" ] = 215,
+    ( *__receptor_type )[ "PRED_SPIKES_15" ] = 216,
+    ( *__receptor_type )[ "PRED_SPIKES_16" ] = 217,
+    ( *__receptor_type )[ "PRED_SPIKES_17" ] = 218,
+    ( *__receptor_type )[ "PRED_SPIKES_18" ] = 219,
+    ( *__receptor_type )[ "PRED_SPIKES_19" ] = 220,
+    ( *__receptor_type )[ "PRED_SPIKES_20" ] = 221,
+    ( *__receptor_type )[ "PRED_SPIKES_21" ] = 222,
+    ( *__receptor_type )[ "PRED_SPIKES_22" ] = 223,
+    ( *__receptor_type )[ "PRED_SPIKES_23" ] = 224,
+    ( *__receptor_type )[ "PRED_SPIKES_24" ] = 225,
+    ( *__receptor_type )[ "PRED_SPIKES_25" ] = 226,
+    ( *__receptor_type )[ "PRED_SPIKES_26" ] = 227,
+    ( *__receptor_type )[ "PRED_SPIKES_27" ] = 228,
+    ( *__receptor_type )[ "PRED_SPIKES_28" ] = 229,
+    ( *__receptor_type )[ "PRED_SPIKES_29" ] = 230,
+    ( *__receptor_type )[ "PRED_SPIKES_30" ] = 231,
+    ( *__receptor_type )[ "PRED_SPIKES_31" ] = 232,
+    ( *__receptor_type )[ "PRED_SPIKES_32" ] = 233,
+    ( *__receptor_type )[ "PRED_SPIKES_33" ] = 234,
+    ( *__receptor_type )[ "PRED_SPIKES_34" ] = 235,
+    ( *__receptor_type )[ "PRED_SPIKES_35" ] = 236,
+    ( *__receptor_type )[ "PRED_SPIKES_36" ] = 237,
+    ( *__receptor_type )[ "PRED_SPIKES_37" ] = 238,
+    ( *__receptor_type )[ "PRED_SPIKES_38" ] = 239,
+    ( *__receptor_type )[ "PRED_SPIKES_39" ] = 240,
+    ( *__receptor_type )[ "PRED_SPIKES_40" ] = 241,
+    ( *__receptor_type )[ "PRED_SPIKES_41" ] = 242,
+    ( *__receptor_type )[ "PRED_SPIKES_42" ] = 243,
+    ( *__receptor_type )[ "PRED_SPIKES_43" ] = 244,
+    ( *__receptor_type )[ "PRED_SPIKES_44" ] = 245,
+    ( *__receptor_type )[ "PRED_SPIKES_45" ] = 246,
+    ( *__receptor_type )[ "PRED_SPIKES_46" ] = 247,
+    ( *__receptor_type )[ "PRED_SPIKES_47" ] = 248,
+    ( *__receptor_type )[ "PRED_SPIKES_48" ] = 249,
+    ( *__receptor_type )[ "PRED_SPIKES_49" ] = 250,
+    ( *__receptor_type )[ "PRED_SPIKES_50" ] = 251,
+    ( *__receptor_type )[ "PRED_SPIKES_51" ] = 252,
+    ( *__receptor_type )[ "PRED_SPIKES_52" ] = 253,
+    ( *__receptor_type )[ "PRED_SPIKES_53" ] = 254,
+    ( *__receptor_type )[ "PRED_SPIKES_54" ] = 255,
+    ( *__receptor_type )[ "PRED_SPIKES_55" ] = 256,
+    ( *__receptor_type )[ "PRED_SPIKES_56" ] = 257,
+    ( *__receptor_type )[ "PRED_SPIKES_57" ] = 258,
+    ( *__receptor_type )[ "PRED_SPIKES_58" ] = 259,
+    ( *__receptor_type )[ "PRED_SPIKES_59" ] = 260,
+    ( *__receptor_type )[ "PRED_SPIKES_60" ] = 261,
+    ( *__receptor_type )[ "PRED_SPIKES_61" ] = 262,
+    ( *__receptor_type )[ "PRED_SPIKES_62" ] = 263,
+    ( *__receptor_type )[ "PRED_SPIKES_63" ] = 264,
+    ( *__receptor_type )[ "PRED_SPIKES_64" ] = 265,
+    ( *__receptor_type )[ "PRED_SPIKES_65" ] = 266,
+    ( *__receptor_type )[ "PRED_SPIKES_66" ] = 267,
+    ( *__receptor_type )[ "PRED_SPIKES_67" ] = 268,
+    ( *__receptor_type )[ "PRED_SPIKES_68" ] = 269,
+    ( *__receptor_type )[ "PRED_SPIKES_69" ] = 270,
+    ( *__receptor_type )[ "PRED_SPIKES_70" ] = 271,
+    ( *__receptor_type )[ "PRED_SPIKES_71" ] = 272,
+    ( *__receptor_type )[ "PRED_SPIKES_72" ] = 273,
+    ( *__receptor_type )[ "PRED_SPIKES_73" ] = 274,
+    ( *__receptor_type )[ "PRED_SPIKES_74" ] = 275,
+    ( *__receptor_type )[ "PRED_SPIKES_75" ] = 276,
+    ( *__receptor_type )[ "PRED_SPIKES_76" ] = 277,
+    ( *__receptor_type )[ "PRED_SPIKES_77" ] = 278,
+    ( *__receptor_type )[ "PRED_SPIKES_78" ] = 279,
+    ( *__receptor_type )[ "PRED_SPIKES_79" ] = 280,
+    ( *__receptor_type )[ "PRED_SPIKES_80" ] = 281,
+    ( *__receptor_type )[ "PRED_SPIKES_81" ] = 282,
+    ( *__receptor_type )[ "PRED_SPIKES_82" ] = 283,
+    ( *__receptor_type )[ "PRED_SPIKES_83" ] = 284,
+    ( *__receptor_type )[ "PRED_SPIKES_84" ] = 285,
+    ( *__receptor_type )[ "PRED_SPIKES_85" ] = 286,
+    ( *__receptor_type )[ "PRED_SPIKES_86" ] = 287,
+    ( *__receptor_type )[ "PRED_SPIKES_87" ] = 288,
+    ( *__receptor_type )[ "PRED_SPIKES_88" ] = 289,
+    ( *__receptor_type )[ "PRED_SPIKES_89" ] = 290,
+    ( *__receptor_type )[ "PRED_SPIKES_90" ] = 291,
+    ( *__receptor_type )[ "PRED_SPIKES_91" ] = 292,
+    ( *__receptor_type )[ "PRED_SPIKES_92" ] = 293,
+    ( *__receptor_type )[ "PRED_SPIKES_93" ] = 294,
+    ( *__receptor_type )[ "PRED_SPIKES_94" ] = 295,
+    ( *__receptor_type )[ "PRED_SPIKES_95" ] = 296,
+    ( *__receptor_type )[ "PRED_SPIKES_96" ] = 297,
+    ( *__receptor_type )[ "PRED_SPIKES_97" ] = 298,
+    ( *__receptor_type )[ "PRED_SPIKES_98" ] = 299,
+    ( *__receptor_type )[ "PRED_SPIKES_99" ] = 300,
+    ( *__receptor_type )[ "PRED_SPIKES_100" ] = 301,
+    ( *__receptor_type )[ "PRED_SPIKES_101" ] = 302,
+    ( *__receptor_type )[ "PRED_SPIKES_102" ] = 303,
+    ( *__receptor_type )[ "PRED_SPIKES_103" ] = 304,
+    ( *__receptor_type )[ "PRED_SPIKES_104" ] = 305,
+    ( *__receptor_type )[ "PRED_SPIKES_105" ] = 306,
+    ( *__receptor_type )[ "PRED_SPIKES_106" ] = 307,
+    ( *__receptor_type )[ "PRED_SPIKES_107" ] = 308,
+    ( *__receptor_type )[ "PRED_SPIKES_108" ] = 309,
+    ( *__receptor_type )[ "PRED_SPIKES_109" ] = 310,
+    ( *__receptor_type )[ "PRED_SPIKES_110" ] = 311,
+    ( *__receptor_type )[ "PRED_SPIKES_111" ] = 312,
+    ( *__receptor_type )[ "PRED_SPIKES_112" ] = 313,
+    ( *__receptor_type )[ "PRED_SPIKES_113" ] = 314,
+    ( *__receptor_type )[ "PRED_SPIKES_114" ] = 315,
+    ( *__receptor_type )[ "PRED_SPIKES_115" ] = 316,
+    ( *__receptor_type )[ "PRED_SPIKES_116" ] = 317,
+    ( *__receptor_type )[ "PRED_SPIKES_117" ] = 318,
+    ( *__receptor_type )[ "PRED_SPIKES_118" ] = 319,
+    ( *__receptor_type )[ "PRED_SPIKES_119" ] = 320,
+    ( *__receptor_type )[ "PRED_SPIKES_120" ] = 321,
+    ( *__receptor_type )[ "PRED_SPIKES_121" ] = 322,
+    ( *__receptor_type )[ "PRED_SPIKES_122" ] = 323,
+    ( *__receptor_type )[ "PRED_SPIKES_123" ] = 324,
+    ( *__receptor_type )[ "PRED_SPIKES_124" ] = 325,
+    ( *__receptor_type )[ "PRED_SPIKES_125" ] = 326,
+    ( *__receptor_type )[ "PRED_SPIKES_126" ] = 327,
+    ( *__receptor_type )[ "PRED_SPIKES_127" ] = 328,
+    ( *__receptor_type )[ "PRED_SPIKES_128" ] = 329,
+    ( *__receptor_type )[ "PRED_SPIKES_129" ] = 330,
+    ( *__receptor_type )[ "PRED_SPIKES_130" ] = 331,
+    ( *__receptor_type )[ "PRED_SPIKES_131" ] = 332,
+    ( *__receptor_type )[ "PRED_SPIKES_132" ] = 333,
+    ( *__receptor_type )[ "PRED_SPIKES_133" ] = 334,
+    ( *__receptor_type )[ "PRED_SPIKES_134" ] = 335,
+    ( *__receptor_type )[ "PRED_SPIKES_135" ] = 336,
+    ( *__receptor_type )[ "PRED_SPIKES_136" ] = 337,
+    ( *__receptor_type )[ "PRED_SPIKES_137" ] = 338,
+    ( *__receptor_type )[ "PRED_SPIKES_138" ] = 339,
+    ( *__receptor_type )[ "PRED_SPIKES_139" ] = 340,
+    ( *__receptor_type )[ "PRED_SPIKES_140" ] = 341,
+    ( *__receptor_type )[ "PRED_SPIKES_141" ] = 342,
+    ( *__receptor_type )[ "PRED_SPIKES_142" ] = 343,
+    ( *__receptor_type )[ "PRED_SPIKES_143" ] = 344,
+    ( *__receptor_type )[ "PRED_SPIKES_144" ] = 345,
+    ( *__receptor_type )[ "PRED_SPIKES_145" ] = 346,
+    ( *__receptor_type )[ "PRED_SPIKES_146" ] = 347,
+    ( *__receptor_type )[ "PRED_SPIKES_147" ] = 348,
+    ( *__receptor_type )[ "PRED_SPIKES_148" ] = 349,
+    ( *__receptor_type )[ "PRED_SPIKES_149" ] = 350,
+    ( *__receptor_type )[ "PRED_SPIKES_150" ] = 351,
+    ( *__receptor_type )[ "PRED_SPIKES_151" ] = 352,
+    ( *__receptor_type )[ "PRED_SPIKES_152" ] = 353,
+    ( *__receptor_type )[ "PRED_SPIKES_153" ] = 354,
+    ( *__receptor_type )[ "PRED_SPIKES_154" ] = 355,
+    ( *__receptor_type )[ "PRED_SPIKES_155" ] = 356,
+    ( *__receptor_type )[ "PRED_SPIKES_156" ] = 357,
+    ( *__receptor_type )[ "PRED_SPIKES_157" ] = 358,
+    ( *__receptor_type )[ "PRED_SPIKES_158" ] = 359,
+    ( *__receptor_type )[ "PRED_SPIKES_159" ] = 360,
+    ( *__receptor_type )[ "PRED_SPIKES_160" ] = 361,
+    ( *__receptor_type )[ "PRED_SPIKES_161" ] = 362,
+    ( *__receptor_type )[ "PRED_SPIKES_162" ] = 363,
+    ( *__receptor_type )[ "PRED_SPIKES_163" ] = 364,
+    ( *__receptor_type )[ "PRED_SPIKES_164" ] = 365,
+    ( *__receptor_type )[ "PRED_SPIKES_165" ] = 366,
+    ( *__receptor_type )[ "PRED_SPIKES_166" ] = 367,
+    ( *__receptor_type )[ "PRED_SPIKES_167" ] = 368,
+    ( *__receptor_type )[ "PRED_SPIKES_168" ] = 369,
+    ( *__receptor_type )[ "PRED_SPIKES_169" ] = 370,
+    ( *__receptor_type )[ "PRED_SPIKES_170" ] = 371,
+    ( *__receptor_type )[ "PRED_SPIKES_171" ] = 372,
+    ( *__receptor_type )[ "PRED_SPIKES_172" ] = 373,
+    ( *__receptor_type )[ "PRED_SPIKES_173" ] = 374,
+    ( *__receptor_type )[ "PRED_SPIKES_174" ] = 375,
+    ( *__receptor_type )[ "PRED_SPIKES_175" ] = 376,
+    ( *__receptor_type )[ "PRED_SPIKES_176" ] = 377,
+    ( *__receptor_type )[ "PRED_SPIKES_177" ] = 378,
+    ( *__receptor_type )[ "PRED_SPIKES_178" ] = 379,
+    ( *__receptor_type )[ "PRED_SPIKES_179" ] = 380,
+    ( *__receptor_type )[ "PRED_SPIKES_180" ] = 381,
+    ( *__receptor_type )[ "PRED_SPIKES_181" ] = 382,
+    ( *__receptor_type )[ "PRED_SPIKES_182" ] = 383,
+    ( *__receptor_type )[ "PRED_SPIKES_183" ] = 384,
+    ( *__receptor_type )[ "PRED_SPIKES_184" ] = 385,
+    ( *__receptor_type )[ "PRED_SPIKES_185" ] = 386,
+    ( *__receptor_type )[ "PRED_SPIKES_186" ] = 387,
+    ( *__receptor_type )[ "PRED_SPIKES_187" ] = 388,
+    ( *__receptor_type )[ "PRED_SPIKES_188" ] = 389,
+    ( *__receptor_type )[ "PRED_SPIKES_189" ] = 390,
+    ( *__receptor_type )[ "PRED_SPIKES_190" ] = 391,
+    ( *__receptor_type )[ "PRED_SPIKES_191" ] = 392,
+    ( *__receptor_type )[ "PRED_SPIKES_192" ] = 393,
+    ( *__receptor_type )[ "PRED_SPIKES_193" ] = 394,
+    ( *__receptor_type )[ "PRED_SPIKES_194" ] = 395,
+    ( *__receptor_type )[ "PRED_SPIKES_195" ] = 396,
+    ( *__receptor_type )[ "PRED_SPIKES_196" ] = 397,
+    ( *__receptor_type )[ "PRED_SPIKES_197" ] = 398,
+    ( *__receptor_type )[ "PRED_SPIKES_198" ] = 399,
+    ( *__receptor_type )[ "PRED_SPIKES_199" ] = 400,
+    ( *__receptor_type )[ "ERROR_SPIKES" ] = 401;
     ( *__d )[ "receptor_types" ] = __receptor_type;
 
   (*__d)[nest::names::recordables] = recordablesMap_.get_list();
@@ -2745,6 +2157,12 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
   if (tmp_buffer_size != get_buffer_size())
   {
   }
+  double tmp_buffer_size_error = get_buffer_size_error();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_buffer_size_error, tmp_buffer_size_error, this);
+  // Resize vectors
+  if (tmp_buffer_size_error != get_buffer_size_error())
+  {
+  }
   long tmp_simulation_steps = get_simulation_steps();
   nest::updateValueParam<long>(__d, nest::state_neuron_names::_simulation_steps, tmp_simulation_steps, this);
   // Resize vectors
@@ -2775,6 +2193,18 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
     _tmp_pred_counts.resize(tmp_N_pred, 0.);
     set_pred_counts(_tmp_pred_counts);
   }
+  long tmp_N_error = get_N_error();
+  nest::updateValueParam<long>(__d, nest::state_neuron_names::_N_error, tmp_N_error, this);
+  // Resize vectors
+  if (tmp_N_error != get_N_error())
+  {
+  }
+  double tmp_C_error = get_C_error();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_C_error, tmp_C_error, this);
+  // Resize vectors
+  if (tmp_C_error != get_C_error())
+  {
+  }
   long tmp_fbk_bf_size = get_fbk_bf_size();
   nest::updateValueParam<long>(__d, nest::state_neuron_names::_fbk_bf_size, tmp_fbk_bf_size, this);
   // Resize vectors
@@ -2792,6 +2222,15 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
     std::vector< double >  _tmp_pred_buffer = get_pred_buffer();
     _tmp_pred_buffer.resize(tmp_pred_bf_size, 0.);
     set_pred_buffer(_tmp_pred_buffer);
+  }
+  long tmp_error_bf_size = get_error_bf_size();
+  nest::updateValueParam<long>(__d, nest::state_neuron_names::_error_bf_size, tmp_error_bf_size, this);
+  // Resize vectors
+  if (tmp_error_bf_size != get_error_bf_size())
+  {
+    std::vector< double >  _tmp_error_buffer = get_error_buffer();
+    _tmp_error_buffer.resize(tmp_error_bf_size, 0.);
+    set_error_buffer(_tmp_error_buffer);
   }
   double tmp_time_wait = get_time_wait();
   nest::updateValueParam<double>(__d, nest::state_neuron_names::_time_wait, tmp_time_wait, this);
@@ -2889,6 +2328,30 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
   nest::updateValueParam<double>(__d, nest::state_neuron_names::_CV_fbk, tmp_CV_fbk, this);
   double tmp_CV_pred = get_CV_pred();
   nest::updateValueParam<double>(__d, nest::state_neuron_names::_CV_pred, tmp_CV_pred, this);
+  double tmp_current_error_input = get_current_error_input();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_current_error_input, tmp_current_error_input, this);
+  std::vector< double >  tmp_error_buffer = get_error_buffer();
+  updateValue<std::vector< double > >(__d, nest::state_neuron_names::_error_buffer, tmp_error_buffer);
+   
+  // Check if the new vector size matches its original size
+  if ( tmp_error_buffer.size() != tmp_error_bf_size )
+  {
+    std::stringstream msg;
+    msg << "The vector \"error_buffer\" does not match its size: " << tmp_error_bf_size;
+    throw nest::BadProperty(msg.str());
+  }
+  long tmp_err_pos_count = get_err_pos_count();
+  nest::updateValueParam<long>(__d, nest::state_neuron_names::_err_pos_count, tmp_err_pos_count, this);
+  double tmp_error_counts = get_error_counts();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_error_counts, tmp_error_counts, this);
+  double tmp_error_rate = get_error_rate();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_error_rate, tmp_error_rate, this);
+  double tmp_fbk_rate = get_fbk_rate();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_fbk_rate, tmp_fbk_rate, this);
+  double tmp_w_fbk = get_w_fbk();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_w_fbk, tmp_w_fbk, this);
+  double tmp_w_pred = get_w_pred();
+  nest::updateValueParam<double>(__d, nest::state_neuron_names::_w_pred, tmp_w_pred, this);
   double tmp_total_CV = get_total_CV();
   nest::updateValueParam<double>(__d, nest::state_neuron_names::_total_CV, tmp_total_CV, this);
   double tmp_lambda_poisson = get_lambda_poisson();
@@ -2905,11 +2368,15 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
   set_pos(tmp_pos);
   set_base_rate(tmp_base_rate);
   set_buffer_size(tmp_buffer_size);
+  set_buffer_size_error(tmp_buffer_size_error);
   set_simulation_steps(tmp_simulation_steps);
   set_N_fbk(tmp_N_fbk);
   set_N_pred(tmp_N_pred);
+  set_N_error(tmp_N_error);
+  set_C_error(tmp_C_error);
   set_fbk_bf_size(tmp_fbk_bf_size);
   set_pred_bf_size(tmp_pred_bf_size);
+  set_error_bf_size(tmp_error_bf_size);
   set_time_wait(tmp_time_wait);
   set_time_trial(tmp_time_trial);
   set_in_rate(tmp_in_rate);
@@ -2929,6 +2396,14 @@ inline void state_neuron::set_status(const DictionaryDatum &__d)
   set_var_pred(tmp_var_pred);
   set_CV_fbk(tmp_CV_fbk);
   set_CV_pred(tmp_CV_pred);
+  set_current_error_input(tmp_current_error_input);
+  set_error_buffer(tmp_error_buffer);
+  set_err_pos_count(tmp_err_pos_count);
+  set_error_counts(tmp_error_counts);
+  set_error_rate(tmp_error_rate);
+  set_fbk_rate(tmp_fbk_rate);
+  set_w_fbk(tmp_w_fbk);
+  set_w_pred(tmp_w_pred);
   set_total_CV(tmp_total_CV);
   set_lambda_poisson(tmp_lambda_poisson);
 

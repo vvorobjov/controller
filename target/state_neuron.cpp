@@ -19,7 +19,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Generated from NESTML 8.2.0 at time: 2025-11-13 19:20:20.490868
+ *  Generated from NESTML 8.2.0 at time: 2025-11-28 13:54:04.968976
 **/
 
 // C++ includes:
@@ -69,6 +69,12 @@ template <> void DynamicRecordablesMap<state_neuron>::create(state_neuron& host)
     insert("var_pred", host.get_data_access_functor( state_neuron::State_::VAR_PRED ));
     insert("CV_fbk", host.get_data_access_functor( state_neuron::State_::CV_FBK ));
     insert("CV_pred", host.get_data_access_functor( state_neuron::State_::CV_PRED ));
+    insert("current_error_input", host.get_data_access_functor( state_neuron::State_::CURRENT_ERROR_INPUT ));
+    insert("error_counts", host.get_data_access_functor( state_neuron::State_::ERROR_COUNTS ));
+    insert("error_rate", host.get_data_access_functor( state_neuron::State_::ERROR_RATE ));
+    insert("fbk_rate", host.get_data_access_functor( state_neuron::State_::FBK_RATE ));
+    insert("w_fbk", host.get_data_access_functor( state_neuron::State_::W_FBK ));
+    insert("w_pred", host.get_data_access_functor( state_neuron::State_::W_PRED ));
     insert("total_CV", host.get_data_access_functor( state_neuron::State_::TOTAL_CV ));
     insert("lambda_poisson", host.get_data_access_functor( state_neuron::State_::LAMBDA_POISSON ));
 
@@ -278,206 +284,6 @@ std::vector< std::tuple< int, int > > state_neuron::rport_to_nestml_buffer_idx =
   { state_neuron::FBK_SPIKES_197, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::FBK_SPIKES_198, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::FBK_SPIKES_199, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_200, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_201, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_202, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_203, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_204, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_205, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_206, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_207, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_208, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_209, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_210, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_211, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_212, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_213, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_214, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_215, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_216, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_217, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_218, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_219, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_220, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_221, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_222, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_223, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_224, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_225, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_226, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_227, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_228, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_229, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_230, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_231, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_232, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_233, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_234, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_235, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_236, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_237, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_238, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_239, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_240, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_241, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_242, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_243, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_244, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_245, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_246, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_247, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_248, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_249, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_250, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_251, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_252, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_253, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_254, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_255, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_256, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_257, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_258, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_259, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_260, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_261, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_262, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_263, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_264, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_265, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_266, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_267, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_268, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_269, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_270, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_271, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_272, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_273, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_274, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_275, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_276, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_277, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_278, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_279, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_280, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_281, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_282, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_283, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_284, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_285, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_286, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_287, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_288, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_289, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_290, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_291, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_292, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_293, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_294, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_295, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_296, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_297, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_298, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_299, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_300, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_301, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_302, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_303, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_304, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_305, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_306, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_307, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_308, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_309, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_310, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_311, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_312, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_313, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_314, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_315, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_316, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_317, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_318, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_319, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_320, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_321, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_322, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_323, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_324, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_325, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_326, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_327, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_328, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_329, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_330, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_331, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_332, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_333, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_334, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_335, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_336, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_337, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_338, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_339, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_340, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_341, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_342, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_343, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_344, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_345, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_346, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_347, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_348, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_349, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_350, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_351, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_352, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_353, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_354, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_355, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_356, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_357, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_358, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_359, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_360, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_361, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_362, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_363, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_364, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_365, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_366, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_367, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_368, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_369, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_370, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_371, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_372, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_373, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_374, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_375, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_376, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_377, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_378, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_379, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_380, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_381, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_382, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_383, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_384, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_385, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_386, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_387, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_388, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_389, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_390, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_391, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_392, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_393, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_394, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_395, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_396, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_397, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_398, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::FBK_SPIKES_399, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::PRED_SPIKES_0, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::PRED_SPIKES_1, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::PRED_SPIKES_2, state_neuron::PORT_NOT_AVAILABLE },
@@ -678,206 +484,7 @@ std::vector< std::tuple< int, int > > state_neuron::rport_to_nestml_buffer_idx =
   { state_neuron::PRED_SPIKES_197, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::PRED_SPIKES_198, state_neuron::PORT_NOT_AVAILABLE },
   { state_neuron::PRED_SPIKES_199, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_200, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_201, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_202, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_203, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_204, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_205, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_206, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_207, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_208, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_209, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_210, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_211, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_212, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_213, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_214, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_215, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_216, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_217, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_218, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_219, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_220, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_221, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_222, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_223, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_224, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_225, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_226, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_227, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_228, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_229, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_230, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_231, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_232, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_233, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_234, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_235, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_236, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_237, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_238, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_239, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_240, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_241, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_242, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_243, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_244, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_245, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_246, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_247, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_248, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_249, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_250, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_251, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_252, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_253, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_254, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_255, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_256, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_257, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_258, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_259, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_260, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_261, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_262, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_263, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_264, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_265, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_266, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_267, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_268, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_269, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_270, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_271, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_272, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_273, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_274, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_275, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_276, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_277, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_278, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_279, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_280, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_281, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_282, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_283, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_284, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_285, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_286, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_287, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_288, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_289, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_290, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_291, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_292, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_293, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_294, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_295, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_296, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_297, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_298, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_299, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_300, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_301, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_302, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_303, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_304, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_305, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_306, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_307, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_308, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_309, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_310, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_311, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_312, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_313, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_314, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_315, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_316, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_317, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_318, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_319, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_320, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_321, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_322, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_323, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_324, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_325, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_326, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_327, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_328, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_329, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_330, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_331, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_332, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_333, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_334, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_335, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_336, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_337, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_338, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_339, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_340, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_341, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_342, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_343, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_344, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_345, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_346, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_347, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_348, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_349, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_350, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_351, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_352, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_353, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_354, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_355, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_356, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_357, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_358, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_359, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_360, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_361, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_362, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_363, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_364, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_365, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_366, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_367, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_368, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_369, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_370, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_371, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_372, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_373, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_374, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_375, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_376, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_377, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_378, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_379, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_380, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_381, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_382, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_383, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_384, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_385, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_386, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_387, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_388, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_389, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_390, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_391, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_392, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_393, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_394, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_395, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_396, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_397, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_398, state_neuron::PORT_NOT_AVAILABLE },
-  { state_neuron::PRED_SPIKES_399, state_neuron::PORT_NOT_AVAILABLE },
+  { state_neuron::ERROR_SPIKES, state_neuron::PORT_NOT_AVAILABLE },
 };
   std::string state_neuron::get_var_name(size_t elem, std::string var_name)
   {
@@ -923,6 +530,12 @@ P_.N_pred; i++)
       {
         size_t elem = state_neuron::State_::PRED_COUNTS + i;
         recordablesMap_.insert(get_var_name(i, "PRED_COUNTS_"), this->get_data_access_functor(elem));
+      }
+      for (size_t i = 0; i < 
+P_.error_bf_size; i++)
+      {
+        size_t elem = state_neuron::State_::ERROR_BUFFER + i;
+        recordablesMap_.insert(get_var_name(i, "ERROR_BUFFER_"), this->get_data_access_functor(elem));
       }
   }
 
@@ -993,11 +606,15 @@ state_neuron::state_neuron(const state_neuron& __n):
   P_.pos = __n.P_.pos;
   P_.base_rate = __n.P_.base_rate;
   P_.buffer_size = __n.P_.buffer_size;
+  P_.buffer_size_error = __n.P_.buffer_size_error;
   P_.simulation_steps = __n.P_.simulation_steps;
   P_.N_fbk = __n.P_.N_fbk;
   P_.N_pred = __n.P_.N_pred;
+  P_.N_error = __n.P_.N_error;
+  P_.C_error = __n.P_.C_error;
   P_.fbk_bf_size = __n.P_.fbk_bf_size;
   P_.pred_bf_size = __n.P_.pred_bf_size;
+  P_.error_bf_size = __n.P_.error_bf_size;
   P_.time_wait = __n.P_.time_wait;
   P_.time_trial = __n.P_.time_trial;
 
@@ -1019,6 +636,14 @@ state_neuron::state_neuron(const state_neuron& __n):
   S_.var_pred = __n.S_.var_pred;
   S_.CV_fbk = __n.S_.CV_fbk;
   S_.CV_pred = __n.S_.CV_pred;
+  S_.current_error_input = __n.S_.current_error_input;
+  S_.error_buffer = __n.S_.error_buffer;
+  S_.err_pos_count = __n.S_.err_pos_count;
+  S_.error_counts = __n.S_.error_counts;
+  S_.error_rate = __n.S_.error_rate;
+  S_.fbk_rate = __n.S_.fbk_rate;
+  S_.w_fbk = __n.S_.w_fbk;
+  S_.w_pred = __n.S_.w_pred;
   S_.total_CV = __n.S_.total_CV;
   S_.lambda_poisson = __n.S_.lambda_poisson;
 
@@ -1028,6 +653,7 @@ state_neuron::state_neuron(const state_neuron& __n):
   V_.buffer_steps = __n.V_.buffer_steps;
   V_.trial_steps = __n.V_.trial_steps;
   V_.wait_steps = __n.V_.wait_steps;
+  V_.buffer_error_steps = __n.V_.buffer_error_steps;
   recordablesMap_.create(*this);
 }
 
@@ -1061,12 +687,16 @@ void state_neuron::init_state_internal_()
   P_.kp = 1; // as real
   P_.pos = true; // as boolean
   P_.base_rate = 0; // as Hz
-  P_.buffer_size = 100; // as ms
+  P_.buffer_size = 150.0; // as ms
+  P_.buffer_size_error = 25.0; // as ms
   P_.simulation_steps = 1000; // as integer
-  P_.N_fbk = 400; // as integer
-  P_.N_pred = 400; // as integer
-  P_.fbk_bf_size = 10000; // as integer
-  P_.pred_bf_size = 10000; // as integer
+  P_.N_fbk = 200; // as integer
+  P_.N_pred = 200; // as integer
+  P_.N_error = 200; // as integer
+  P_.C_error = 5.0; // as real
+  P_.fbk_bf_size = 30000; // as integer
+  P_.pred_bf_size = 30000; // as integer
+  P_.error_bf_size = 25; // as integer
   P_.time_wait = 150.0; // as ms
   P_.time_trial = 650.0; // as ms
 
@@ -1096,6 +726,15 @@ void state_neuron::init_state_internal_()
   S_.var_pred = 0.0; // as real
   S_.CV_fbk = 0.0; // as real
   S_.CV_pred = 0.0; // as real
+  S_.current_error_input = 0; // as real
+  S_.error_buffer.resize(
+  P_.error_bf_size, 0);
+  S_.err_pos_count = 0; // as integer
+  S_.error_counts = 0.0; // as real
+  S_.error_rate = 0.0; // as real
+  S_.fbk_rate = 0.0; // as real
+  S_.w_fbk = 0.0; // as real
+  S_.w_pred = 0.0; // as real
   S_.total_CV = 0.0; // as real
   S_.lambda_poisson = 0; // as real
 }
@@ -1126,6 +765,7 @@ void state_neuron::recompute_internal_variables(bool exclude_timestep)
     V_.buffer_steps = nest::Time(nest::Time::ms((double) (P_.buffer_size))).get_steps(); // as integer
     V_.trial_steps = nest::Time(nest::Time::ms((double) (P_.time_trial))).get_steps(); // as integer
     V_.wait_steps = nest::Time(nest::Time::ms((double) (P_.time_wait))).get_steps(); // as integer
+    V_.buffer_error_steps = nest::Time(nest::Time::ms((double) (P_.buffer_size_error))).get_steps(); // as integer
   }
   else {    
     V_.res = nest::Time::get_resolution().get_ms(); // as ms
@@ -1133,6 +773,7 @@ void state_neuron::recompute_internal_variables(bool exclude_timestep)
     V_.buffer_steps = nest::Time(nest::Time::ms((double) (P_.buffer_size))).get_steps(); // as integer
     V_.trial_steps = nest::Time(nest::Time::ms((double) (P_.time_trial))).get_steps(); // as integer
     V_.wait_steps = nest::Time(nest::Time::ms((double) (P_.time_wait))).get_steps(); // as integer
+    V_.buffer_error_steps = nest::Time(nest::Time::ms((double) (P_.buffer_size_error))).get_steps(); // as integer
   }
 }
 void state_neuron::pre_run_hook()
@@ -1196,6 +837,7 @@ void state_neuron::update(nest::Time const & origin, const long from, const long
 
   S_.tick = nest::Time(nest::Time::ms((double) (get_t()))).get_steps();
   long i = 0;
+  S_.current_error_input = (0.001 * B_.spike_inputs_grid_sum_[ERROR_SPIKES - MIN_SPIKE_RECEPTOR]) / (nest::Time::get_resolution().get_ms() * 0.001);
   for ( i = 0;
                    i<(P_.N_fbk - 1);
        i += 1 )
@@ -1278,22 +920,6 @@ void state_neuron::update(nest::Time const & origin, const long from, const long
       S_.mean_fbk += S_.fbk_counts[k];
     }
     S_.mean_fbk /= P_.N_fbk;
-    if (S_.mean_fbk != 0)
-    {  
-      S_.var_fbk = 0.0;
-      for ( k = 0;
-                       k<(P_.N_fbk - 1);
-           k += 1 )
-      {
-        S_.var_fbk += pow((S_.fbk_counts[k] - S_.mean_fbk), 2);
-      }
-      S_.var_fbk /= P_.N_fbk;
-      S_.CV_fbk = (S_.var_fbk / S_.mean_fbk);
-    }
-    else
-    {  
-      S_.CV_fbk = 3.0;
-    }
   }
   S_.mean_pred = 0.0;
   if (P_.N_pred == 0)
@@ -1309,28 +935,39 @@ void state_neuron::update(nest::Time const & origin, const long from, const long
       S_.mean_pred += S_.pred_counts[m];
     }
     S_.mean_pred /= P_.N_pred;
-    if (S_.mean_pred != 0)
+  }
+  S_.error_buffer[S_.err_pos_count] = S_.current_error_input;
+  S_.err_pos_count += 1;
+  if (S_.err_pos_count > V_.buffer_error_steps - 1)
+  {  
+    S_.err_pos_count = 0;
+  }
+  S_.error_counts = 0.0;
+  long e_idx = 0;
+  for ( e_idx = 0;
+                   e_idx<(V_.buffer_error_steps - 1);
+       e_idx += 1 )
+  {
+    if (S_.error_buffer[e_idx] != 0)
     {  
-      S_.var_pred = 0.0;
-      for ( m = 0;
-                       m<P_.N_pred;
-           m += 1 )
-      {
-        S_.var_pred += pow((S_.pred_counts[m] - S_.mean_pred), 2);
-      }
-      S_.var_pred /= P_.N_pred;
-      S_.CV_pred = (S_.var_pred / S_.mean_pred);
-    }
-    else
-    {  
-      S_.CV_pred = 3.0;
+      S_.error_counts += S_.error_buffer[e_idx];
     }
   }
-  S_.total_CV = S_.CV_fbk + S_.CV_pred;
-  S_.in_rate = (1000.0 * ((S_.mean_pred * S_.CV_fbk / S_.total_CV + S_.mean_fbk * S_.CV_pred / S_.total_CV) / P_.buffer_size));
+  if (S_.error_counts != 0)
+  {  
+    S_.error_rate = (1000 * S_.error_counts) / (V_.buffer_error_steps * P_.N_error);
+    S_.fbk_rate = (1000 * S_.mean_fbk) / V_.buffer_steps;
+    S_.w_fbk = std::abs(S_.error_rate) / std::max(std::max(std::abs(S_.error_rate), std::abs(S_.fbk_rate)), P_.C_error);
+    S_.w_pred = 1 - S_.w_fbk;
+  }
+  else
+  {  
+    S_.w_fbk = 1;
+    S_.w_pred = 0;
+  }
+  S_.in_rate = (1000.0 * ((S_.mean_pred * S_.w_pred + S_.mean_fbk * S_.w_fbk) / P_.buffer_size));
   S_.out_rate = P_.base_rate + P_.kp * S_.in_rate;
   S_.lambda_poisson = S_.out_rate * nest::Time::get_resolution().get_ms() * 0.001;
-  S_.spike_count_out = ([&]() -> int { nest::poisson_distribution::param_type poisson_params(S_.lambda_poisson); int sample = poisson_dev_( nest::get_vp_specific_rng( get_thread() ), poisson_params); return sample; })();
   S_.spike_count_out = ([&]() -> int { nest::poisson_distribution::param_type poisson_params(S_.lambda_poisson); int sample = poisson_dev_( nest::get_vp_specific_rng( get_thread() ), poisson_params); return sample; })();
   if (S_.spike_count_out > 0 && (S_.tick % V_.trial_steps) > V_.wait_steps)
   {  

@@ -4,15 +4,11 @@ model state_neuron:
         pos boolean = true # Sign sensitivity of the neuron
         base_rate Hz = 0 Hz # Base firing rate
         buffer_size ms = 150.0 ms # Size of the sliding window
-        buffer_size_error ms = 25.0 ms
         simulation_steps integer = 1000 # Number of simulation steps (simulation_time/resolution())
         N_fbk integer = 200 # Population size for sensory feedback
         N_pred integer = 200 # Population size for sensory prediction
-        N_error integer = 200
-        C_error real = 5.0 
         fbk_bf_size integer = 30000
         pred_bf_size integer = 30000
-        error_bf_size integer = 25
         time_wait ms = 150.0 ms
         time_trial ms = 650.0 ms
 
@@ -41,21 +37,6 @@ model state_neuron:
         CV_fbk real = 0.0 # Coefficient of variation of sensory feedback
         CV_pred real = 0.0 # Coefficient of variation of sensory prediction
 
-        #################
-        current_error_input real = 0
-        error_buffer[error_bf_size] real = 0
-        err_pos_count integer = 0 
-
-        error_counts real = 0.0
-
-        error_rate real = 0.0
-        fbk_rate real = 0.0
-
-        w_fbk real = 0.0
-        w_pred real = 0.0
-
-        #################
-
         total_CV real = 0.0
         
         lambda_poisson real = 0 # Parameter of the Poisson distribution defining generator behavior
@@ -65,24 +46,19 @@ model state_neuron:
         buffer_steps integer = steps(buffer_size)
         trial_steps integer = steps(time_trial)
         wait_steps integer = steps(time_wait)
-        buffer_error_steps integer = steps(buffer_size_error)
           
     input: 
         fbk_spikes[N_fbk] <- spike
         pred_spikes[N_pred] <- spike
-        error_spikes <- spike        
     
     output:
         spike
-        
+    
     update:
         tick = steps(t)
 
         # Save incoming spikes in the two buffers
         i integer = 0
-
-        # in input port I have probability instead of count... don't know why
-        current_error_input= error_spikes / (resolution() * 0.001)
         
         for i in 0 ... (N_fbk-1) step 1:
             current_fbk_input[i] = fbk_spikes[i]
@@ -115,6 +91,8 @@ model state_neuron:
                 index = N_fbk * jump + k
                 if fbk_buffer[index] != 0:
                     fbk_counts[k] += 1
+            # apply anscombe transform
+            # fbk_counts[k] = 2.0*((fbk_counts[k] + (3.0/8.0))**(0.5))
         
         m integer = 0
         for m in 0 ... (N_pred-1) step 1:
@@ -123,6 +101,8 @@ model state_neuron:
                 index = (N_pred * jump) + m
                 if pred_buffer[index] != 0:
                     pred_counts[m] += 1
+            # apply anscombe transform
+            # pred_counts[m] = 2.0*((pred_counts[m] + (3.0/8.0))**(0.5))
         
         # Compute mean and variability of both buffers
         mean_fbk = 0.0
@@ -132,6 +112,14 @@ model state_neuron:
             for k in 0 ... (N_fbk-1) step 1:
                 mean_fbk += fbk_counts[k]
             mean_fbk /= N_fbk
+            if mean_fbk > 10**(-3):
+                var_fbk = 0.0
+                for k in 0 ... (N_fbk-1) step 1:
+                    var_fbk += (fbk_counts[k] -mean_fbk)**2
+                var_fbk /= N_fbk
+                CV_fbk = (var_fbk/mean_fbk)
+            else:
+                CV_fbk = 3.0
 
         mean_pred = 0.0
         if N_pred == 0:
@@ -141,33 +129,18 @@ model state_neuron:
                 mean_pred += pred_counts[m]
             mean_pred /= N_pred
 
+            if mean_pred > 10**(-3):
+                var_pred = 0.0
+                for m in 0 ... (N_pred-1) step 1:
+                    var_pred += (pred_counts[m]- mean_pred)**2
+                var_pred /= N_pred
+                CV_pred = (var_pred/mean_pred)
+            else:
+                CV_pred = 3.0
 
-        ####################################
-        error_buffer[err_pos_count] = current_error_input
+        total_CV = CV_fbk + CV_pred
 
-        err_pos_count += 1
-        if err_pos_count > buffer_error_steps-1:
-            err_pos_count = 0
-        
-        error_counts = 0.0
-        e_idx integer = 0
-        for e_idx in 0 ... (buffer_error_steps-1) step 1:
-            if error_buffer[e_idx] != 0:
-                error_counts += error_buffer[e_idx]
-        
-        if error_counts != 0:
-            error_rate = (1000 * error_counts) / (buffer_error_steps * N_error)
-            fbk_rate = (1000 * mean_fbk) / buffer_steps
-            
-            w_fbk = abs(error_rate) / max(max(abs(error_rate), abs(fbk_rate)), C_error)
-            w_pred = 1 - w_fbk
-        else:
-            w_fbk = 1
-            w_pred = 0
-
-        ####################################
-
-        in_rate = (mean_pred*w_pred + mean_fbk*w_fbk)/buffer_size
+        in_rate = (mean_pred*CV_fbk/total_CV + mean_fbk*CV_pred/total_CV)/buffer_size
 
         out_rate = base_rate + kp * in_rate
 

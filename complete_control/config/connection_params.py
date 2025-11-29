@@ -20,7 +20,7 @@ class ConnectionsParams(BaseModel):
 
     dcn_forw_prediction: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.1,  # 0.55
+            weight=0.0154,  # 0.0154,  # 0.1,  # 0.55
             delay=min_delay,
         )
     )
@@ -50,13 +50,13 @@ class ConnectionsParams(BaseModel):
     )
     state_mc_fbk: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=-1.67,  # -2.75,  # 1.875,  #   -1.2,
+            weight=-3.0,  # 1.67,  # -2.75,  # 1.875,  #   -1.2,
             delay=min_delay,
         )
     )
     mc_out_motor_commands: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1,
+            weight=0.25,  # 1.0
             delay=min_delay,
         )
     )
@@ -66,40 +66,42 @@ class ConnectionsParams(BaseModel):
             delay=min_delay,
         )
     )
+    """
     sn_feedback: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.001,  # not used
+            weight=0.005,
             delay=min_delay,
         )
     )
+    """
     error_io_f: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1.85,  # 0.016,
+            weight=1.0,  # 0.016,
             delay=min_delay,
             receptor_type=1,
         )
     )
     planner_plan_to_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1.0,
+            weight=0.25,
             delay=min_delay,
         )
     )
     state_state_to_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.020,
+            weight=0.005,  # 0.020,
             delay=min_delay,
         )
     )
     planner_error_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.01,
+            weight=0.00166667,
             delay=min_delay,
         )
     )
     state_to_inv_error_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=-0.025,
+            weight=-0.005,
             delay=min_delay,
         )
     )
@@ -129,7 +131,7 @@ class ConnectionsParams(BaseModel):
     )
     mc_out_brain_stem: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.1,
+            weight=0.005,  # 0.1,
             delay=min_delay,
         )
     )
@@ -159,7 +161,7 @@ class ConnectionsParams(BaseModel):
     )
     error_inv_io_i: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.8,
+            weight=0.8,  # 0.4,
             delay=min_delay,
             receptor_type=1,
         )
@@ -167,7 +169,7 @@ class ConnectionsParams(BaseModel):
 
     feedback_error: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.05,
+            weight=0.005,
             delay=min_delay,
         )
     )
@@ -175,11 +177,16 @@ class ConnectionsParams(BaseModel):
     @computed_field
     @property
     def sn_fbk_smoothed(self) -> SingleSynapseParams:
-        return SingleSynapseParams(weight=1.0, delay=self.sensory_delay)  # 0.028
+        return SingleSynapseParams(weight=0.005, delay=self.sensory_delay)  # 0.028
 
     @computed_field
     @property
     def dcn_f_error(self) -> SingleSynapseParams:
         return SingleSynapseParams(
-            weight=0.1, delay=self.sensory_delay
+            weight=-0.0154, delay=self.sensory_delay
         )  # intanto setta 0.1 -> 0.0 per vedere solo contributo fbk
+
+    @computed_field
+    @property
+    def sn_feedback(self) -> SingleSynapseParams:
+        return SingleSynapseParams(weight=0.005, delay=self.sensory_delay)

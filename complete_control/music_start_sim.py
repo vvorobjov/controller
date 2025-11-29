@@ -130,6 +130,43 @@ def coordinate_paths_with_receiver() -> tuple[str, RunPaths]:
     return run_timestamp_str, run_paths
 
 
+def generate_param_plot(data, pop_name, param_name, plots_path, plot_one_n=True):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    senders = np.array(data["senders"])
+    times = np.array(data["times"])
+    param = np.array(data[param_name])
+
+    fig = plt.figure(figsize=(10, 6))
+
+    # take one neuron (id=sender)
+    if plot_one_n:
+        gid = np.unique(senders)[0]
+        mask = senders == gid
+        plt.plot(times[mask], param[mask])
+        plt.title(f"{pop_name} - {param_name} - neuron {gid}")
+        # if param_name == "CV_fbk" or param_name == "CV_pred":
+        #    plt.ylim(0, 1)
+
+    # plot all neurons
+    else:
+        for gid in np.unique(senders):
+            mask = senders == gid
+            plt.plot(
+                times[mask], param[mask], color=(0, 0, 0, 0.05), label=f"Neuron {gid}"
+            )
+        plt.title(f"{pop_name} - {param_name} - all neurons")
+        # plt.legend()
+
+    plt.xlabel("Time (ms)")
+    plt.ylabel(param_name)
+
+    fig.savefig(plots_path / f"{pop_name}_{param_name}.png")
+    plt.close(fig)
+    return
+
+
 if __name__ == "__main__":
 
     comm = MPI.COMM_WORLD.Create_group(
@@ -179,8 +216,74 @@ if __name__ == "__main__":
     # Create controllers
     controllers = create_controllers(master_config, comm=comm)
 
+    #######################################################
+    # create and connect mm to state
+    params_state = [
+        "var_fbk",
+        "var_pred",
+        "mean_fbk",
+        "mean_pred",
+        "w_fbk",
+        "w_pred",
+        "CV_fbk",
+        "CV_pred",
+    ]
+    mm_state = nest.Create("multimeter", {"record_from": params_state})
+    nest.Connect(mm_state, controllers[0].pops.state_p.pop)
+
+    mm_pred = nest.Create("multimeter", 1, {"record_from": ["lambda_poisson"]})
+    mm_fbk = nest.Create("multimeter", 1, {"record_from": ["lambda_poisson"]})
+    for x in range(200):
+        if (
+            "lambda_poisson"
+            in nest.GetStatus(controllers[0].pops.pred_p.pop[x])[0].keys()
+        ):
+            nest.Connect(mm_pred, controllers[0].pops.pred_p.pop[x])
+        else:
+            print(f"Neuron pred {x} has not been connected")
+    for x in range(200):
+        if (
+            "lambda_poisson"
+            in nest.GetStatus(controllers[0].pops.fbk_smooth_p.pop[x])[0].keys()
+        ):
+            nest.Connect(mm_fbk, controllers[0].pops.fbk_smooth_p.pop[x])
+        else:
+            print(f"Neuron fbk_smooth {x} has not been connected")
+
+    print(
+        f"Dcn params: {nest.GetStatus(controllers[0].cerebellum_handler.cerebellum.populations.forw_dcnp_p_view.pop[0])[0].keys()}"
+    )
+    ##############################################################
+
     # Run simulation
     run_simulation(master_config, run_paths.data_nest, controllers, comm)
+
+    ##########################à
+
+    main_log.info("Start - Params from mm printed successfully")
+    pop_name = "State_Estimator"
+    plots_path = run_paths.figures
+    data_state = nest.GetStatus(mm_state, "events")[0]
+    data_pred = nest.GetStatus(mm_pred, "events")[0]
+    data_fbk = nest.GetStatus(mm_fbk, "events")[0]
+    for param in params_state:
+        try:
+            generate_param_plot(
+                data_state, pop_name, param, plots_path, plot_one_n=True
+            )
+        except Exception as e:
+            print(f"Error: {e}, \n param_: {param}")
+    try:
+        pop_name = "Pred"
+        param = "lambda_poisson"
+        generate_param_plot(data_pred, pop_name, param, plots_path, plot_one_n=False)
+        pop_name = "FbkSmooth"
+        generate_param_plot(data_fbk, pop_name, param, plots_path, plot_one_n=False)
+    except Exception as e:
+        print(f"Pred Error: {e} \n")
+    main_log.info("Params from mm printed successfully")
+
+    ###############################################################
 
     # Plotting (Rank 0 Only)
     if rank == 0 and master_config.PLOT_AFTER_SIMULATE:

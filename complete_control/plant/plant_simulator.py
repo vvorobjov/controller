@@ -416,7 +416,11 @@ class PlantSimulator:
                 )
 
                 # Send sensory feedback through MUSIC
-                self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
+                if step < self.num_total_steps - 1:
+                    self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
+
+                # Send sensory feedback through MUSIC
+                # self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
 
                 # Update progress
                 current_sim_time_s += self.config.RESOLUTION_S

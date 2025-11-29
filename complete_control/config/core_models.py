@@ -33,15 +33,15 @@ class RobotSpecParams(BaseModel, frozen=True):
 
 
 class ExperimentParams(BaseModel, frozen=True):
-    enable_gravity: bool = False
-    z_gravity_magnitude: float = 9.81  # m/s^2
+    enable_gravity: bool = True
+    z_gravity_magnitude: float = 1.0  # m/s^2
     gravity_trial_start: int = 0  # gravity turns ON at start of this trial
     gravity_trial_end: int = 1  # gravity turns OFF at end of this trial
 
 
 class OracleData(BaseModel):
     init_joint_angle: float = 90
-    tgt_joint_angle: float = 20
+    tgt_joint_angle: float = 140
     target_visual_offset: float = 4.0
     target_tolerance_angle_deg: float = 10
     target_color: TargetColor = Field(default=TargetColor.BLUE_LEFT)
@@ -64,10 +64,10 @@ class OracleData(BaseModel):
 
 class SimulationParams(BaseModel, frozen=True):
     resolution: float = 1.0  # ms
-    time_prep: float = 650.0  # ms
-    time_move: float = 500.0  # ms
-    time_post: float = 350.0  # ms
-    n_trials: int = 2
+    time_prep: float = 650.0  # 650.0  # ms
+    time_move: float = 500.0  # 500.0  # ms
+    time_post: float = 350.0  # 350.0  # ms
+    n_trials: int = 1
 
     oracle: OracleData = Field(default_factory=lambda: OracleData())
 
@@ -106,7 +106,7 @@ class SimulationParams(BaseModel, frozen=True):
 
 
 class BrainParams(BaseModel, frozen=True):
-    population_size: int = 50
+    population_size: int = 200
     first_id_sens_neurons: int = 0  # not sure why we need this.
 
 

@@ -39,20 +39,21 @@ class StateEstimator_mass:
         self.pops_n = []
         for i in range(numJoints):
 
-            tmp_pop_p = nest.Create("state_neuron_nestml", numNeurons)
+            tmp_pop_p = nest.Create("state_neuron", numNeurons)  # state_neuron_nestml
             nest.SetStatus(tmp_pop_p, self._param_neurons)
             nest.SetStatus(tmp_pop_p, {"pos": True})
             self.pops_p.append(
                 PopView(tmp_pop_p, time_vect, to_file=True, label="state_p")
             )
 
-            tmp_pop_n = nest.Create("state_neuron_nestml", numNeurons)
+            tmp_pop_n = nest.Create("state_neuron", numNeurons)  # state_neuron_nestml
             nest.SetStatus(tmp_pop_n, self._param_neurons)
             nest.SetStatus(tmp_pop_n, {"pos": False})  # change here: it was tmp_pop_p ?
             self.pops_n.append(
                 PopView(tmp_pop_n, time_vect, to_file=True, label="state_n")
             )
 
+        """
         params = [
             "kp",
             "base_rate",
@@ -65,8 +66,8 @@ class StateEstimator_mass:
             "var_fbk",
         ]
         state_status = nest.GetStatus(tmp_pop_p[:1], params)[0]
-
-        # print(f"State params: {state_status}")
+        print(f"State params: {state_status}")
+        """
 
     @property
     def numNeuronsPop(self):
