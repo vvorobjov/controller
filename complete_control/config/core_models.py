@@ -34,7 +34,7 @@ class RobotSpecParams(BaseModel, frozen=True):
 
 class ExperimentParams(BaseModel, frozen=True):
     enable_gravity: bool = True
-    z_gravity_magnitude: float = 1.0  # m/s^2
+    z_gravity_magnitude: float = 1.5  # m/s^2
     gravity_trial_start: int = 0  # gravity turns ON at start of this trial
     gravity_trial_end: int = 1  # gravity turns OFF at end of this trial
 

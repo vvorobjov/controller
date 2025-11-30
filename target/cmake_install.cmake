@@ -43,17 +43,25 @@ if(NOT DEFINED CMAKE_OBJDUMP)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so")
+  if(EXISTS "$ENV{DESTDIR}/sim/install/nest/state_check_module.so" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}/sim/install/nest/state_check_module.so")
     file(RPATH_CHECK
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so"
+         FILE "$ENV{DESTDIR}/sim/install/nest/state_check_module.so"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/nest" TYPE MODULE FILES "/sim/controller/target/state_check_module.so")
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so")
+  list(APPEND CMAKE_ABSOLUTE_DESTINATION_FILES
+   "/sim/install/nest/state_check_module.so")
+  if(CMAKE_WARN_ON_ABSOLUTE_INSTALL_DESTINATION)
+    message(WARNING "ABSOLUTE path INSTALL DESTINATION : ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
+  endif()
+  if(CMAKE_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION)
+    message(FATAL_ERROR "ABSOLUTE path INSTALL DESTINATION forbidden (by caller): ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
+  endif()
+  file(INSTALL DESTINATION "/sim/install/nest" TYPE MODULE FILES "/sim/controller/target/state_check_module.so")
+  if(EXISTS "$ENV{DESTDIR}/sim/install/nest/state_check_module.so" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}/sim/install/nest/state_check_module.so")
     if(CMAKE_INSTALL_DO_STRIP)
-      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/nest/state_check_module.so")
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}/sim/install/nest/state_check_module.so")
     endif()
   endif()
 endif()

@@ -91,7 +91,7 @@ CMAKE_INSTALL_INFODIR:PATH=
 
 //object code libraries (lib/nest or lib64/nest or lib/<multiarch-tuple>/nest
 // on Debian)
-CMAKE_INSTALL_LIBDIR:STRING=lib/nest
+CMAKE_INSTALL_LIBDIR:STRING=/sim/install/nest
 
 //Program executables (libexec)
 CMAKE_INSTALL_LIBEXECDIR:PATH=libexec

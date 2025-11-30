@@ -19,7 +19,7 @@
 *  You should have received a copy of the GNU General Public License
 *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 *
-*  Generated from NESTML 8.2.0 at time: 2025-11-28 13:54:06.830886
+*  Generated from NESTML 8.2.0 at time: 2025-11-30 15:35:09.728073
 */
 
 // Include from NEST

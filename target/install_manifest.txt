@@ -1,1 +1,1 @@
-/sim/install/nest/lib/nest/state_check_module.so
+/sim/install/nest/state_check_module.so
