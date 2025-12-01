@@ -15,7 +15,7 @@ T = TypeVar("T")
 class CerebellumPopulationsGeneric(BaseModel, Generic[T]):
     # === Forward Model Core Populations ===
     # Mossy Fibers (split for positive/negative or distinct inputs)
-    forw_mf_view: Optional[T] = None
+    forw_mf: Optional[T] = None
 
     # Granular Layer
     forw_glom: Optional[T] = None

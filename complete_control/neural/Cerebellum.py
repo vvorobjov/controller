@@ -105,7 +105,7 @@ class Cerebellum:
         # Forward Model
         fwd = adapter.simdata[simulation_forw]
         inv = adapter.simdata[simulation_inv]
-        self.populations.forw_mf_view = self._find_popview(fwd, "mossy_fibers")
+        self.populations.forw_mf = self._find_popview(fwd, "mossy_fibers")
         self.populations.forw_glom = self._find_popview(fwd, "glomerulus")
         self.populations.forw_grc = self._find_popview(fwd, "granule_cell")
         self.populations.forw_goc = self._find_popview(fwd, "golgi_cell")
@@ -132,7 +132,7 @@ class Cerebellum:
         self.populations.inv_pc_p = self._find_popview(inv, "purkinje_cell_plus")
         self.populations.inv_pc_n = self._find_popview(inv, "purkinje_cell_minus")
 
-        self._update_weight_plastic_pops(None)
+        self._update_weight_plastic_pops(weights)
 
     def _find_popview(self, simdata, model_name):
         return PopView(
