@@ -11,7 +11,6 @@ from config.plant_config import PlantConfig
 from config.ResultMeta import ResultMeta
 from matplotlib.animation import FuncAnimation
 from matplotlib.lines import Line2D
-from utils_common.draw_schema import draw_schema
 from utils_common.generate_signals import PlannerData
 from utils_common.results import extract_and_merge_plant_results
 
@@ -19,64 +18,6 @@ from .plant_models import JointState, JointStates, PlantPlotData
 
 (SHOULDER, ELBOW, HAND) = range(3)
 log = structlog.get_logger(__name__)
-
-
-def plot_joint_space(
-    config: PlantConfig,
-    time_vector_s: np.ndarray,
-    pos_j_rad_actual: np.ndarray,
-    desired_trj_joint_rad: np.ndarray,
-    save_fig: bool = True,
-) -> None:
-    """Plots joint space position (actual vs desired)."""
-    pth_fig_receiver = config.run_paths.figures_receiver
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    plt.figure()
-    plt.plot(
-        time_vector_s, pos_j_rad_actual[:], linewidth=2, label="Actual Joint Angle"
-    )
-
-    # Construct full desired trajectory for plotting
-    # The config.trajectory_joint_single_trial_rad is for one trial.
-    # We need to tile it or use a pre-computed full desired trajectory.
-    # For now, let's plot only actual if full desired isn't readily available.
-    # Or, plot the single trial desired trajectory overlaid repeatedly.
-
-    # Example: Overlaying the single trial desired trajectory for each trial period
-    single_trial_steps = len(config.time_vector_single_trial_s)
-    desired_single_trial = desired_trj_joint_rad
-
-    full_desired_plot = np.full_like(pos_j_rad_actual[:], np.nan)
-    for trial_n in range(config.N_TRIALS):
-        start_idx = trial_n * single_trial_steps
-        end_idx = start_idx + len(desired_single_trial)
-        if end_idx <= len(full_desired_plot):
-            full_desired_plot[start_idx:end_idx] = desired_single_trial
-        else:  # partial last trial
-            len_to_copy = len(full_desired_plot) - start_idx
-            if len_to_copy > 0:
-                full_desired_plot[start_idx:] = desired_single_trial[:len_to_copy]
-
-    plt.plot(
-        time_vector_s,
-        full_desired_plot,
-        linestyle=":",
-        linewidth=2,
-        label="Desired Joint Angle (Per Trial)",
-    )
-
-    plt.xlabel("Time (s)")
-    plt.ylabel("Joint Angle (rad)")
-    plt.title("Joint Space Position")
-    plt.legend()
-    plt.ylim((0.0, 2.8))
-    plt.tight_layout()
-    if save_fig:
-        filepath = pth_fig_receiver / f"position_joint_{timestamp}.png"
-        plt.savefig(filepath)
-        log.info(f"Saved joint space plot at {filepath}")
-    plt.close()
 
 
 def plot_ee_space(
@@ -147,29 +88,35 @@ def plot_ee_space(
 
 
 def plot_motor_commands(
-    config: PlantConfig,
+    pth_fig_receiver: Path,
     time_vector_s: np.ndarray,
     input_cmd_torque_actual: np.ndarray,
-    # input_cmd_torque_desired: np.ndarray, # If available
     save_fig: bool = True,
 ) -> None:
     """Plots motor commands (actual vs desired if available)."""
-    pth_fig_receiver = config.run_paths.figures_receiver
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    cond_str = "refactored"  # Placeholder for condition string from original plots
+    MARKERSIZE = 0.8
+    COLOR_ACTUAL = "m"
+    LABEL_ACTUAL = "Actual Motor Command"
 
-    plt.figure()
-    plt.plot(time_vector_s, input_cmd_torque_actual[:], label="Actual Motor Command")
-    # if input_cmd_torque_desired is not None:
-    #     plt.plot(time_vector_s, input_cmd_torque_desired[:,0], linestyle=':', label="Desired Motor Command")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Motor Command (Torque N.m)")  # Assuming torque
-    plt.title("Motor Commands")
-    plt.legend()
-    plt.tight_layout()
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Motor Command (Torque N.m)")
+    ax.set_title("Motor Commands")
+    ax.set_xlim(time_vector_s.min(), time_vector_s.max())
+
+    ax.plot(
+        time_vector_s,
+        input_cmd_torque_actual,
+        markersize=MARKERSIZE,
+        color=COLOR_ACTUAL,
+        label=LABEL_ACTUAL,
+    )
+    ax.legend()
+    fig.tight_layout()
     if save_fig:
-        filepath = pth_fig_receiver / f"{cond_str}_motCmd_{timestamp}.png"
-        plt.savefig(filepath)
+        filepath = pth_fig_receiver / f"motCmd_{timestamp}.png"
+        fig.savefig(filepath)
         log.info(f"Saved motor commands plot at {filepath}")
     plt.close()
 
@@ -180,9 +127,9 @@ def plot_errors_per_trial(
     save_fig: bool = True,
 ) -> None:
     """Plots the final error for each trial."""
-    if not errors_list:
-        log.info("No errors to plot.")
-        return
+    if isinstance(errors_list[0], list):
+        # for now, flatten. if we ever have error per joint, revisit
+        errors_list = [leaf for tree in errors_list for leaf in tree]
 
     pth_fig_receiver = config.run_paths.figures_receiver
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -218,6 +165,7 @@ def plot_joint_space_animated(
     x = time_vector_s
     y1 = pos_j_rad_actual
     y2 = desired_trj_joint_rad
+    filepath = None
 
     MARKERSIZE = 0.8
     COLOR_ACTUAL = "m"
@@ -301,9 +249,10 @@ def plot_joint_space_animated(
                 log.info(f"Saved animated joint space plot at {filepath}")
         else:
             filepath = pth_fig_receiver / f"position_joint_{timestamp}.png"
-            fig.savefig(filepath, dpi=900, transparent=False)
+            fig.savefig(filepath, dpi=300, transparent=False)
             log.info(f"Saved joint space plot at {filepath}")
     plt.close()
+    return fig, ax, filepath
 
 
 def plot_desired(
@@ -356,7 +305,6 @@ def plot_plant_outputs(
         sum(p.simulation.duration_s for p in params),
         params[0].simulation.resolution / 1000,
     )
-    log.debug(time_vector_total_s)
     ref_plant_config = PlantConfig(ref_mp)
     joint_data = plant_data.joint_data[ELBOW]
     trjs = []
@@ -396,8 +344,8 @@ def plot_plant_outputs(
                     loglevel="warning",
                 ).output(str((run_paths.figures / f"task_{ax}.mp4").absolute())).run()
 
-    plot_joint_space_animated(
-        pth_fig_receiver=run_paths[0].figures_receiver,
+    f, a, filepath = plot_joint_space_animated(
+        pth_fig_receiver=ref_plant_config.run_paths.figures_receiver,
         time_vector_s=time_vector_total_s,
         pos_j_rad_actual=joint_data.pos_rad,
         desired_trj_joint_rad=desired_trajectory,
@@ -405,29 +353,25 @@ def plot_plant_outputs(
         video_duration=video_duration,
         fps=framerate,
     )
-    plot_ee_space(
-        config=ref_plant_config,
-        desired_start_ee=np.array(plant_data.init_hand_pos_ee),
-        desired_end_ee=np.array(plant_data.trgt_hand_pos_ee),
-        actual_traj_ee=plant_data.ee_data.pos_ee,
-    )
+    # plot_ee_space(
+    #     config=ref_plant_config,
+    #     desired_start_ee=np.array(plant_data.init_hand_pos_ee),
+    #     desired_end_ee=np.array(plant_data.trgt_hand_pos_ee),
+    #     actual_traj_ee=plant_data.ee_data.pos_ee,
+    # )
     plot_motor_commands(
-        config=ref_plant_config,
-        time_vector_s=ref_plant_config.time_vector_total_s,
+        pth_fig_receiver=ref_plant_config.run_paths.figures_receiver,
+        time_vector_s=time_vector_total_s,
         input_cmd_torque_actual=joint_data.input_cmd_torque,
     )
-    if plant_data.errors_per_trial:
-        plot_errors_per_trial(
-            config=ref_plant_config, errors_list=plant_data.errors_per_trial
-        )
+    plot_errors_per_trial(config=ref_plant_config, errors_list=plant_data.error)
 
-    plot_desired(
-        config=ref_plant_config,
-        time_vector_s=ref_plant_config.time_vector_total_s,
-        pos_j_rad_actual=joint_data.pos_rad,
-        desired_trj_joint_rad=planner_data.trajectory,
-    )
-    draw_schema(run_paths, scale_factor=0.005)
+    # plot_desired(
+    #     config=ref_plant_config,
+    #     time_vector_s=ref_plant_config.time_vector_total_s,
+    #     pos_j_rad_actual=joint_data.pos_rad,
+    #     desired_trj_joint_rad=planner_data.trajectory,
+    # )
 
     log.info("Plant plots generated.")
 
