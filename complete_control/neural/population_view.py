@@ -99,7 +99,7 @@ class PopView:
             self.filepath = complete_file
             for f in file_list:
                 f.unlink()
-            return RecordingManifest(population_spikes=self.filepath)
+            return pop_spikes
         else:
             return None
 

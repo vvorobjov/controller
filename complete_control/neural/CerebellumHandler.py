@@ -113,7 +113,7 @@ class CerebellumHandler:
         )
         self.log.info("Core Cerebellum object instantiated.")
         # Get N_mossy counts from the Cerebellum object
-        self.N_mossy_forw = len(self.cerebellum.populations.forw_mf_view.pop)
+        self.N_mossy_forw = len(self.cerebellum.populations.forw_mf.pop)
         self.N_mossy_inv = len(self.cerebellum.populations.inv_mf.pop)
         self.log.info(
             "Mossy fiber counts", N_forw=self.N_mossy_forw, N_inv=self.N_mossy_inv
@@ -282,7 +282,7 @@ class CerebellumHandler:
         self.log.debug("Connecting motor_commands -> fwd_mf")
         nest.Connect(
             self.interface_pops.motor_commands.pop,
-            self.cerebellum.populations.forw_mf_view.pop,
+            self.cerebellum.populations.forw_mf.pop,
             "one_to_one",
             syn_spec=self.conn_params.motor_commands_mossy_forw.model_dump(
                 exclude_none=True

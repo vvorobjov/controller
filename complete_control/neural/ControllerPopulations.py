@@ -1,6 +1,6 @@
 from typing import Generic, Optional, TypeVar
 
-from neural.neural_models import RecordingManifest, convert_to_recording
+from neural.neural_models import PopulationSpikes, convert_to_recording
 from pydantic import BaseModel
 
 from .population_view import PopView
@@ -50,7 +50,7 @@ class ControllerPopulationsGeneric(BaseModel, Generic[T]):
         arbitrary_types_allowed = True
 
 
-class ControllerPopulationsRecordings(ControllerPopulationsGeneric[RecordingManifest]):
+class ControllerPopulationsRecordings(ControllerPopulationsGeneric[PopulationSpikes]):
     pass
 
 

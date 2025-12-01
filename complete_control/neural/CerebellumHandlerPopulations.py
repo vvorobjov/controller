@@ -1,6 +1,6 @@
 from typing import Generic, Optional, TypeVar
 
-from neural.neural_models import RecordingManifest, convert_to_recording
+from neural.neural_models import PopulationSpikes, convert_to_recording
 from pydantic import BaseModel
 
 from .population_view import PopView
@@ -53,7 +53,7 @@ class CerebellumHandlerPopulationsGeneric(BaseModel, Generic[T]):
 
 
 class CerebellumHandlerPopulationsRecordings(
-    CerebellumHandlerPopulationsGeneric[RecordingManifest]
+    CerebellumHandlerPopulationsGeneric[PopulationSpikes]
 ):
     pass
 
