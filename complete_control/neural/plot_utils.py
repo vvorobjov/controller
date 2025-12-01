@@ -508,15 +508,9 @@ def merge_and_plot(
     pops_paired=POPS_PAIRED,
     path_fig=None,
 ):
-    from pympler.asizeof import asizeof
-
     neural_concat, ref_mc, time_vect = extract_neural_and_merge(metas)
     path_fig = path_fig or ref_mc.run_paths.figures
 
-    tot_obj_size = asizeof(neural_concat)
-    _log.debug(
-        f"size of all neurals: {sizeof_fmt(tot_obj_size)} for {len(metas)} results ({sizeof_fmt(tot_obj_size/len(metas))} per neural)"
-    )
     plotted = {}
     for pair in pops_paired:
         fig_pop, ax_pop = plot_population_paired(
