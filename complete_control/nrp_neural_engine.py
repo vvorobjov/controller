@@ -37,9 +37,6 @@ class Script(GrpcEngineScript):
         self.log.debug(nest.ResetKernel())
         self.step = 0
 
-        # Load custom NESTML modules
-        # nest.Install("state_check_module")
-
         run_timestamp_str = os.getenv("EXEC_TIMESTAMP")
 
         self.run_paths = RunPaths.from_run_id(run_timestamp_str)
@@ -57,6 +54,7 @@ class Script(GrpcEngineScript):
             self.run_paths.data_nest,
         )
         self.log.info("Environment and NEST kernel setup complete.")
+        self.log.info(f"Neuron modelss: {nest.Models()}")
 
         self.controllers = create_controllers(self.master_config)
         self.log.info(f"Created {len(self.controllers)} controllers.")
