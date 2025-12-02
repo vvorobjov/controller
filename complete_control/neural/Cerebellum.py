@@ -44,8 +44,9 @@ class Cerebellum:
         self.label_prefix = label_prefix
         self.populations = CerebellumPopulations()
         self.forward_model = None
+        self.comm = comm
 
-        adapter: NestAdapter = get_simulation_adapter("nest", comm)
+        adapter: NestAdapter = get_simulation_adapter("nest", self.comm)
 
         conf_forward: config.Configuration = config.parse_configuration_file(
             str(paths.forward_yaml)
@@ -54,13 +55,13 @@ class Cerebellum:
             str(paths.inverse_yaml)
         )
 
-        self.forward_model = from_storage(str(paths.cerebellum_hdf5), comm)
+        self.forward_model = from_storage(str(paths.cerebellum_hdf5), self.comm)
         self.forward_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_forward.simulations[SIMULATION_NAME_IN_YAML]
         )
         self.log.debug("loaded forward model and its configuration")
 
-        self.inverse_model = from_storage(str(paths.cerebellum_hdf5), comm)
+        self.inverse_model = from_storage(str(paths.cerebellum_hdf5), self.comm)
         self.inverse_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_inverse.simulations[SIMULATION_NAME_IN_YAML]
         )
@@ -131,6 +132,7 @@ class Cerebellum:
         self.populations.inv_dcnp_n = self._find_popview(inv, "dcn_p_minus")
         self.populations.inv_pc_p = self._find_popview(inv, "purkinje_cell_plus")
         self.populations.inv_pc_n = self._find_popview(inv, "purkinje_cell_minus")
+        self.log.debug(f"all populations correctly retrieved")
 
         self._update_weight_plastic_pops(weights)
 
@@ -176,8 +178,11 @@ class Cerebellum:
         create_plastic = Profile()
 
         num_conns_curr_proc = applied_weights = 0
+        add_kwargs = {}
+        if self.comm:
+            add_kwargs = {"local_only": True}
         with create_plastic.time():
-            loc_nodes = set(nest.GetNodes(local_only=True).get("global_id"))
+            loc_nodes = set(nest.GetNodes(**add_kwargs).get("global_id"))
             curr_proc_recordings: defaultdict[str, list[SynapseRecording]] = (
                 defaultdict(list)
             )

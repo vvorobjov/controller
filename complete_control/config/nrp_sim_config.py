@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
+
 from . import MasterParams
 
 
@@ -22,7 +24,7 @@ class SimulationConfig(BaseModel):
     SimulationDescription: str = (
         "Launch a py_sim engine to run a Bullet simulation and a python engine to control the simulation"
     )
-    SimulationTimeout: int
+    SimulationTimeout: float
     EngineConfigs: List[EngineConfig] = [
         EngineConfig(
             EngineType="python_grpc",
@@ -51,6 +53,6 @@ class SimulationConfig(BaseModel):
     @classmethod
     def from_masterparams(cls, mp: MasterParams, **kwargs):
         return SimulationConfig(
-            SimulationTimeout=int(mp.simulation.duration_ms / 1000),
+            SimulationTimeout=mp.simulation.duration_ms / 1000,
             **kwargs,
         )

@@ -51,6 +51,7 @@ class Script(GrpcEngineScript):
         proto_wrapper = nrpgenericproto_pb2.ArrayDouble()
         proto_wrapper.array.extend([0.0, 0.0])
         self._setDataPack("control_cmd", proto_wrapper)
+        self.joint_pos_rad = None
 
         self.log.info("NRP Bullet Engine: Initialization complete.")
 
@@ -69,14 +70,14 @@ class Script(GrpcEngineScript):
             )
 
         if curr_section == TrialSection.TIME_POST:
-            joint_pos_rad = 0.0  # mask joint position during TIME_POST
+            self.joint_pos_rad = 0.0  # mask joint position during TIME_POST
 
         self.current_sim_time_s += self.config.RESOLUTION_S
         self.step += 1
         if self.step % 50 == 0:
             self.log.debug(
                 f"[bullet] Update {self.step} complete.",
-                joint_pos=joint_pos_rad,
+                joint_pos=self.joint_pos_rad,
                 rate_pos=rate_pos,
                 rate_neg=rate_neg,
                 time_pybullet=str(self.pybullet_profile.total_time),
@@ -84,7 +85,7 @@ class Script(GrpcEngineScript):
             )
 
         datapack = wrappers_pb2.DoubleValue()
-        datapack.value = joint_pos_rad
+        datapack.value = self.joint_pos_rad
         self._setDataPack("joint_pos_rad", datapack)
 
         self.rest_profile.start()

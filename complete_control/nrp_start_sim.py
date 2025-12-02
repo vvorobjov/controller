@@ -3,13 +3,12 @@ import os
 from timeit import default_timer as timer
 
 import structlog
-from config import ResultMeta
 from config.MasterParams import MasterParams
 from config.nrp_sim_config import SimulationConfig
 from config.paths import RunPaths
+from config.ResultMeta import ResultMeta, extract_id
 from neural.plot_utils import plot_controller_outputs
 from nrp_client import NrpCore
-from nrp_protobuf import wrappers_pb2
 from plant.plant_plotting import plot_plant_outputs
 from tqdm import tqdm
 from utils_common.results import make_trial_id
@@ -103,7 +102,7 @@ def run_trial(parent_id: str = "") -> str:
 def main():
     # For standalone execution, we still support reading PARENT_ID from env
     # and printing the marker for the old runner if needed.
-    parent_id = ResultMeta.extract_id(os.environ.get("PARENT_ID") or "")
+    parent_id = extract_id(os.environ.get("PARENT_ID") or "")
     run_id = run_trial(parent_id)
     print(f"__SIMULATION_RUN_ID__:{run_id}", flush=True)
 
