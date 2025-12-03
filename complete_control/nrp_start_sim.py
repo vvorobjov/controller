@@ -14,10 +14,9 @@ from tqdm import tqdm
 from utils_common.results import make_trial_id
 
 
-def run_trial(parent_id: str = "") -> str:
+def run_trial(parent_id: str = "", label: str = "") -> str:
     client_log = structlog.get_logger("nrp_client")
 
-    label = ""
     run_id = make_trial_id(label=label)
 
     os.environ["EXEC_TIMESTAMP"] = run_id

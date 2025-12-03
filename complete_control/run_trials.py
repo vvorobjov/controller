@@ -118,7 +118,7 @@ def run_trial_music(trial_num: int, total_trials: int, parent_id: str | None) ->
             pass
 
 
-def run_trial_nrp(trial_num: int, total_trials: int, parent_id: str) -> str:
+def run_trial_nrp(trial_num: int, total_trials: int, parent_id: str, label: str) -> str:
     """Runs a single NRP simulation trial using direct Python call."""
     log.info(f"--- Starting NRP Trial {trial_num}/{total_trials} ---")
 
@@ -133,7 +133,7 @@ def run_trial_nrp(trial_num: int, total_trials: int, parent_id: str) -> str:
         log.info("Starting a new simulation chain.")
 
     try:
-        run_id = run_trial_nrp_func(parent_id=parent_id)
+        run_id = run_trial_nrp_func(parent_id=parent_id, label=label)
         log.info(f"Trial {trial_num} completed successfully. Run ID: {run_id}")
         return run_id
     except Exception as e:
@@ -158,8 +158,14 @@ def main():
         "--backend",
         type=str,
         choices=["music", "nrp"],
-        default="music",
-        help="The simulation backend to use (default: music).",
+        default="nrp",
+        help="The simulation backend to use (default: nrp).",
+    )
+    parser.add_argument(
+        "--label",
+        type=str,
+        help="The simulation backend to use (default: '').",
+        default="",
     )
     args = parser.parse_args()
 
@@ -181,7 +187,9 @@ def main():
             if args.backend == "music":
                 run_id = run_trial_music(i + 1, args.num_trials, current_parent_id)
             elif args.backend == "nrp":
-                run_id = run_trial_nrp(i + 1, args.num_trials, current_parent_id)
+                run_id = run_trial_nrp(
+                    i + 1, args.num_trials, current_parent_id, args.label
+                )
 
             current_parent_id = run_id
         except RuntimeError:
