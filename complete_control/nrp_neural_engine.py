@@ -102,7 +102,8 @@ class Script(GrpcEngineScript):
         with self.sim_profile.time():
             if (
                 curr_section != TrialSection.TIME_GRASP
-                and curr_section != TrialSection.TIME_MOVE
+                and curr_section != TrialSection.TIME_POST
+                and curr_section != TrialSection.TIME_END_TRIAL
             ):
                 nest.Run(timestep_ns * NANO_SEC * 1000)
 
@@ -154,4 +155,4 @@ class Script(GrpcEngineScript):
         with open(self.master_config.run_paths.neural_result, "w") as f:
             f.write(res.model_dump_json())
 
-        # nest.Cleanup()
+        nest.Cleanup()

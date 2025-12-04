@@ -30,6 +30,7 @@ def draw_schema(metas: list[ResultMeta], scale_factor: float = 0.005):
     run_paths = metas[-1].load_params().run_paths
     figs_path = prep_temp_dir(run_paths)
 
+    # TODO create no cereb population set, only pass those when use_cereb false
     p = merge_and_plot(metas, path_fig=figs_path)
 
     fig, ax = plt.subplots(figsize=(40, 35))
