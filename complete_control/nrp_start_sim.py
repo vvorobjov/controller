@@ -11,6 +11,7 @@ from neural.plot_utils import plot_controller_outputs
 from nrp_client import NrpCore
 from plant.plant_plotting import plot_plant_outputs
 from tqdm import tqdm
+from utils_common.draw_schema import draw_schema
 from utils_common.results import make_trial_id
 
 
@@ -76,11 +77,15 @@ def run_trial(parent_id: str = "", label: str = "") -> str:
 
     nrp.shutdown()
 
+    result = ResultMeta.create(master_config)
+    result.save(master_config.run_paths)
+
     if master_config.plotting.PLOT_AFTER_SIMULATE:
         client_log.info("--- Generating Plots (Standalone) ---")
         plot_start_time = timer()
-        plot_controller_outputs(run_paths)
-        plot_plant_outputs(run_paths)
+        # plot_controller_outputs([result])
+        plot_plant_outputs([result])
+        # draw_schema([result])
         plot_end_time = timer()
         total_plot_time = datetime.timedelta(seconds=plot_end_time - plot_start_time)
         client_log.info(f"Plotting Finished. {total_plot_time.total_seconds():.1f} s")
@@ -91,9 +96,6 @@ def run_trial(parent_id: str = "", label: str = "") -> str:
     client_log.info(
         f"Simulation completed. Total execution time: {total_time.total_seconds():.1f} s"
     )
-
-    result = ResultMeta.create(master_config)
-    result.save(master_config.run_paths)
 
     return run_id
 

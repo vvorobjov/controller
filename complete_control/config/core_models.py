@@ -33,8 +33,8 @@ class RobotSpecParams(BaseModel, frozen=True):
 
 
 class ExperimentParams(BaseModel, frozen=True):
-    enable_gravity: bool = False
-    z_gravity_magnitude: float = 0.2  # m/s^2
+    enable_gravity: bool = True
+    z_gravity_magnitude: float = 2  # m/s^2
 
 
 class OracleData(BaseModel):
@@ -120,6 +120,6 @@ class MusicParams(BaseModel, frozen=True):
 
 
 class PlottingParams(BaseModel, frozen=True):
-    PLOT_AFTER_SIMULATE: bool = False
+    PLOT_AFTER_SIMULATE: bool = True
     CAPTURE_VIDEO: list[str] = []  # ["x", "y", "z"]
     NUM_STEPS_CAPTURE_VIDEO: int = 100

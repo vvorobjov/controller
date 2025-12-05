@@ -78,7 +78,7 @@ class ConnectionsParams(BaseModel):
     """
     error_io_f: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=1.0,  # 0.016,
+            weight=0.5,
             delay=min_delay,
             receptor_type=1,
         )
@@ -163,7 +163,7 @@ class ConnectionsParams(BaseModel):
     )
     error_inv_io_i: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.8,  # 0.4,
+            weight=0.8,
             delay=min_delay,
             receptor_type=1,
         )
@@ -179,14 +179,12 @@ class ConnectionsParams(BaseModel):
     @computed_field
     @property
     def sn_fbk_smoothed(self) -> SingleSynapseParams:
-        return SingleSynapseParams(weight=0.005, delay=self.sensory_delay)  # 0.028
+        return SingleSynapseParams(weight=0.005, delay=self.sensory_delay)
 
     @computed_field
     @property
     def dcn_f_error(self) -> SingleSynapseParams:
-        return SingleSynapseParams(
-            weight=-0.0154, delay=self.sensory_delay
-        )  # intanto setta 0.1 -> 0.0 per vedere solo contributo fbk
+        return SingleSynapseParams(weight=-0.0154, delay=self.sensory_delay)
 
     @computed_field
     @property

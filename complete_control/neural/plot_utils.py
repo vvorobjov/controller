@@ -558,16 +558,12 @@ def plot_controller_outputs(metas: list[ResultMeta]):
 
     # merge_and_plot(metas)
 
-    # p = merge_and_plot(
-    #     [metas[0], metas[-1]],
-    #     pops_single=[],
-    #     pops_paired=[
-    #         (POPS.planner_p, POPS.planner_n),
-    #         (POPS.forw_io_p, POPS.forw_io_n),
-    #         (POPS.state_p, POPS.state_n),
-    #     ],
-    # )
-    # create_collage(p, path_fig, "first-last")
+    p = merge_and_plot(
+        [metas[0], metas[-1]],
+        pops_single=[POPS.plan_to_inv],
+        pops_paired=[(POPS.planner_p, POPS.planner_n)],
+    )
+    create_collage(p, path_fig, "first-last")
 
     # populations_to_overlay = [
     #     POPS.planner_p,
