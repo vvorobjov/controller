@@ -1,16 +1,24 @@
 from pathlib import Path
+from typing import List
 
-import numpy as np
 import structlog
 from mpi4py.MPI import Comm
+from neural.result_models import NeuralResultManifest
+from neural.Controller import PopulationBlocks
 from neural.nest_adapter import nest
-from neural.neural_models import PopulationSpikes, SynapseBlock, SynapseRecording
-from neural.population_view import PopView
+from neural.neural_models import (
+    SynapseBlock,
+    SynapseRecording,
+)
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(str(__file__))
 
 
-def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
+def collapse_files(
+    dir: Path,
+    pop_blocks: PopulationBlocks,
+    comm: Comm = None,
+):
     """
     Collapses multiple ASCII recording files from different processes into single files per population.
     TODO decide how to handle non-ascii popviews: fail or ignore?
@@ -18,7 +26,7 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     ----------
     dir : str
         Directory path containing the recording files
-    pops : list[PopView]
+    pop_blocks : PopulationBlocks
     comm : Comm
         Comm on which to barrier() on
     Notes
@@ -26,81 +34,73 @@ def collapse_files(dir: Path, pops: list[PopView], comm: Comm = None):
     Files are processed only by rank 0 process. For each population, files starting with
     the population name are combined, duplicates are removed, and original files are deleted.
     """
-    for pop in pops:
-        gids = nest.GetStatus(pop.pop, "global_id")
-        neuron_model = nest.GetStatus(pop.pop, "model")[0]
-        if comm is None or nest.Rank() == 0:
-            name = pop.label
-            file_list = [
-                i
-                for i in dir.iterdir()
-                if i.name.startswith(name) and i.suffix != ".json"
-            ]
-            senders = []
-            times = []
-            combined_data = []
 
-            for f in file_list:
-                with open(dir / f, "r") as fd:
-                    lines = fd.readlines()
-                    for line in lines:
-                        if line.startswith("#") or line.startswith("sender"):
-                            continue
-                        combined_data.append(line.strip())
-            unique_lines = list(set(combined_data))
+    controller_rec = cerebhandler_rec = cereb_rec = None
+    use_cerebellum = False
 
-            for line in unique_lines:
-                sender, time = line.split()
-                senders.append(int(sender))
-                times.append(float(time))
+    controller_rec = pop_blocks.controller.to_recording(dir, comm)
 
-            pop_spikes = PopulationSpikes(
-                label=name,
-                gids=np.array(gids),
-                senders=np.array(senders),
-                times=np.array(times),
-                population_size=len(pop.pop),
-                neuron_model=neuron_model,
-            )
+    if pop_blocks.cerebellum_handler:
+        use_cerebellum = True
+        cerebhandler_rec = pop_blocks.cerebellum_handler.to_recording(dir, comm)
+        cereb_rec = pop_blocks.cerebellum.to_recording(dir, comm)
 
-            complete_file = dir / (name + ".json")
-            with open(complete_file, "w") as wfd:
-                wfd.write(pop_spikes.model_dump_json(indent=4))
-
-            pop.filepath = complete_file
-            for f in file_list:
-                f.unlink()
     if comm is not None:
         nest.SyncProcesses()
 
+    return NeuralResultManifest(
+        controller=controller_rec,
+        cerebellum_handler=cerebhandler_rec,
+        cerebellum=cereb_rec,
+        use_cerebellum=use_cerebellum,
+        weights=None,
+    )
 
-def save_conn_weights(weights_history: dict, dir: Path, filename_prefix: str):
-    """
-    merge SynapseRecording objects with the same (source, target, type, trials_recorded),
-    concatenate their weight_history, and save as a JSON array.
-    """
-    for (source_pop, target_pop), inner in weights_history.items():
-        label = f"{source_pop.label}>{target_pop.label}"
-        recs = []
-        for (
-            (source_neur, target_neur, synapse_id, synapse_model),
-            weights,
-        ) in inner.items():
-            recs.append(
-                SynapseRecording(
-                    source=source_neur,
-                    target=target_neur,
-                    syn_id=synapse_id,
-                    syn_type=synapse_model,
-                    weight_history=weights,
-                )
+
+def merge_synapse_blocks(blocks: List[SynapseBlock]) -> SynapseBlock:
+    if not blocks:
+        raise ValueError("Cannot merge empty list of blocks")
+
+    reference_source = blocks[0].source_pop_label
+    reference_target = blocks[0].target_pop_label
+
+    for i, block in enumerate(blocks[1:], start=1):
+        if (
+            block.source_pop_label != reference_source
+            or block.target_pop_label != reference_target
+        ):
+            raise ValueError(
+                f"Inconsistent source_pop_label: block 0 has '{reference_source}>{reference_target}', "
+                f"but block {i} has '{block.source_pop_label}>{block.target_pop_label}'"
             )
-        s = SynapseBlock(
-            source_pop_label=source_pop.label,
-            target_pop_label=target_pop.label,
-            synapse_recordings=recs,
-        )
-        rec_path = dir / f"{filename_prefix}-{label}.json"
-        with open(rec_path, "w") as f:
-            json_array = s.model_dump_json(indent=2)
-            f.write(json_array)
+
+    return SynapseBlock(
+        source_pop_label=blocks[0].source_pop_label,
+        target_pop_label=blocks[0].target_pop_label,
+        synapse_recordings=[r for b in blocks for r in b.synapse_recordings],
+    )
+
+
+def save_conn_weights(weights: list[SynapseBlock], dir: Path, comm=None) -> list[Path]:
+    from neural.Cerebellum import create_key_plastic_connection
+
+    paths = []
+    _log.debug(f"saving weights...")
+    for block in weights:
+        if comm is not None:
+            # gather all blocks and merge them in a single object
+            gathered: list[SynapseBlock] = comm.gather(block, root=0)
+            if comm.rank == 0:
+                block = merge_synapse_blocks(gathered)
+
+        if comm is None or comm.rank == 0:
+            label = create_key_plastic_connection(
+                block.source_pop_label, block.target_pop_label
+            )
+            rec_path = dir / f"{label}.json"
+            _log.debug(f"saving {label}, with {len(block.synapse_recordings)} synapses")
+            with open(rec_path, "w") as f:
+                json_array = block.model_dump_json(indent=2)
+                f.write(json_array)
+            paths.append(rec_path)
+    return paths

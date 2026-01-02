@@ -22,8 +22,9 @@ from complete_control.plant.plant_plotting import plot_plant_outputs
 
 def coordinate_with_simulation():
     shared_data = {
-        "timestamp": None,
+        "run_id": None,
         "paths": None,
+        "parent_id": None,
     }
     print("attempting to receive data via broadcast")
     return MPI.COMM_WORLD.bcast(shared_data, root=0)
@@ -31,13 +32,13 @@ def coordinate_with_simulation():
 
 def main():
     shared_data = coordinate_with_simulation()
-    run_timestamp_str: str = shared_data["timestamp"]
+    run_id: str = shared_data["run_id"]
     run_paths: project_paths.RunPaths = shared_data["paths"]
 
     setup_logging(
         comm=MPI.COMM_WORLD,
         log_dir_path=run_paths.logs,
-        timestamp_str=run_timestamp_str,
+        timestamp_str=run_id,
         log_level=os.environ.get("LOG_LEVEL", "DEBUG"),
         default_log_all_ranks=True,
     )
@@ -45,13 +46,15 @@ def main():
     log.info(
         "Receiver plant process started and configured.",
         world_rank=MPI.COMM_WORLD.Get_rank(),
-        run_timestamp=run_timestamp_str,
+        run_id=run_id,
         log_path=str(run_paths.logs),
     )
 
     try:
         log.info("Initializing PlantSimulator...")
-        config = PlantConfig.from_runpaths(run_paths)
+        config = PlantConfig.from_runpaths(
+            run_paths, parent_id=shared_data["parent_id"]
+        )
         simulator = PlantSimulator(
             config=config,
             pybullet_instance=p,
@@ -72,7 +75,7 @@ def main():
             log.info("Disconnecting PyBullet from receiver plant.")
             p.disconnect()
 
-    if config.master_config.PLOT_AFTER_SIMULATE:
+    if config.master_config.plotting.PLOT_AFTER_SIMULATE:
         plot_plant_outputs(config.run_paths)
 
     log.info("Receiver plant process finished.")

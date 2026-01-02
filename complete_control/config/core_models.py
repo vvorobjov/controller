@@ -33,18 +33,16 @@ class RobotSpecParams(BaseModel, frozen=True):
 
 
 class ExperimentParams(BaseModel, frozen=True):
-    enable_gravity: bool = False
-    z_gravity_magnitude: float = 9.81  # m/s^2
-    gravity_trial_start: int = 0  # gravity turns ON at start of this trial
-    gravity_trial_end: int = 1  # gravity turns OFF at end of this trial
+    enable_gravity: bool = True
+    z_gravity_magnitude: float = 2  # m/s^2
 
 
 class OracleData(BaseModel):
     init_joint_angle: float = 90
-    tgt_joint_angle: float = 20
+    tgt_joint_angle: float = 140
     target_visual_offset: float = 4.0
     target_tolerance_angle_deg: float = 10
-    target_color: TargetColor = Field(default=TargetColor.BLUE_LEFT)
+    target_color: TargetColor = Field(default=TargetColor.RED_RIGHT)
     robot_spec: RobotSpecParams = Field(default_factory=lambda: RobotSpecParams())
 
     @computed_field
@@ -63,11 +61,11 @@ class OracleData(BaseModel):
 
 
 class SimulationParams(BaseModel, frozen=True):
-    resolution: float = 0.1  # ms
-    time_prep: float = 150.0  # ms
+    resolution: float = 1.0  # ms
+    time_prep: float = 650.0  # ms
     time_move: float = 500.0  # ms
-    time_post: float = 350.0  # ms
-    n_trials: int = 2
+    time_grasp: float = 100.0  # ms
+    time_post: float = 250.0  # ms
 
     oracle: OracleData = Field(default_factory=lambda: OracleData())
 
@@ -75,13 +73,13 @@ class SimulationParams(BaseModel, frozen=True):
 
     @computed_field
     @property
-    def duration_single_trial_ms(self) -> float:
-        return self.time_prep + self.time_move + self.time_post
+    def duration_ms(self) -> float:
+        return self.time_prep + self.time_move + self.time_grasp + self.time_post
 
     @computed_field
     @property
-    def total_duration_all_trials_ms(self) -> float:
-        return self.duration_single_trial_ms * self.n_trials
+    def duration_s(self) -> float:
+        return self.duration_ms / 1000
 
     @classmethod
     def get_default(cls, field_name: str):
@@ -94,7 +92,7 @@ class SimulationParams(BaseModel, frozen=True):
 
     @property
     def sim_steps(self) -> int:
-        return int(self.total_duration_all_trials_ms / self.resolution)
+        return int(self.duration_ms / self.resolution)
 
     @property
     def neural_control_steps(self) -> int:
@@ -102,11 +100,11 @@ class SimulationParams(BaseModel, frozen=True):
 
     @property
     def manual_control_steps(self) -> int:
-        return int(self.time_post / self.resolution)
+        return int((self.time_grasp + self.time_post) / self.resolution)
 
 
 class BrainParams(BaseModel, frozen=True):
-    population_size: int = 50
+    population_size: int = 200
     first_id_sens_neurons: int = 0  # not sure why we need this.
 
 
@@ -119,3 +117,9 @@ class MusicParams(BaseModel, frozen=True):
     # robotic side ports
     port_motcmd_in: str = "mot_cmd_in"
     port_fbk_out: str = "fbk_out"
+
+
+class PlottingParams(BaseModel, frozen=True):
+    PLOT_AFTER_SIMULATE: bool = True
+    CAPTURE_VIDEO: list[str] = []  # ["x", "y", "z"]
+    NUM_STEPS_CAPTURE_VIDEO: int = 10

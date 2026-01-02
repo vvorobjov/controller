@@ -10,8 +10,11 @@ import structlog
 
 from complete_control.config import paths
 from complete_control.config.paths import RUNS_DIR, RunPaths
+from complete_control.config.ResultMeta import ResultMeta
 from complete_control.neural.plot_utils import plot_controller_outputs
 from complete_control.plant.plant_plotting import plot_plant_outputs
+from complete_control.utils_common.draw_schema import draw_schema
+from complete_control.utils_common.results import gather_metas
 
 log = structlog.get_logger()
 
@@ -38,18 +41,20 @@ def main():
         "If no directory is provided, the most recent one is used."
     )
     parser.add_argument(
-        "run_directory",
+        "id",
         type=str,
         nargs="?",
         default=None,
-        help="The path to the simulation run directory (e.g., 'runs/20231027_120000'). "
-        "If omitted, the latest run will be used.",
+        help="ID to plot. If no ID is provided, the most recent one is used.",
     )
     args = parser.parse_args()
 
+    metas = None
     run_dir = None
-    if args.run_directory:
-        run_dir = Path(args.run_directory)
+
+    if args.id:
+        log.info("IDs provided, loading metas...", ids=args.id)
+        metas = list(reversed(gather_metas(args.id)))
     else:
         log.info("No run directory provided, searching for the most recent one...")
         run_dir = find_most_recent_run()
@@ -57,40 +62,21 @@ def main():
             log.error("No run directories found in RUNS_DIR.", path=str(RUNS_DIR))
             sys.exit(1)
         log.info("Found most recent run directory.", path=str(run_dir))
+        metas = list(reversed(gather_metas(run_dir.name)))
 
-    if not run_dir.is_dir():
+    if run_dir and not run_dir.is_dir():
         log.error("The specified run directory does not exist.", path=str(run_dir))
         sys.exit(1)
 
-    log.info("Setting up run paths...", run_directory=str(run_dir))
-
-    # The timestamp is the name of the run directory
-    current_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_timestamp_str = run_dir.name
-    run_paths = RunPaths.from_run_id(run_timestamp_str)
-    path_current_figures = (
-        run_paths.run
-        / f"manualplots@{current_timestamp}"
-        / paths.FOLDER_NAME_NEURAL_FIGS
-    )
-    path_current_figures.mkdir(exist_ok=True, parents=True)
-    path_current_receiver_figs = (
-        run_paths.run
-        / f"manualplots@{current_timestamp}"
-        / paths.FOLDER_NAME_ROBOTIC_FIGS
-    )
-    path_current_receiver_figs.mkdir(exist_ok=True, parents=True)
-    run_paths = dataclasses.replace(
-        run_paths,
-        figures=path_current_figures,
-        figures_receiver=path_current_receiver_figs,
-    )
-
     log.info("Generating plots...")
-    plot_controller_outputs(run_paths)
-    plot_plant_outputs(run_paths)
+    # plot_controller_outputs(metas)
+    # plot_plant_outputs(metas)
+    draw_schema(metas, scale_factor=0.005)
 
-    log.info("Plotting complete.", output_directory=str(run_paths.figures))
+    log.info(
+        "Plotting complete.",
+        output_directory=str(RunPaths.from_run_id(metas[-1].id).figures),
+    )
 
 
 if __name__ == "__main__":

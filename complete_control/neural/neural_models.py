@@ -1,8 +1,27 @@
-from typing import List
+from pathlib import Path
+from typing import List, TypeVar
 
 from pydantic import BaseModel
+from utils_common.custom_types import NdArray
 
-from complete_control.utils_common.custom_types import NdArray
+T = TypeVar("T")
+
+
+def convert_to_recording(
+    source: object, target_class: type[T], path: Path, comm=None
+) -> T:
+    from neural.population_view import PopView
+
+    """Convert a population object to its recording equivalent."""
+    dest = target_class()
+    for k, v in source.__dict__.items():
+        if isinstance(v, PopView):
+            setattr(dest, k, v.collect(path, comm))
+    return dest
+
+
+class RecordingManifest(BaseModel):
+    population_spikes: Path
 
 
 class PopulationSpikes(BaseModel):
@@ -21,12 +40,19 @@ class PopulationSpikes(BaseModel):
         arbitrary_types_allowed = True
 
 
-class SynapseRecording(BaseModel):
-    weight_history: List[float]
+class Synapse(BaseModel):
     source: int  # GID
     target: int  # GID
-    syn_type: str
     syn_id: int
+    synapse_model: str
+    # receptor_type: int see https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
+    delay: float
+    port: int
+
+
+class SynapseRecording(BaseModel):
+    syn: Synapse
+    weight: float
 
     class Config:
         arbitrary_types_allowed = True

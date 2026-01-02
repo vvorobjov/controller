@@ -6,9 +6,12 @@ __credits__ = ["Cristiano Alessandro and Massimo Grillo"]
 __license__ = "GPL"
 __version__ = "1.0.1"
 
+import structlog
 from neural.nest_adapter import nest
 
 from .population_view import PopView
+
+_log = structlog.get_logger("neural.StateEstimator")
 
 
 class StateEstimator_mass:
@@ -36,19 +39,31 @@ class StateEstimator_mass:
         self.pops_n = []
         for i in range(numJoints):
 
-            tmp_pop_p = nest.Create("state_neuron_nestml", numNeurons)
+            tmp_pop_p = nest.Create("state_neuron", numNeurons)  # state_neuron_nestml
             nest.SetStatus(tmp_pop_p, self._param_neurons)
             nest.SetStatus(tmp_pop_p, {"pos": True})
-            self.pops_p.append(
-                PopView(tmp_pop_p, time_vect, to_file=True, label="state_p")
-            )
+            self.pops_p.append(PopView(tmp_pop_p, to_file=True, label="state_p"))
 
-            tmp_pop_n = nest.Create("state_neuron_nestml", numNeurons)
+            tmp_pop_n = nest.Create("state_neuron", numNeurons)  # state_neuron_nestml
             nest.SetStatus(tmp_pop_n, self._param_neurons)
-            nest.SetStatus(tmp_pop_p, {"pos": False})
-            self.pops_n.append(
-                PopView(tmp_pop_n, time_vect, to_file=True, label="state_n")
-            )
+            nest.SetStatus(tmp_pop_n, {"pos": False})
+            self.pops_n.append(PopView(tmp_pop_n, to_file=True, label="state_n"))
+
+        """
+        params = [
+            "kp",
+            "base_rate",
+            "buffer_size",
+            "N_fbk",
+            "N_pred",
+            "fbk_bf_size",
+            "pred_bf_size",
+            "receptor_types",
+            "var_fbk",
+        ]
+        state_status = nest.GetStatus(tmp_pop_p[:1], params)[0]
+        print(f"State params: {state_status}")
+        """
 
     @property
     def numNeuronsPop(self):
@@ -70,7 +85,7 @@ class StateEstimator:
         kpred=0.0,
         ksens=1.0,
         pathData="./data/",
-        **kwargs
+        **kwargs,
     ):
 
         self._numNeuronsPop = numNeurons
@@ -149,33 +164,33 @@ class StateEstimator:
 
             # Positive population (joint i)
             tmp_pop_p = nest.Create("parrot_neuron", numNeurons)
-            self.pred_p.append(PopView(tmp_pop_p, time_vect))
+            self.pred_p.append(PopView(tmp_pop_p, to_file=False))
 
             # Negative population (joint i)
             tmp_pop_n = nest.Create("parrot_neuron", numNeurons)
-            self.pred_n.append(PopView(tmp_pop_n, time_vect))
+            self.pred_n.append(PopView(tmp_pop_n, to_file=False))
 
             ############ SENSORY FEEDBACK POPULATION ############
 
             # Positive population (joint i)
             tmp_pop_p = nest.Create("parrot_neuron", numNeurons)
-            self.sens_p.append(PopView(tmp_pop_p, time_vect))
+            self.sens_p.append(PopView(tmp_pop_p, to_file=False))
 
             # Negative population (joint i)
             tmp_pop_n = nest.Create("parrot_neuron", numNeurons)
-            self.sens_n.append(PopView(tmp_pop_n, time_vect))
+            self.sens_n.append(PopView(tmp_pop_n, to_file=False))
 
             ############ OUTPUT POPULATION ############
 
             # Positive population (joint i)
             tmp_pop_p = nest.Create("basic_neuron", n=numNeurons, params=par_out)
             nest.SetStatus(tmp_pop_p, {"pos": True, "buffer_size": buf_sz})
-            self.out_p.append(PopView(tmp_pop_p, time_vect))
+            self.out_p.append(PopView(tmp_pop_p, to_file=False))
 
             # Negative population (joint i)
             tmp_pop_n = nest.Create("basic_neuron", n=numNeurons, params=par_out)
             nest.SetStatus(tmp_pop_n, {"pos": False, "buffer_size": buf_sz})
-            self.out_n.append(PopView(tmp_pop_n, time_vect))
+            self.out_n.append(PopView(tmp_pop_n, to_file=False))
 
             ###### CONNECT FFWD AND FBK POULATIONS TO OUT POPULATION ######
             # Populations of each joint are connected together according to connection

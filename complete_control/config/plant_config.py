@@ -32,15 +32,14 @@ class PlantConfig:
         self.TIME_MOVE_S: float = self.TIME_MOVE_MS / 1000.0
         self.TIME_PREP_MS: float = self.master_config.simulation.time_prep
         self.TIME_PREP_S: float = self.TIME_PREP_MS / 1000.0
-        self.N_TRIALS: int = self.master_config.simulation.n_trials
+        self.TIME_GRASP_MS: int = self.master_config.simulation.time_grasp
+        self.TIME_GRASP_S: int = self.master_config.simulation.time_grasp / 1000.0
         self.TIME_POST_MS: float = self.master_config.simulation.time_post
         self.TIME_POST_S: float = self.TIME_POST_MS / 1000.0
 
-        self.TIME_TRIAL_S: float = (
-            self.master_config.simulation.duration_single_trial_ms / 1000.0
-        )
+        self.TIME_TRIAL_S: float = self.master_config.simulation.duration_ms / 1000.0
         self.TOTAL_SIM_DURATION_S: float = (
-            self.master_config.simulation.total_duration_all_trials_ms / 1000.0
+            self.master_config.simulation.duration_ms / 1000.0
         )
 
         self.time_vector_total_s: np.ndarray = np.arange(
@@ -63,7 +62,7 @@ class PlantConfig:
         self.N_NEURONS: int = self.master_config.brain.population_size
 
         # Plant interaction parameters (remain as is for Stage 1)
-        self.SCALE_TORQUE: float = 500000.0
+        self.SCALE_TORQUE: float = 5000.0  # 500000.0
         self.BUFFER_SIZE_S: float = 1.0 / 100.0
 
         # MUSIC configuration from MasterConfig

@@ -11,6 +11,7 @@ from .core_models import (
     ExperimentParams,
     MetaInfo,
     MusicParams,
+    PlottingParams,
     SimulationParams,
 )
 from .module_params import ModuleContainerConfig
@@ -24,14 +25,17 @@ class MasterParams(BaseModel):
         "arbitrary_types_allowed": True,
     }
     run_paths: RunPaths
+    run_id: str
+    parent_id: str
 
-    PLOT_AFTER_SIMULATE: bool = True
     USE_CEREBELLUM: bool = True
     GUI_PYBULLET: bool = False
     USE_MUSIC: bool = False
-    SAVE_WEIGHTS_CEREB: bool = False
+    SAVE_WEIGHTS_CEREB: bool = True
 
     NJT: int = 1
+    JOINTS_NO_CONTROL: int = 2
+    plotting: PlottingParams = Field(default_factory=lambda: PlottingParams())
     simulation: SimulationParams = Field(default_factory=lambda: SimulationParams())
     experiment: ExperimentParams = Field(default_factory=lambda: ExperimentParams())
     brain: BrainParams = Field(default_factory=lambda: BrainParams())
@@ -70,7 +74,10 @@ class MasterParams(BaseModel):
             f.write(self.model_dump_json(indent=indent))
 
     @classmethod
-    def from_runpaths(cls, run_paths: RunPaths, **kwargs):
+    def from_runpaths(cls, run_paths: RunPaths, parent_id: str, **kwargs):
         return MasterParams(
-            run_paths=RunPaths.from_run_id(run_paths.run.name), **kwargs
+            run_paths=run_paths,
+            run_id=run_paths.run.name,
+            parent_id=parent_id,
+            **kwargs
         )

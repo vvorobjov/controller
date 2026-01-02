@@ -9,6 +9,7 @@ ARG PYTHON_MINOR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
+    ffmpeg \
     # nest-simulator dependencies, partly from https://nest-simulator.readthedocs.io/en/stable/installation/noenv_install.html#noenv
     gsl-bin \
     libgsl27 \
@@ -74,7 +75,8 @@ ENV VIRTUAL_ENV=/sim/venv
 RUN python -m venv --system-site-packages $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN pip install --upgrade pip setuptools wheel packaging
+COPY ./docker/constraints.txt /tmp/constraints.txt
+RUN pip install --upgrade pip setuptools wheel packaging -c /tmp/constraints.txt
 
 ENV INSTALL_DIR=/sim/install
 ENV DEPS_DIR=/sim/dependencies
@@ -92,7 +94,6 @@ ENV CEREBELLUM_PATH=/sim/cerebellum
 ENV LD_LIBRARY_PATH="${MUSIC_INSTALL_DIR}/lib"
 
 RUN mkdir -p $INSTALL_DIR $DEPS_DIR $NEST_INSTALL_DIR $MUSIC_INSTALL_DIR
-COPY ./docker/constraints.txt /tmp/constraints.txt
 
 # openmpi, music and nest
 FROM base AS builder
@@ -160,10 +161,10 @@ RUN git clone https://github.com/INCF/MUSIC \
     && make -j$(nproc) \
     && make install
 
-####################### NEST 3.7 #######################
-ENV NEST_VERSION=3.7
+####################### NEST 3.9 #######################
+ENV NEST_VERSION=3.9
 
-# Install NEST 3.7
+# Install NEST 3.9
 WORKDIR $DEPS_DIR
 RUN git clone --depth 1 --branch v${NEST_VERSION} https://github.com/nest/nest-simulator/
 WORKDIR ${DEPS_DIR}/nest-simulator
@@ -183,10 +184,6 @@ RUN mkdir -p nest-build \
     $DEPS_DIR/nest-simulator \
     && make -j$(nproc) \
     && make install
-
-# patch nest-server
-RUN sed -i 's/jsonify(response)/jsonify(nest.serialize_data(response))/' "${NEST_PYTHON_MODULE_PATH}"/server/hl_api_server.py
-COPY ./docker/hl_api_types.py "${NEST_PYTHON_MODULE_PATH}"/lib/hl_api_types.py
 
 
 ####################### NRP #######################
@@ -236,7 +233,7 @@ RUN cd ${NRP_SRC_DIR} && ls -al && bash .ci/11-prepare-build.sh && bash .ci/20-b
 ####################### CEREBELLUM+MODELS #######################
 RUN git clone https://github.com/near-nes/cerebellar-models $CEREBELLUM_PATH \
     && cd $CEREBELLUM_PATH \
-    && git checkout 06974a57c233ac5efad6cfae560d2b7eb509027d\
+    && git checkout f538488a988061afad63655cf9e71751a26d2078\
     && cd custom_stdp \
     && cmake . \
     && make \

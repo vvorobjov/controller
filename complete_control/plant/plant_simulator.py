@@ -4,19 +4,16 @@ from typing import Any, List, Tuple
 
 import numpy as np
 import structlog
+from config.core_models import TargetColor
 from config.plant_config import PlantConfig
+from mpi4py import MPI
 from utils_common.log import tqdm
-
-from complete_control.config.core_models import TargetColor
+from utils_common.utils import TrialSection, get_current_section
 
 from . import plant_utils
-from .plant_models import PlantPlotData
+from .plant_models import EEData, JointData, PlantPlotData
 from .robotic_plant import RoboticPlant
 from .sensoryneuron import SensoryNeuron
-
-
-class TrialSection(Enum):
-    TIME_START, TIME_PREP, TIME_MOVE, TIME_POST, TIME_END_TRIAL = range(5)
 
 
 class PlantSimulator:
@@ -62,10 +59,13 @@ class PlantSimulator:
             self.log.debug("MUSIC communication and SensorySystem setup complete.")
 
         self.num_total_steps = len(self.config.time_vector_total_s)
+        total_num_joints = (
+            self.config.master_config.NJT + self.config.master_config.JOINTS_NO_CONTROL
+        )
         self.joint_data = [
-            plant_utils.JointData.empty(self.num_total_steps)
-            for _ in range(self.config.NJT)
+            JointData.empty(self.num_total_steps) for _ in range(total_num_joints)
         ]
+        self.ee_data: EEData = EEData.empty(self.num_total_steps)
         # For storing raw received spikes before processing (per joint)
         self.received_spikes_pos: List[List[Tuple[float, int]]] = [
             [] for _ in range(self.config.NJT)
@@ -73,9 +73,12 @@ class PlantSimulator:
         self.received_spikes_neg: List[List[Tuple[float, int]]] = [
             [] for _ in range(self.config.NJT)
         ]
-        self.errors_per_trial: List[float] = []  # Store final error of each trial
         self.plant._capture_state_and_save(self.config.run_paths.input_image)
         self.checked_proximity = False
+        self.shoulder_moving = False
+
+        for ax in self.config.master_config.plotting.CAPTURE_VIDEO:
+            (self.config.run_paths.video_frames / ax).mkdir(exist_ok=True, parents=True)
 
         # TODO this has to be saved from planner, and currently it's not. mock it!
         if (
@@ -85,6 +88,10 @@ class PlantSimulator:
             self.direction = 0.1
         else:
             self.direction = -0.1
+
+        self.max_len_frame_name = len(
+            str(self.config.TOTAL_SIM_DURATION_S * 1000 * self.config.RESOLUTION_MS)
+        )
 
         self.log.info("PlantSimulator initialization complete.")
 
@@ -113,9 +120,20 @@ class PlantSimulator:
             "MUSIC input port configured",
             port_name=self.config.MUSIC_PORT_MOT_CMD_IN,
             channels=n_music_channels_in,
-            acc_latency=self.config.MUSIC_ACCEPTABLE_LATENCY_S,
+            # acc_latency=self.config.MUSIC_ACCEPTABLE_LATENCY_S,
         )
-
+        #################################
+        try:
+            self.log.info("Plant waiting at MUSIC mapping barrier (MPI.COMM_WORLD)")
+            MPI.COMM_WORLD.barrier()
+            self.log.info("Plant passed MUSIC mapping barrier")
+        except Exception:
+            # If MPI is not available for some reason, continue without blocking
+            self.log.warning(
+                "MPI barrier for MUSIC mapping failed or MPI not available; continuing without sync"
+            )
+            acc_latency = (self.config.MUSIC_ACCEPTABLE_LATENCY_S,)
+        #################################
         # Configure output port mapping
         # Sensory neurons will connect to this port. Mapping is global, base 0, size N*2*njt.
         n_music_channels_out = self.config.N_NEURONS * 2 * self.config.NJT
@@ -211,9 +229,8 @@ class PlantSimulator:
         )
 
     def _should_mask_sensory_info(self, current_sim_time_s: float) -> bool:
-        "mask sensory during TIME_BEFORE_NEXT"
-        time_in_trial = current_sim_time_s % self.config.TIME_TRIAL_S
-        return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < time_in_trial
+        "mask sensory during manual control"
+        return (self.config.TIME_PREP_S + self.config.TIME_MOVE_S) < current_sim_time_s
 
     def music_end_step(
         self, joint_pos_rad: float, current_sim_time_s: float, music_runtime
@@ -249,36 +266,31 @@ class PlantSimulator:
 
         return rate_pos_hz, rate_neg_hz
 
-    def _move_shoulder_if_target_close(self, direction):
+    def _grasp_if_target_close(self) -> float:
         if not self.checked_proximity:
             self.log.debug(
-                "In TIME_POST. Verifying whether EE is in range for attachment..."
+                "In TIME_GRASP. Verifying whether EE is in range for attachment..."
             )
             self.checked_proximity = True
             if self.plant.check_target_proximity():
-                self.log.debug("EE is in range. Attaching and moving shoulder...")
+                self.log.debug("EE is in range. Attaching...")
                 self.target_attached = True
-                self.plant.move_shoulder(direction)
+                self.plant.grasp()
             else:
                 self.target_attached = False
-                self.log.debug(
-                    "EE is not in range. not attaching and not moving shoulder."
-                )
+                self.log.debug("EE is not in range. not attaching.")
+        return 1 if self.target_attached else 0  # torque
+
+    def _move_shoulder(self, direction) -> float:
+        if self.target_attached and not self.shoulder_moving:
+            self.log.debug("Moving shoulder...")
+            self.plant.move_shoulder(direction)
+            self.shoulder_moving = True
+            return 1
         if self.target_attached:
             self.plant.update_ball_position()
-
-    def get_current_section(self, curr_time_s: float):
-        if curr_time_s == 0:
-            return TrialSection.TIME_START
-        elif 0 <= (curr_time_s % self.config.TIME_TRIAL_S) < self.config.RESOLUTION_S:
-            return TrialSection.TIME_END_TRIAL
-        time_in_trial = curr_time_s % self.config.TIME_TRIAL_S
-        if time_in_trial <= self.config.TIME_PREP_S:
-            return TrialSection.TIME_PREP
-        elif time_in_trial <= self.config.TIME_MOVE_S + self.config.TIME_PREP_S:
-            return TrialSection.TIME_MOVE
-        else:
-            return TrialSection.TIME_POST
+            return 1
+        return 0
 
     def run_simulation_step(
         self,
@@ -294,9 +306,12 @@ class PlantSimulator:
             where ee_pos_m and ee_vel_m_list are lists representing end effector
             position and velocity
         """
-        joint_pos_rad, joint_vel_rad_s = self.plant.get_joint_state()
+        joint_states = self.plant.get_joint_states()
+        joint_pos_rad, joint_vel_rad_s = joint_states.elbow
         ee_pos_m, ee_vel_m_list = self.plant.get_ee_pose_and_velocity()
-        curr_section = self.get_current_section(current_sim_time_s)
+        curr_section = get_current_section(
+            current_sim_time_s * 1000, self.config.master_config
+        )
 
         if step >= self.num_total_steps:
             self.log.warning(
@@ -305,10 +320,22 @@ class PlantSimulator:
                 max_steps=self.num_total_steps,
                 sim_time=current_sim_time_s,
             )
-            return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list
+            return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list, curr_section
 
         net_rate_hz = rate_pos_hz - rate_neg_hz
-        input_torque = net_rate_hz / self.config.SCALE_TORQUE
+        elbow_torque = net_rate_hz / self.config.SCALE_TORQUE
+        hand_torque = shoulder_torque = 0
+
+        if self.config.master_config.plotting.CAPTURE_VIDEO and not (
+            step % self.config.master_config.plotting.NUM_STEPS_CAPTURE_VIDEO
+        ):
+            for ax in self.config.master_config.plotting.CAPTURE_VIDEO:
+                self.plant._capture_state_and_save(
+                    self.config.run_paths.video_frames
+                    / ax
+                    / f"{step:0{self.max_len_frame_name}d}.jpg",
+                    axis=ax,
+                )
 
         if not (step % 500):
             self.log.debug(
@@ -316,68 +343,33 @@ class PlantSimulator:
             )
 
         self.plant.update_stats()
-        # Enable perturbation/gravity
-        self._check_gravity(current_sim_time_s)
 
-        if (
-            curr_section == TrialSection.TIME_PREP
-            or curr_section == TrialSection.TIME_POST
-        ):
-            self.plant.lock_elbow_joint()
+        if curr_section == TrialSection.TIME_MOVE:
+            self.plant.set_elbow_joint_torque([elbow_torque])
         else:
-            self.plant.set_elbow_joint_torque([input_torque])
+            self.plant.lock_elbow_joint()
+
+        if curr_section == TrialSection.TIME_GRASP:
+            hand_torque = self._grasp_if_target_close()
 
         if curr_section == TrialSection.TIME_POST:
-            self._move_shoulder_if_target_close(self.direction)
+            shoulder_torque = self._move_shoulder(self.direction)
 
         # Step PyBullet simulation
         self.plant.simulate_step(self.config.RESOLUTION_S)
-        # Record data for this step (For NJT=1)
-        self.joint_data[0].record_step(
-            step=step,
-            joint_pos_rad=joint_pos_rad,
-            joint_vel_rad_s=joint_vel_rad_s,
-            ee_pos_m=ee_pos_m,
-            ee_vel_m_s=ee_vel_m_list,
-            spk_rate_pos_hz=rate_pos_hz,
-            spk_rate_neg_hz=rate_neg_hz,
-            spk_rate_net_hz=net_rate_hz,
-            input_cmd_torque=input_torque,
-        )
 
-        # Trial end logic (reset plant if needed)
-        if curr_section == TrialSection.TIME_END_TRIAL:
-            final_error_rad = joint_pos_rad - self.config.target_joint_pos_rad
-            self.errors_per_trial.append(final_error_rad)
-            self.log.info(
-                "Trial finished. Resetting plant.",
-                trial_num=len(self.errors_per_trial),
-                sim_time_s=current_sim_time_s,
-                final_error_rad=final_error_rad,
-            )
-            self.checked_proximity = False
-            self.target_attached = False
-            self.plant.reset_plant()
-            self.plant.reset_target()
+        imposed_torques = [hand_torque, elbow_torque, shoulder_torque]
+        for torque, (i, state) in zip(
+            imposed_torques,
+            enumerate(joint_states),
+        ):
+            self.joint_data[i].record_step(step, state.pos, state.vel, torque)
+
+        self.ee_data.record_step(step, ee_pos_m, ee_vel_m_list)
 
         return joint_pos_rad, joint_vel_rad_s, ee_pos_m, ee_vel_m_list, curr_section
 
-    def _check_gravity(self, current_sim_time_s: float):
-        """Check trial number and enable/disable gravity"""
-        exp_params = self.config.master_config.experiment
-
-        if exp_params.enable_gravity:
-            current_trial = int(current_sim_time_s / self.config.TIME_TRIAL_S)
-
-            if current_trial >= exp_params.gravity_trial_start:
-                self.plant.set_gravity(True, exp_params.z_gravity_magnitude)
-            if (
-                exp_params.gravity_trial_end is not None
-                and current_trial > exp_params.gravity_trial_end
-            ):
-                self.plant.set_gravity(False)
-
-    def run_simulation(self) -> None:
+    def run_simulation(self) -> PlantPlotData:
         """Runs the main simulation loop. **NJT==1**"""
         self.log.info(
             "Starting simulation loop...",
@@ -389,43 +381,49 @@ class PlantSimulator:
         current_sim_time_s = 0.0
         step = 0
 
-        with tqdm(total=self.num_total_steps, unit="step", desc="Simulating") as pbar:
-            while current_sim_time_s < self.config.TOTAL_SIM_DURATION_S - (
-                self.config.RESOLUTION_S / 2.0
-            ):
-                # Get commands from MUSIC
-                rate_pos, rate_neg = self.music_prepare_step(current_sim_time_s)
+        for s in tqdm(
+            range(self.num_total_steps),
+            unit="step",
+            desc="Simulating",
+        ):
+            current_sim_time_s = music_runtime.time()
+            # Get commands from MUSIC
+            rate_pos, rate_neg = self.music_prepare_step(current_sim_time_s)
 
-                # Run simulation step
-                joint_pos, joint_vel, ee_pos, ee_vel, curr_section = (
-                    self.run_simulation_step(
-                        rate_pos, rate_neg, current_sim_time_s, step
-                    )
-                )
-
-                # Send sensory feedback through MUSIC
+            # Run simulation step
+            joint_pos, joint_vel, ee_pos, ee_vel, curr_section = (
+                self.run_simulation_step(rate_pos, rate_neg, current_sim_time_s, step)
+            )
+            # Send sensory feedback through MUSIC
+            if s < self.num_total_steps - 1:
                 self.music_end_step(joint_pos, current_sim_time_s, music_runtime)
 
-                # Update progress
-                current_sim_time_s += self.config.RESOLUTION_S
-                step += 1
-                pbar.update(1)
+            step += 1
+        self.log.info(
+            "Simulation loop finished. Finalizing..", music_time=music_runtime.time()
+        )
+        # music_runtime.tick()
+        self.log.info("tried giving one last tick...", music_time=music_runtime.time())
 
-        music_runtime.finalize()
-        self.log.info("Simulation loop finished.")
+        # music_runtime.finalize()  # you're supposed to call this, but it locks up
 
-        # After loop, finalize and save/plot
-        self._finalize_and_process_data()
+        return self.finalize_and_process_data(joint_pos)
 
-    def _finalize_and_process_data(self) -> None:
+    def finalize_and_process_data(self, reached_joint_rad) -> PlantPlotData:
         """Saves all data required for post-simulation analysis and plotting."""
         self.log.info("Finalizing and saving simulation data...")
+        error = reached_joint_rad - self.config.target_joint_pos_rad
 
         plot_data = PlantPlotData(
             joint_data=self.joint_data,
-            errors_per_trial=self.errors_per_trial,
+            ee_data=self.ee_data,
+            error=[error],
             init_hand_pos_ee=list(self.plant.init_hand_pos_ee),
             trgt_hand_pos_ee=list(self.plant.trgt_hand_pos_ee),
         )
-        plot_data.save(self.config.run_paths.robot_result)
-        self.log.info(f"Saved plotting data to {self.config.run_paths.robot_result}")
+        tmp_filename = self.config.run_paths.robot_result.with_suffix(".tmp")
+        final_filename = self.config.run_paths.robot_result
+        plot_data.save(tmp_filename)
+        # save + rename to have atomic write
+        tmp_filename.rename(final_filename)
+        return plot_data

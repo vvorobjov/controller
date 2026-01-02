@@ -1,14 +1,28 @@
+from collections import defaultdict
+from pathlib import Path
+
 import numpy as np
 import structlog
+import tqdm
 from bsb import SimulationData, config, from_storage, get_simulation_adapter, options
 from bsb_nest.adapter import NestAdapter, NestResult
 from config.bsb_models import BSBConfigPaths
+from config.connection_params import ConnectionsParams
 from mpi4py import MPI
+from neural.nest_adapter import nest
+from neural.neural_models import SynapseBlock, SynapseRecording
+from utils_common.profile import Profile
 
 from .CerebellumPopulations import CerebellumPopulations
 from .population_view import PopView
 
 SIMULATION_NAME_IN_YAML = "basal_activity"
+DUMMY_MODEL_NAME = "dummy_connection"
+PLASTICITY_TYPES = ("stdp_synapse_sinexp", "stdp_synapse_alpha")
+
+
+def create_key_plastic_connection(s: str, t: str):
+    return f"{s}>{t}"
 
 
 class Cerebellum:
@@ -16,30 +30,38 @@ class Cerebellum:
         self,
         comm: MPI.Comm,
         paths: BSBConfigPaths,
+        conn_params: ConnectionsParams,
         total_time_vect: np.ndarray,
         label_prefix: str,
+        weights: list[Path] | None,
     ):
         self.log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
         options.verbosity = (
             0  # TODO how to we handle this verbosity? keep 0 for now but...
         )
         self.total_time_vect = total_time_vect
+        self.conn_params = conn_params
         self.label_prefix = label_prefix
         self.populations = CerebellumPopulations()
         self.forward_model = None
+        self.comm = comm
 
-        adapter: NestAdapter = get_simulation_adapter("nest", comm)
-        # hdf5 uses relative paths from itself to find functions, so if we move it it won't work anymore
+        adapter: NestAdapter = get_simulation_adapter("nest", self.comm)
 
-        self.forward_model = from_storage(str(paths.cerebellum_hdf5), comm)
-        conf_forward = config.parse_configuration_file(str(paths.forward_yaml))
+        conf_forward: config.Configuration = config.parse_configuration_file(
+            str(paths.forward_yaml)
+        )
+        conf_inverse: config.Configuration = config.parse_configuration_file(
+            str(paths.inverse_yaml)
+        )
+
+        self.forward_model = from_storage(str(paths.cerebellum_hdf5), self.comm)
         self.forward_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_forward.simulations[SIMULATION_NAME_IN_YAML]
         )
         self.log.debug("loaded forward model and its configuration")
 
-        self.inverse_model = from_storage(str(paths.cerebellum_hdf5), comm)
-        conf_inverse = config.parse_configuration_file(str(paths.inverse_yaml))
+        self.inverse_model = from_storage(str(paths.cerebellum_hdf5), self.comm)
         self.inverse_model.simulations[SIMULATION_NAME_IN_YAML] = (
             conf_inverse.simulations[SIMULATION_NAME_IN_YAML]
         )
@@ -81,423 +103,153 @@ class Cerebellum:
         adapter.create_devices(simulation_inv)
         self.log.debug("created cerebellum devices")
 
-        ### FORWARD MODEL
-        # Mossy fibers
-        self.forw_Nest_Mf = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "mossy_fibers"
-        )
-        self.N_mossy_forw = len(self.forw_Nest_Mf)
+        # Forward Model
+        fwd = adapter.simdata[simulation_forw]
+        inv = adapter.simdata[simulation_inv]
+        self.populations.forw_mf = self._find_popview(fwd, "mossy_fibers")
+        self.populations.forw_glom = self._find_popview(fwd, "glomerulus")
+        self.populations.forw_grc = self._find_popview(fwd, "granule_cell")
+        self.populations.forw_goc = self._find_popview(fwd, "golgi_cell")
+        self.populations.forw_bc = self._find_popview(fwd, "basket_cell")
+        self.populations.forw_sc = self._find_popview(fwd, "stellate_cell")
+        self.populations.forw_io_p = self._find_popview(fwd, "io_plus")
+        self.populations.forw_io_n = self._find_popview(fwd, "io_minus")
+        self.populations.forw_dcnp_p = self._find_popview(fwd, "dcn_p_plus")
+        self.populations.forw_dcnp_n = self._find_popview(fwd, "dcn_p_minus")
+        self.populations.forw_pc_p = self._find_popview(fwd, "purkinje_cell_plus")
+        self.populations.forw_pc_n = self._find_popview(fwd, "purkinje_cell_minus")
 
-        # Glomerulus
-        _forw_N_Glom_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "glomerulus"
-        )
-        # Granule cells
-        _forw_N_GrC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "granule_cell"
-        )
-        # Golgi cells
-        _forw_N_GoC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "golgi_cell"
-        )
-        # Basket cells
-        _forw_N_BC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "basket_cell"
-        )
-        # Stellate cells
-        _forw_N_SC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "stellate_cell"
-        )
-        # IO
-        _forw_N_IO_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "io_plus"
-        )
-        _forw_N_IO_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "io_minus"
-        )
-        # DCN
-        _forw_N_DCNp_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_p_plus"
-        )
-        _forw_N_DCNp_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_p_minus"
-        )
-        _forw_N_DCNi_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_i_plus"
-        )
-        _forw_N_DCNi_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "dcn_i_minus"
-        )
-        # PC
-        _forw_N_PC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_plus"
-        )
-        _forw_N_PC_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_forw
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_minus"
+        # Inverse Model
+        self.populations.inv_mf = self._find_popview(inv, "mossy_fibers")
+        self.populations.inv_glom = self._find_popview(inv, "glomerulus")
+        self.populations.inv_grc = self._find_popview(inv, "granule_cell")
+        self.populations.inv_goc = self._find_popview(inv, "golgi_cell")
+        self.populations.inv_bc = self._find_popview(inv, "basket_cell")
+        self.populations.inv_sc = self._find_popview(inv, "stellate_cell")
+        self.populations.inv_io_p = self._find_popview(inv, "io_plus")
+        self.populations.inv_io_n = self._find_popview(inv, "io_minus")
+        self.populations.inv_dcnp_p = self._find_popview(inv, "dcn_p_plus")
+        self.populations.inv_dcnp_n = self._find_popview(inv, "dcn_p_minus")
+        self.populations.inv_pc_p = self._find_popview(inv, "purkinje_cell_plus")
+        self.populations.inv_pc_n = self._find_popview(inv, "purkinje_cell_minus")
+        self.log.debug(f"all populations correctly retrieved")
+
+        self._update_weight_plastic_pops(weights)
+
+    def _find_popview(self, simdata, model_name):
+        return PopView(
+            next(
+                gids
+                for neuron_model, gids in simdata.populations.items()
+                if neuron_model.name == model_name
+            ),
+            to_file=True,
         )
 
-        ### INVERSE MODEL
-        # Mossy fibers
-        self.inv_Nest_Mf = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "mossy_fibers"
-        )
-        self.N_mossy_inv = len(self.inv_Nest_Mf)
+    def get_plastic_connections(self):
+        conns = {}
+        pairs = self.populations.get_plastic_pairs()
+        tot_syn = 0
+        for pre_pop, post_pop in pairs:
+            c = []
+            for p in PLASTICITY_TYPES:
+                c.extend(
+                    nest.GetConnections(
+                        source=pre_pop.pop,
+                        target=post_pop.pop,
+                        synapse_model=p,
+                    )
+                    or []
+                )
+            conns[(pre_pop.label, post_pop.label)] = c
+            tot_syn += len(c)
 
-        # Glomerulus
-        _inv_N_Glom_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "glomerulus"
+        self.log.debug(
+            f"total number of synapses (per process): {tot_syn}", log_all_ranks=True
         )
-        # Granule cells
-        _inv_N_GrC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "granule_cell"
-        )
-        # Golgi cells
-        _inv_N_GoC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "golgi_cell"
-        )
-        # Basket cells
-        _inv_N_BC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "basket_cell"
-        )
-        # Stellate cells
-        _inv_N_SC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "stellate_cell"
-        )
-        # IO
-        _inv_N_IO_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "io_plus"
-        )
-        _inv_N_IO_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "io_minus"
-        )
-        # DCN
-        _inv_N_DCNp_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_p_plus"
-        )
-        _inv_N_DCNp_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_p_minus"
-        )
-        _inv_N_DCNi_plus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_i_plus"
-        )
-        _inv_N_DCNi_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "dcn_i_minus"
-        )
-        # PC
-        _inv_N_PC_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_plus"
-        )
-        _inv_N_PC_minus_gids = next(
-            gids
-            for neuron_model, gids in adapter.simdata[
-                simulation_inv
-            ].populations.items()
-            if neuron_model.name == "purkinje_cell_minus"
-        )
+        return conns
 
-        self._create_core_pop_views(
-            _forw_N_Glom_gids,
-            _forw_N_GrC_gids,
-            _forw_N_GoC_gids,
-            _forw_N_BC_gids,
-            _forw_N_SC_gids,
-            _forw_N_IO_plus_gids,
-            _forw_N_IO_minus_gids,
-            _forw_N_DCNp_plus_gids,
-            _forw_N_DCNp_minus_gids,
-            _forw_N_PC_gids,
-            _forw_N_PC_minus_gids,
-            _inv_N_Glom_gids,
-            _inv_N_GrC_gids,
-            _inv_N_GoC_gids,
-            _inv_N_BC_gids,
-            _inv_N_SC_gids,
-            _inv_N_IO_plus_gids,
-            _inv_N_IO_minus_gids,
-            _inv_N_DCNp_plus_gids,
-            _inv_N_DCNp_minus_gids,
-            _inv_N_PC_gids,
-            _inv_N_PC_minus_gids,
-        )
+    def _pop_this_id_is_in(self, id):
+        return next(i.label for _, i in self.populations if id in i.pop)
 
-    def _create_core_pop_views(
-        self,
-        _forw_N_Glom_gids,
-        _forw_N_GrC_gids,
-        _forw_N_GoC_gids,
-        _forw_N_BC_gids,
-        _forw_N_SC_gids,
-        _forw_N_IO_plus_gids,
-        _forw_N_IO_minus_gids,
-        _forw_N_DCNp_plus_gids,
-        _forw_N_DCNp_minus_gids,
-        _forw_N_PC_gids,
-        _forw_N_PC_minus_gids,
-        _inv_N_Glom_gids,
-        _inv_N_GrC_gids,
-        _inv_N_GoC_gids,
-        _inv_N_BC_gids,
-        _inv_N_SC_gids,
-        _inv_N_IO_plus_gids,
-        _inv_N_IO_minus_gids,
-        _inv_N_DCNp_plus_gids,
-        _inv_N_DCNp_minus_gids,
-        _inv_N_PC_gids,
-        _inv_N_PC_minus_gids,
-    ):
-        """Creates PopView instances for all core NEST populations."""
-        # Forward Model PopViews
-        self.populations.forw_mf_view = PopView(
-            self.forw_Nest_Mf,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_mf",
-        )
-        self.populations.forw_glom_view = PopView(
-            _forw_N_Glom_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_glom",
-        )
-        self.populations.forw_grc_view = PopView(
-            _forw_N_GrC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_grc",
-        )
-        self.populations.forw_goc_view = PopView(
-            _forw_N_GoC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_goc",
-        )
-        self.populations.forw_bc_view = PopView(
-            _forw_N_BC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_bc",
-        )
-        self.populations.forw_sc_view = PopView(
-            _forw_N_SC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_sc",
-        )
-        self.populations.forw_io_p_view = PopView(
-            _forw_N_IO_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_io_p",
-        )
-        self.populations.forw_io_n_view = PopView(
-            _forw_N_IO_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_io_n",
-        )
-        self.populations.forw_dcnp_p_view = PopView(
-            _forw_N_DCNp_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_dcnp_p",
-        )
-        self.populations.forw_dcnp_n_view = PopView(
-            _forw_N_DCNp_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_dcnp_n",
-        )
-        self.populations.forw_pc_p_view = PopView(
-            _forw_N_PC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_pc_p",
-        )
-        self.populations.forw_pc_n_view = PopView(
-            _forw_N_PC_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}forw_pc_n",
-        )
+    def _update_weight_plastic_pops(self, weights: list[Path]):
+        if weights is None:
+            return
+        create_plastic = Profile()
 
-        # Inverse Model PopViews
-        self.populations.inv_mf_view = PopView(
-            self.inv_Nest_Mf,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_mf",
-        )
-        self.populations.inv_glom_view = PopView(
-            _inv_N_Glom_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_glom",
-        )
-        self.populations.inv_grc_view = PopView(
-            _inv_N_GrC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_grc",
-        )
-        self.populations.inv_goc_view = PopView(
-            _inv_N_GoC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_goc",
-        )
-        self.populations.inv_bc_view = PopView(
-            _inv_N_BC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_bc",
-        )
-        self.populations.inv_sc_view = PopView(
-            _inv_N_SC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_sc",
-        )
-        self.populations.inv_io_p_view = PopView(
-            _inv_N_IO_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_io_p",
-        )
-        self.populations.inv_io_n_view = PopView(
-            _inv_N_IO_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_io_n",
-        )
-        self.populations.inv_dcnp_p_view = PopView(
-            _inv_N_DCNp_plus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_dcnp_p",
-        )
-        self.populations.inv_dcnp_n_view = PopView(
-            _inv_N_DCNp_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_dcnp_n",
-        )
-        self.populations.inv_pc_p_view = PopView(
-            _inv_N_PC_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_pc_p",
-        )
-        self.populations.inv_pc_n_view = PopView(
-            _inv_N_PC_minus_gids,
-            self.total_time_vect,
-            to_file=True,
-            label=f"{self.label_prefix}inv_pc_n",
-        )
+        num_conns_curr_proc = applied_weights = 0
+        add_kwargs = {}
+        if self.comm:
+            add_kwargs = {"local_only": True}
+        with create_plastic.time():
+            loc_nodes = set(nest.GetNodes(**add_kwargs).get("global_id"))
+            curr_proc_recordings: defaultdict[str, list[SynapseRecording]] = (
+                defaultdict(list)
+            )
+            self.log.debug(f"loading all connections, split by synapse model...")
+            # load all connections, split by synapse model
+            for path in weights:
+                with open(path, "r") as f:
+                    block = SynapseBlock.model_validate_json(f.read())
+                for conn in block.synapse_recordings:
+                    if conn.syn.target in loc_nodes:
+                        curr_proc_recordings[conn.syn.synapse_model].append(conn)
+                        num_conns_curr_proc += 1
+            self.log.debug(f"{curr_proc_recordings.keys()}")
+
+            # iterate based on synapse model
+            for syn_model, connections in curr_proc_recordings.items():
+                rec_sources, rec_targets = (set(), set())
+                recordings: dict[tuple, SynapseRecording] = {}
+
+                # index connections based on key, save sources/targets
+                for conn in connections:
+                    rec_sources.add(conn.syn.source)
+                    rec_targets.add(conn.syn.target)
+                    recordings[
+                        (
+                            conn.syn.source,
+                            conn.syn.target,
+                            conn.syn.synapse_model,
+                            conn.syn.port,
+                        )
+                    ] = conn
+
+                # collect nest SynapseCollection of this synapse model
+                conn_nest = nest.GetConnections(
+                    # nest wants a sorted unique list
+                    source=nest.NodeCollection(sorted(rec_sources)),
+                    target=nest.NodeCollection(sorted(rec_targets)),
+                    synapse_model=syn_model,
+                )
+
+                if len(conn_nest) != len(recordings):
+                    raise ValueError(
+                        f"collected inconsistent connections: {len(conn_nest)} collected vs {len(recordings)} recordings"
+                    )
+
+                # sort weights according to collected nest connections
+                source = conn_nest.get("source")
+                target = conn_nest.get("target")
+                synapse_model = conn_nest.get("synapse_model")
+                port = conn_nest.get("port")
+                weights_sorted = []
+                for conn, source, target, model, port in zip(
+                    conn_nest,
+                    source,
+                    target,
+                    synapse_model,
+                    port,
+                ):
+                    weights_sorted.append(
+                        recordings.pop((source, target, model, port)).weight
+                    )
+
+                # apply sorted weights according to the existing SynapseCollection
+                nest.SetStatus(conn_nest, [{"weight": w} for w in weights_sorted])
+                applied_weights += len(weights_sorted)
+        self.log.warning(f"applying all weights took: {create_plastic.total_time}")
+        if applied_weights != num_conns_curr_proc:
+            raise ValueError(
+                f"applied_weights != num_conns_curr_proc ({applied_weights} != {num_conns_curr_proc})"
+            )

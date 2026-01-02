@@ -6,16 +6,17 @@ import nest
 import structlog
 from config.MasterParams import MasterParams
 from config.paths import COMPLETE_CONTROL, RunPaths
+from config.ResultMeta import extract_id
 from neural.nest_adapter import initialize_nest, nest
-from neural.plot_utils import plot_controller_outputs
 from neural_simulation_lib import (
-    create_controllers,
+    create_controller,
     setup_environment,
     setup_nest_kernel,
 )
 from nrp_core.engines.python_grpc import GrpcEngineScript
 from nrp_protobuf import nrpgenericproto_pb2, wrappers_pb2
 from utils_common.profile import Profile
+from utils_common.utils import TrialSection, get_current_section
 
 NANO_SEC = 1e-9
 
@@ -27,7 +28,7 @@ class Script(GrpcEngineScript):
         initialize_nest("MUSIC")
         # initialize_nest("NRP")
         self.master_config = None
-        self.controllers = []
+        self.controller = None
         self.step = 0
         self.run_paths = None
 
@@ -38,12 +39,15 @@ class Script(GrpcEngineScript):
         self.step = 0
 
         run_timestamp_str = os.getenv("EXEC_TIMESTAMP")
+        parent_id = extract_id(os.getenv("PARENT_ID") or "")
 
         self.run_paths = RunPaths.from_run_id(run_timestamp_str)
         self.log: structlog.stdlib.BoundLogger = structlog.get_logger("nrp_neural")
         self.log.info(f"Engine Log Path: {self.run_paths.logs}")
 
-        self.master_config = MasterParams.from_runpaths(self.run_paths, USE_MUSIC=False)
+        self.master_config = MasterParams.from_runpaths(
+            self.run_paths, parent_id=parent_id, USE_MUSIC=False
+        )
         with open(self.run_paths.params_json, "w") as f:
             f.write(self.master_config.model_dump_json(indent=2))
         self.log.info("MasterParams loaded and dumped successfully.")
@@ -54,9 +58,10 @@ class Script(GrpcEngineScript):
             self.run_paths.data_nest,
         )
         self.log.info("Environment and NEST kernel setup complete.")
+        self.log.info(f"Neuron modelss: {nest.Models()}")
 
-        self.controllers = create_controllers(self.master_config)
-        self.log.info(f"Created {len(self.controllers)} controllers.")
+        self.controller = create_controller(self.master_config)
+        self.log.info(f"Created controller.")
         self.sensory_profile = Profile()
         self.sim_profile = Profile()
         self.motor_profile = Profile()
@@ -84,9 +89,10 @@ class Script(GrpcEngineScript):
         joint_pos_rad = self._getDataPack("joint_pos_rad").value
 
         sim_time_s = self._time_ns * NANO_SEC
+        curr_section = get_current_section(sim_time_s * 1000, self.master_config)
 
         with self.sensory_profile.time():
-            self.controllers[0].update_sensory_info_from_NRP(
+            self.controller.update_sensory_info_from_NRP(
                 joint_pos_rad, sim_time_s * 1000
             )
 
@@ -94,13 +100,18 @@ class Script(GrpcEngineScript):
             self.log.debug("[neural] updated sensory info")
 
         with self.sim_profile.time():
-            nest.Run(timestep_ns * NANO_SEC * 1000)
+            if (
+                curr_section != TrialSection.TIME_GRASP
+                and curr_section != TrialSection.TIME_POST
+                and curr_section != TrialSection.TIME_END_TRIAL
+            ):
+                nest.Run(timestep_ns * NANO_SEC * 1000)
 
         if self.step % 50 == 0:
-            self.log.debug("[neural] simulated")
+            self.log.debug("[neural] simulated or skipped")
 
         with self.motor_profile.time():
-            pos, neg = self.controllers[0].extract_motor_command_NRP()
+            pos, neg = self.controller.extract_motor_command_NRP()
 
         if self.step % 50 == 0:
             self.log.debug(
@@ -130,20 +141,18 @@ class Script(GrpcEngineScript):
             time_motor=str(self.motor_profile.total_time),
             time_rest=str(self.rest_profile.total_time),
         )
-        from neural.data_handling import collapse_files
+        from neural.data_handling import collapse_files, save_conn_weights
 
-        pop_views = []
-        for controller in self.controllers:
-            pop_views.extend(controller.get_all_recorded_views())
-        collapse_files(self.run_paths.data_nest, pop_views)
+        rec_paths = None
+        if self.controller.use_cerebellum and self.master_config.SAVE_WEIGHTS_CEREB:
+            w = self.controller.record_synaptic_weights()
+            rec_paths = save_conn_weights(w, self.run_paths.data_nest, comm=None)
 
-        # nest.Cleanup()
+        pop_views = self.controller.collect_populations()
+        res = collapse_files(self.run_paths.data_nest, pop_views)
+        res.weights = rec_paths
 
-    # def reset(self):
-    #     self.log.info("NRP Neural Engine: Resetting.")
-    #     self.nest_client.Cleanup()
+        with open(self.master_config.run_paths.neural_result, "w") as f:
+            f.write(res.model_dump_json())
 
-    #     if self.nest_client:
-    #         self.nest_client.ResetKernel()
-
-    #     self.initialize()
+        nest.Cleanup()

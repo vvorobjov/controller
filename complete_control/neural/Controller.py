@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -14,9 +15,13 @@ from config.module_params import (
     StateModuleConfig,
 )
 from config.population_params import PopulationsParams
+from neural.CerebellumHandlerPopulations import CerebellumHandlerPopulations
+from neural.CerebellumPopulations import CerebellumPopulations
 from neural.nest_adapter import nest
+from neural.neural_models import Synapse, SynapseBlock, SynapseRecording
 from plant.sensoryneuron import SensoryNeuron
 from utils_common.generate_signals import generate_traj
+from utils_common.results import read_weights
 
 from .ControllerPopulations import ControllerPopulations
 from .motorcortex import MotorCortex
@@ -48,6 +53,13 @@ from .stateestimator import StateEstimator_mass
 #            └──────────────┘
 
 NJT = 1
+
+
+@dataclass
+class PopulationBlocks:
+    controller: ControllerPopulations = None
+    cerebellum_handler: CerebellumHandlerPopulations = None
+    cerebellum: CerebellumPopulations = None
 
 
 class Controller:
@@ -157,28 +169,61 @@ class Controller:
 
         self.log.info("Controller initialization complete.")
 
-    def record_synaptic_weights(self, trial: int):
-        PF_to_purkinje_conns = (
-            self.cerebellum_handler.get_synapse_connections_PF_to_PC()
-        )
+    def record_synaptic_weights(self) -> list[SynapseBlock]:
+        PF_to_purkinje_conns = self.cerebellum_handler.get_plastic_connections()
+        blocks = []
         for (pre_pop, post_pop), conns in PF_to_purkinje_conns.items():
+            recs = []
+            self.log.debug(f"saving {pre_pop}>{post_pop}...")
             for conn in conns:
-                source_neur, target_neur, synapse_id, delay, synapse_model, weight = (
-                    nest.GetStatus(
-                        conn,
-                        [
-                            "source",
-                            "target",
-                            "synapse_id",
-                            "delay",
-                            "synapse_model",
-                            "weight",
-                        ],
-                    )[0]
+                st = nest.GetStatus(
+                    conn,
+                    [
+                        "source",
+                        "target",
+                        "synapse_id",
+                        "delay",
+                        "synapse_model",
+                        "weight",
+                        "port",
+                        # "receptor", see https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
+                    ],
                 )
-                self.weights_history[(pre_pop, post_pop)][
-                    (source_neur, target_neur, synapse_id, synapse_model)
-                ].append(weight)
+                if len(st) != 1:
+                    raise ValueError(
+                        f"Multiple ({len(st)}) statuses found for a single connection ({st})"
+                    )
+                (
+                    source_neur,
+                    target_neur,
+                    synapse_id,
+                    delay,
+                    synapse_model,
+                    weight,
+                    port,
+                    # receptor_type, see https://github.com/near-nes/controller/issues/102#issuecomment-3558895210
+                ) = st[0]
+                recs.append(
+                    SynapseRecording(
+                        syn=Synapse(
+                            source=source_neur,
+                            target=target_neur,
+                            syn_id=synapse_id,
+                            synapse_model=synapse_model,
+                            delay=delay,
+                            port=port,
+                        ),
+                        weight=weight,
+                    )
+                )
+            blocks.append(
+                SynapseBlock(
+                    source_pop_label=pre_pop,
+                    target_pop_label=post_pop,
+                    synapse_recordings=recs,
+                )
+            )
+        return blocks
 
     def _instantiate_cerebellum_handler(self, controller_pops: ControllerPopulations):
         from .CerebellumHandler import CerebellumHandler
@@ -190,91 +235,52 @@ class Controller:
                 "Cerebellum config must be provided when use_cerebellum is True"
             )
 
-        cereb_pop_keys = [
-            "prediction",
-            "feedback",
-            "motor_commands",
-            "error",
-            "plan_to_inv",
-            "state_to_inv",
-            "error_i",
-            "motor_pred",
-            "feedback_inv",
-        ]
-        cereb_conn_keys = [
-            "dcn_forw_prediction",
-            "error_io_f",
-            "dcn_f_error",  # Fwd connections
-            "feedback_error",  # Used by CerebellumHandler for fwd error calculation
-            "plan_to_inv_error_inv",
-            "state_error_inv",  # Inv error connections (state_error_inv might not exist, handled below)
-            "error_inv_io_i",
-            "dcn_i_motor_pred",  # Inv connections
-            # "sn_feedback_inv" is used by controller.py to connect TO cerebellum_controller, not internally by it.
-            # Connections *from* SDC *to* CerebController interfaces are handled in SDC._connect_blocks
-            # Connections *from* CerebController *to* SDC interfaces are handled in SDC._connect_blocks
-        ]
-
-        # cereb_pops_params = {k: self.pops_params[k] for k in cereb_pop_keys}
-        # cereb_conn_params = {k: self.conn_params[k] for k in cereb_conn_keys}
-        # TODO different parameter sets could be nice :)
         cereb_pops_params = self.pops_params
         cereb_conn_params = self.conn_params
+        weights = read_weights(self.master_params)
 
-        try:
-            cerebellum_controller = CerebellumHandler(
-                N=self.N,
-                total_time_vect=self.total_time_vect,
-                sim_params=self.sim_params,
-                pops_params=cereb_pops_params,
-                conn_params=cereb_conn_params,
-                cerebellum_paths=self.cerebellum_paths,
-                path_data=self.path_data,
-                label_prefix=f"{self.label}cereb_",
-                dof_id=self.dof_id,
-                comm=self.comm,
-                controller_pops=controller_pops,
-            )
-            self.log.info("Internal CerebellumHandler instantiated successfully.")
-            return cerebellum_controller
-        except Exception as e:
-            self.log.error(
-                "Failed to instantiate internal CerebellumHandler",
-                error=str(e),
-                exc_info=True,
-            )
-            raise
+        cerebellum_controller = CerebellumHandler(
+            N=self.N,
+            total_time_vect=self.total_time_vect,
+            sim_params=self.sim_params,
+            pops_params=cereb_pops_params,
+            conn_params=cereb_conn_params,
+            cerebellum_paths=self.cerebellum_paths,
+            path_data=self.path_data,
+            label_prefix=f"{self.label}cereb_",
+            dof_id=self.dof_id,
+            comm=self.comm,
+            controller_pops=controller_pops,
+            weights=weights,
+        )
+        self.log.info("Internal CerebellumHandler instantiated successfully.")
+        return cerebellum_controller
 
     # --- 1. Block Creation ---
     def _create_blocks(self):
         """Creates all neuron populations using PopView for this DoF."""
         self.log.debug("Building planner block")
-        self._build_planner(to_file=True)
+        self._build_planner()
         self.log.debug("Building motor cortex block")
-        self._build_motor_cortex(to_file=True)
+        self._build_motor_cortex()
         self.log.debug("Building state estimator block")
-        self._build_state_estimator(to_file=True)
+        self._build_state_estimator()
         self.log.debug("Building sensory neurons block")
-        self._build_sensory_neurons(to_file=True)
+        self._build_sensory_neurons()
         self.log.debug(
             "Building prediction neurons block"
         )  # These are the scaling neurons for cerebellar fwd output or other prediction source
-        self._build_prediction_neurons(to_file=True)
+        self._build_prediction_neurons()
         self.log.debug("Building feedback smoothed neurons block")
-        self._build_fbk_smoothed_neurons(to_file=True)
+        self._build_fbk_smoothed_neurons()
         self.log.debug("Building brainstem block")
-        self._build_brainstem(to_file=True)
+        self._build_brainstem()
 
-    # --- Helper for PopView Creation ---
-    def _create_pop_view(self, nest_pop, base_label: str, to_file: bool) -> PopView:
-        """Creates a PopView instance with appropriate label."""
-        full_label = f"{self.label}{base_label}" if to_file else ""
-        return PopView(
-            nest_pop, self.total_time_vect, to_file=to_file, label=full_label
-        )
+    def _pop_view(self, nest_pop) -> PopView:
+        """Always creates with no label and to_file True to trigger auto naming"""
+        return PopView(nest_pop, to_file=True)
 
-    # --- Build Methods ---
-    def _build_planner(self, to_file=False):
+    def _build_planner(self):
         p_params = self.plan_params
         N = self.N
         trajectory = generate_traj(
@@ -315,10 +321,10 @@ class Controller:
                 "simulation_steps": self.sim_params.sim_steps,
             },
         )
-        self.pops.planner_p = self._create_pop_view(tmp_pop_p, "planner_p", to_file)
-        self.pops.planner_n = self._create_pop_view(tmp_pop_n, "planner_n", to_file)
+        self.pops.planner_p = self._pop_view(tmp_pop_p)
+        self.pops.planner_n = self._pop_view(tmp_pop_n)
 
-    def _build_motor_cortex(self, to_file=False):
+    def _build_motor_cortex(self):
         self.log.debug(
             "Initializing MotorCortex sub-module",
             N=self.N,
@@ -333,7 +339,7 @@ class Controller:
         self.pops.mc_out_p = self.mc.out_p
         self.pops.mc_out_n = self.mc.out_n
 
-    def _build_state_estimator(self, to_file=False):
+    def _build_state_estimator(self):
         buf_sz = self.state_params.buffer_size
         N = self.N
 
@@ -344,10 +350,13 @@ class Controller:
             {
                 "N_fbk": N,
                 "N_pred": N,
+                "buffer_size": buf_sz,
                 "fbk_bf_size": N * int(buf_sz / self.sim_params.resolution),
                 "pred_bf_size": N * int(buf_sz / self.sim_params.resolution),
                 # the nestml model has a hardcoded solution to stop any spikes in time_wait
                 "time_wait": 0,
+                # "p": self.state_params.p,
+                # "pred_offset": self.state_params.pred_offset,
             }
         )
 
@@ -363,14 +372,14 @@ class Controller:
         self.pops.state_p = self.stEst.pops_p[0]
         self.pops.state_n = self.stEst.pops_n[0]
 
-    def _build_sensory_neurons(self, to_file=False):
+    def _build_sensory_neurons(self):
         """Parrot neurons for sensory feedback input"""
         pop_p = nest.Create("parrot_neuron", self.N)
-        self.pops.sn_p = self._create_pop_view(pop_p, "sensoryneur_p", to_file)
+        self.pops.sn_p = self._pop_view(pop_p)
         pop_n = nest.Create("parrot_neuron", self.N)
-        self.pops.sn_n = self._create_pop_view(pop_n, "sensoryneur_n", to_file)
+        self.pops.sn_n = self._pop_view(pop_n)
 
-    def _build_prediction_neurons(self, to_file=False):
+    def _build_prediction_neurons(self):
         """
         Builds internal prediction neurons (diff_neuron_nestml).
         These neurons always exist to 'scale' the prediction signal before it goes to the State Estimator.
@@ -388,13 +397,13 @@ class Controller:
 
         pop_p = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.pred_p = self._create_pop_view(pop_p, "pred_p", to_file)
+        self.pops.pred_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("diff_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.pred_n = self._create_pop_view(pop_n, "pred_n", to_file)
+        self.pops.pred_n = self._pop_view(pop_n)
 
-    def _build_fbk_smoothed_neurons(self, to_file=False):
+    def _build_fbk_smoothed_neurons(self):
         """Neurons for smoothing feedback"""
         params = self.pops_params.fbk_smoothed
         pop_params = {
@@ -407,13 +416,13 @@ class Controller:
 
         pop_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.fbk_smooth_p = self._create_pop_view(pop_p, "fbk_smooth_p", to_file)
+        self.pops.fbk_smooth_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.fbk_smooth_n = self._create_pop_view(pop_n, "fbk_smooth_n", to_file)
+        self.pops.fbk_smooth_n = self._pop_view(pop_n)
 
-    def _build_brainstem(self, to_file=False):
+    def _build_brainstem(self):
         """Basic neurons for output stage"""
         params = self.pops_params.brain_stem
         pop_params = {
@@ -426,11 +435,11 @@ class Controller:
 
         pop_p = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_p, {**pop_params, "pos": True})
-        self.pops.brainstem_p = self._create_pop_view(pop_p, "brainstem_p", to_file)
+        self.pops.brainstem_p = self._pop_view(pop_p)
 
         pop_n = nest.Create("basic_neuron_nestml", self.N)
         nest.SetStatus(pop_n, {**pop_params, "pos": False})
-        self.pops.brainstem_n = self._create_pop_view(pop_n, "brainstem_n", to_file)
+        self.pops.brainstem_n = self._pop_view(pop_n)
 
     # --- 2. Block Connection ---
     def _connect_blocks_controller(self):
@@ -541,16 +550,25 @@ class Controller:
             syn_spec_p=syn_spec_p,
             syn_spec_n=syn_spec_n,
         )
+        #############################
+        N_indegree_fbk = 3
+        conn_spec_fbk = {
+            "rule": "fixed_indegree",
+            "indegree": N_indegree_fbk,
+            "allow_multapses": False,
+        }
+        #############################
+
         nest.Connect(
             self.pops.sn_p.pop,
             self.pops.fbk_smooth_p.pop,
-            "all_to_all",
+            "all_to_all",  # conn_spec=conn_spec_fbk,  # "one_to_one",  # "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
             self.pops.sn_n.pop,
             self.pops.fbk_smooth_n.pop,
-            "all_to_all",
+            "all_to_all",  # conn_spec=conn_spec_fbk,  # "one_to_one",  # "all_to_all",
             syn_spec=syn_spec_n,
         )
 
@@ -578,7 +596,8 @@ class Controller:
             )
         # Prediction (self.pops.pred_p/n) -> State Estimator (Receptors N+1 to 2N)
         # These connections are always made, as pred_p/n always exist.
-        offset = self.N + 1  # Start receptor types after the first N for sensory
+        offset = 201
+        # self.N + 1 Start receptor types after the first N for sensory   #it doesn't have to be N but the number of FBK receptors of the state neuron
         pred_state_spec = self.conn_params.pred_state.model_dump(exclude_none=True)
         self.log.debug(
             "Connecting self.pops.pred_p/n to state estimator", spec=pred_state_spec
@@ -752,9 +771,7 @@ class Controller:
             res=self.sim_params.resolution,
         )
         self.proxy_in_gen = nest.Create("inhomogeneous_poisson_generator", 2)
-        self.proxy_in_gen_view = self._create_pop_view(
-            self.proxy_in_gen, "proxy_in_NRP", True
-        )
+        self.proxy_in_gen_view = PopView(self.proxy_in_gen, True, "proxy_in_NRP")
 
         self.log.info(
             "Sensory neurons created and connected",
@@ -785,26 +802,20 @@ class Controller:
 
         return rate_pos, rate_neg
 
-    def get_all_recorded_views(self) -> list[PopView]:
+    def collect_populations(self) -> PopulationBlocks:
         """
         Collects all PopView instances that are configured for recording from
         the main controller populations and, if enabled, from the cerebellum populations.
         """
-        all_views = []
-        self.log.debug("Collecting views from ControllerPopulations")
-        all_views.extend(self.pops.get_all_views())
+        pops = PopulationBlocks()
+        self.log.debug("Collecting pops from ControllerPopulations")
+        pops.controller = self.pops
 
         if self.use_cerebellum:
-            self.log.debug("Collecting views from CerebellumHandler.interface_pops")
-            all_views.extend(self.cerebellum_handler.interface_pops.get_all_views())
-            all_views.extend(
-                self.cerebellum_handler.cerebellum.populations.get_all_views()
-            )
+            self.log.debug("Collecting pops from CerebellumHandler.interface_pops")
+            pops.cerebellum_handler = self.cerebellum_handler.interface_pops
+            pops.cerebellum = self.cerebellum_handler.cerebellum.populations
         else:
-            self.log.debug("Cerebellum not in use, skipping cerebellum views.")
+            self.log.debug("Cerebellum not in use, skipping cerebellum pops.")
 
-        recorded_views = [view for view in all_views if view and view.label]
-        self.log.info(
-            f"Collected {len(recorded_views)} views with labels for recording."
-        )
-        return recorded_views
+        return pops

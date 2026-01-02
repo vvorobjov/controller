@@ -1,5 +1,8 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
+
+from . import MasterParams
 
 
 class EngineConfig(BaseModel):
@@ -8,7 +11,7 @@ class EngineConfig(BaseModel):
     ServerAddress: str
     PythonFileName: str
     ProtobufPackages: List[str] = ["Wrappers", "NrpGenericProto"]
-    EngineTimestep: float = 0.0001
+    EngineTimestep: float = 0.001  # change here according to res
 
 
 class DataPackProcessingFunction(BaseModel):
@@ -21,7 +24,7 @@ class SimulationConfig(BaseModel):
     SimulationDescription: str = (
         "Launch a py_sim engine to run a Bullet simulation and a python engine to control the simulation"
     )
-    SimulationTimeout: int = 1
+    SimulationTimeout: float
     EngineConfigs: List[EngineConfig] = [
         EngineConfig(
             EngineType="python_grpc",
@@ -46,3 +49,10 @@ class SimulationConfig(BaseModel):
             FileName="complete_control/nrp_tf_from_bullet.py",
         ),
     ]
+
+    @classmethod
+    def from_masterparams(cls, mp: MasterParams, **kwargs):
+        return SimulationConfig(
+            SimulationTimeout=mp.simulation.duration_ms / 1000,
+            **kwargs,
+        )

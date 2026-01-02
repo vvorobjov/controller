@@ -8,5 +8,5 @@
   np=1
 
 # How ports are connected
-from.mot_cmd_out -> to.mot_cmd_in [100]
-to.fbk_out -> from.fbk_in [100]
+from.mot_cmd_out -> to.mot_cmd_in [400]
+to.fbk_out -> from.fbk_in [400]

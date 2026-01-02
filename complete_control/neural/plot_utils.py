@@ -1,21 +1,22 @@
 import json
 from pathlib import Path
 
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import structlog
-from config.MasterParams import MasterParams
-from config.paths import RunPaths
+from config.ResultMeta import ResultMeta
+from matplotlib.axis import Axis
+from matplotlib.figure import Figure
 from mpi4py import MPI
+from neural.neural_models import SynapseBlock
+from PIL import Image, ImageDraw
 
-from complete_control.neural.neural_models import SynapseBlock
+from complete_control.config.MasterParams import MasterParams
+from complete_control.utils_common.results import concatenate_neural_results
 
 from .neural_models import PopulationSpikes
-
-import matplotlib.gridspec as gridspec
-
-from PIL import Image, ImageDraw, ImageFont
+from .population_utils import POPS, POPS_PAIRED, POPS_SINGLE, POPS_TREE
 
 _log: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 FIGURE_EXT = "png"
@@ -118,8 +119,8 @@ def global_to_local_ids(x: PopulationSpikes, hist_logscale=False):
 
 def generate_plot_fig(
     time_v,
-    pop_p_data,
-    pop_n_data,
+    pop_p_data: PopulationSpikes,
+    pop_n_data: PopulationSpikes,
     title,
     buffer_size,
     ts_p,
@@ -211,18 +212,19 @@ def generate_plot_fig(
     return fig, ax
 
 
-def plot_population(
+def plot_population_paired(
     time_v,
-    pop_p_path: Path,
-    pop_n_path: Path,
+    pop_p_data: PopulationSpikes | Path,
+    pop_n_data: PopulationSpikes | Path,
     t0=0,
     t1=None,
     title="",
     buffer_size=15,
 ):
     """Plots raster and PSTH for a population pair from data files."""
-    pop_p_data = load_spike_data_from_file(pop_p_path)
-    pop_n_data = load_spike_data_from_file(pop_n_path)
+    if isinstance(pop_p_data, Path) and isinstance(pop_n_data, Path):
+        pop_p_data = load_spike_data_from_file(pop_p_data)
+        pop_n_data = load_spike_data_from_file(pop_n_data)
 
     if t1 is None:
         t1 = time_v[-1]
@@ -253,13 +255,15 @@ def plot_population(
 
 def plot_population_single(
     time_v,
-    pop_path: Path,
+    pop_data: Path | PopulationSpikes,
     title="",
     buffer_size=15,
     filepath=None,
 ):
     """Plots raster and PSTH for a population pair from data files."""
-    pop_data = load_spike_data_from_file(pop_path)
+    if isinstance(pop_data, Path):
+        pop_data = load_spike_data_from_file(pop_data)
+
     local_ids = global_to_local_ids(pop_data)
 
     fig, ax = plt.subplots(2, 1, sharex=True, figsize=(10, 6))
@@ -306,7 +310,7 @@ def plot_population_single(
         _log.debug(f"Saved plot at {filepath}")
         plt.close(fig)
 
-    return fig, ax
+    return fig, ax, filepath
 
 
 def list_depth(lst):
@@ -320,7 +324,6 @@ def plot_populations_per_trial(
     lgd,
     i,
     populations_to_plot_trial,
-    path_data,
     single_trial_time_vect_concat,
     single_trial_duration,
     path_fig="",
@@ -347,20 +350,17 @@ def plot_populations_per_trial(
         elif pop_list_depth == 2:
             pops_to_plot = populations_to_plot_trial[tidx]
 
-        for file_prefix in pops_to_plot:
-            plot_name_t = file_prefix
+        for pop_p_t, pop_n_t in pops_to_plot:
+            plot_name_t = pop_p_t
             _log.debug(f"Plotting trial {nt} for {plot_name_t}...")
-
-            pop_p_path_t = path_data / f"{file_prefix}_p.json"
-            pop_n_path_t = path_data / f"{file_prefix}_n.json"
 
             tstart_trial = nt * single_trial_duration
             tend_trial = (nt + 1) * single_trial_duration
 
-            fig_ipop, ax_ipop = plot_population(
+            fig_ipop, ax_ipop = plot_population_paired(
                 single_trial_time_vect_concat,
-                pop_p_path_t,
-                pop_n_path_t,
+                pop_p_t,
+                pop_n_t,
                 tstart_trial,
                 tend_trial,
                 title=f"{plot_name_t.replace('_', ' ').title()} {lgd} Trial {nt}",
@@ -390,370 +390,203 @@ def plot_populations_per_trial(
 
 
 def create_collage(
-    all_trials_imgs,
-    pop_collage,
-    path_fig,
+    plotted: dict[object, tuple[Figure, Axis, Path]],
+    path_fig: Path,
+    label: str = "",
+    paired: bool = False,
 ):
-    _log.debug(f"Generating per trial collage for {pop_collage} populations...")
 
-    first_img = None
-    for trial_imgs in all_trials_imgs.values():
-        for img in trial_imgs.values():
-            first_img = img
-            break
-        if first_img:
-            break
-    if first_img is None:
-        _log.warning("No images found in all_trials_imgs.")
-        return
+    first_img = Image.open(list(plotted.values())[0][2])
 
     width, height = first_img.size
+    collage = Image.new(
+        "RGB",
+        (width, height * len(plotted)),
+        color=(255, 255, 255),
+    )
+    draw = ImageDraw.Draw(collage)
 
-    for nt, trial_dict in all_trials_imgs.items():
-        collage = Image.new(
-            "RGB",
-            (width, height * len(pop_collage)),
-            color=(255, 255, 255),
-        )
-        draw = ImageDraw.Draw(collage)
+    for i, (pop, (f, a, filepath)) in enumerate(plotted.items()):
+        # if pop in trial_dict:
+        img = Image.open(filepath)
+        collage.paste(img, (0, height * i))
+        # else:
+        #     draw.rectangle(
+        #         [(0, height * i), (width, height * (i + 1))],
+        #         fill=(230, 230, 230),
+        #         outline=(150, 150, 150),
+        #     )
+        #     text = f"{pop}: Plot not generated"
+        #     draw.text(
+        #         (width // 2 - 20, height * i + height // 2 - 20),
+        #         text,
+        #         fill=(0, 0, 0),
+        #     )
 
-        for i, pop in enumerate(pop_collage):
-            if pop in trial_dict:
-                img = trial_dict[pop]
-                collage.paste(img, (0, height * i))
-            else:
-                draw.rectangle(
-                    [(0, height * i), (width, height * (i + 1))],
-                    fill=(230, 230, 230),
-                    outline=(150, 150, 150),
-                )
-                text = f"{pop}: Plot not generated"
-                draw.text(
-                    (width // 2 - 20, height * i + height // 2 - 20),
-                    text,
-                    fill=(0, 0, 0),
-                )
-
-        if path_fig:
-            collage_path = path_fig / "Collage"
-            collage_path.mkdir(parents=True, exist_ok=True)
-            collage.save(collage_path / f"Trial_{nt}_collage.{FIGURE_EXT}")
-            _log.debug(f"Saved plot at {collage_path}")
+    if path_fig:
+        collage_path = path_fig / "Collage"
+        collage_path.mkdir(parents=True, exist_ok=True)
+        img_path = collage_path / f"{label}_collage.{FIGURE_EXT}"
+        collage.save(img_path)
+        _log.debug(f"Saved plot at {img_path}")
 
     return
+
+
+def extract_neural_and_merge(metas: list[ResultMeta]):
+    neural_concat = concatenate_neural_results(metas)
+    ref_mc: MasterParams = metas[0].load_params()
+
+    total_sim_duration = sum(
+        p.simulation.duration_ms for p in [m.load_params() for m in metas]
+    )
+    time_vect = np.linspace(
+        0,
+        total_sim_duration,
+        num=int(np.round(total_sim_duration / ref_mc.simulation.resolution)),
+        endpoint=True,
+    )
+    return neural_concat, ref_mc, time_vect
 
 
 def plot_overlay(
-    trials2plot,
-    populations_to_overlay: list,
-    path_data,
-    single_trial_time_vect_concat,
-    time_trial,
+    metas,
+    populations_to_overlay: list[str],
     path_fig,
-    normalize=False,
+    normalize=True,
+    label="",
 ):
 
-    for nt in trials2plot:
-        fig_overl, ax_overl = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-        _log.debug(f"Generating overlayed plot for trial {nt}...")
+    fig_overl, ax = plt.subplots(1, 1, figsize=(10, 6), sharex=True)
 
-        for file_prefix in populations_to_overlay:
-            plot_name_t = file_prefix
+    (neural_concat, ref_mc, time_vect) = extract_neural_and_merge(metas)
 
-            pop_p_path = path_data / f"{file_prefix}_p.json"
-            pop_n_path = path_data / f"{file_prefix}_n.json"
+    for file_prefix in populations_to_overlay:
+        plot_name_t = file_prefix
 
-            pop_p_data = load_spike_data_from_file(pop_p_path)
-            pop_n_data = load_spike_data_from_file(pop_n_path)
+        pop_data = neural_concat.get_pop(file_prefix)
 
-            t0 = nt * time_trial
-            t1 = (nt + 1) * time_trial
+        plot_rate(
+            time_vect,
+            pop_data.times,
+            pop_data.population_size,
+            buffer_sz=15,
+            ax=ax,
+            label=plot_name_t,
+            normalize=normalize,
+        )
 
-            mask_p = (pop_p_data.times >= t0) & (pop_p_data.times < t1)
-            mask_n = (pop_n_data.times >= t0) & (pop_n_data.times < t1)
+    ax.legend(fontsize=8)
+    ax.set_ylabel("Normalized rate" if normalize else "Rate (Hz)")
+    ax.set_title("Overlayed populations (PSTH)")
 
-            ts_p = pop_p_data.times[mask_p] - t0
-            ts_n = pop_n_data.times[mask_n] - t0
+    fig_overl.tight_layout()
 
-            plot_rate(
-                single_trial_time_vect_concat,
-                ts_p,
-                pop_p_data.population_size,
-                buffer_sz=15,
-                ax=ax_overl[0],
-                label=f"{plot_name_t}_p",
-                normalize=normalize,
-            )
-
-            plot_rate(
-                single_trial_time_vect_concat,
-                ts_n,
-                pop_n_data.population_size,
-                buffer_sz=15,
-                ax=ax_overl[1],
-                label=f"{plot_name_t}_p",
-                normalize=normalize,
-            )
-
-        for ax in ax_overl:
-            ax.legend(fontsize=8)
-            if normalize:
-                ax.set_ylabel("Normalized rate")
-            else:
-                ax.set_ylabel("Rate (Hz)")
-
-        ax_overl[0].set_title("Overlayed positive populations (PSTH)")
-        ax_overl[1].set_title("Overlayed negative populations (PSTH)")
-
-        fig_overl.tight_layout()
-
-        if path_fig:
-            overl_path = path_fig / "Overlayed plots"
-            if normalize:
-                overl_path = overl_path / "Normalized"
-            overl_path.mkdir(parents=True, exist_ok=True)
-
-            if normalize:
-                fig_overl.savefig(overl_path / f"Trial_{nt}_normalized.{FIGURE_EXT}")
-            else:
-                fig_overl.savefig(overl_path / f"Trial_{nt}.{FIGURE_EXT}")
-            _log.debug(
-                f"Saved overlayed plot at {overl_path} / Trial_{nt}.{FIGURE_EXT}"
-            )
-            plt.close(fig_overl)
+    if path_fig:
+        overl_path = path_fig / f"overlayed/{'normalized' if normalize else ''}"
+        overl_path.mkdir(parents=True, exist_ok=True)
+        save_path = (
+            overl_path / f"{label}_{'normalized' if normalize else ''}.{FIGURE_EXT}"
+        )
+        fig_overl.savefig(save_path)
+        _log.debug(f"Saved overlayed plot at {save_path}")
+        plt.close(fig_overl)
     return
 
 
-def plot_controller_outputs(run_paths: RunPaths):
+def sizeof_fmt(num, suffix="B"):
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
+def merge_and_plot(
+    metas: list[ResultMeta],
+    pops_single=POPS_SINGLE,
+    pops_paired=POPS_PAIRED,
+    path_fig=None,
+):
+    neural_concat, ref_mc, time_vect = extract_neural_and_merge(metas)
+    path_fig = path_fig or ref_mc.run_paths.figures
+
+    plotted = {}
+    for pair in pops_paired:
+        fig_pop, ax_pop = plot_population_paired(
+            time_vect,
+            neural_concat.get_pop(pair[0]),
+            neural_concat.get_pop(pair[1]),
+            title=f"{pair[0].replace('_', ' ').title()}",
+            buffer_size=15,
+        )
+
+        filepath = path_fig / f"{pair[0]}.{FIGURE_EXT}"
+        if filepath:
+            fig_pop.savefig(filepath)
+            _log.debug(f"Saved plot at {filepath}")
+            plt.close(fig_pop)
+        plotted[pair] = (fig_pop, ax_pop, filepath)
+
+    for pop in pops_single:
+        plot_name = pop
+        _log.debug(f"Plotting for {plot_name}...")
+
+        filepath = path_fig / f"{plot_name}.{FIGURE_EXT}"
+        fig, ax, filepath = plot_population_single(
+            time_vect,
+            neural_concat.get_pop(pop),
+            title=f"{plot_name.replace('_', ' ').title()}",
+            buffer_size=15,
+            filepath=filepath,
+        )
+        plotted[pop] = (fig, ax, filepath)
+    return plotted
+
+
+def plot_controller_outputs(metas: list[ResultMeta]):
     """Plots outputs for various populations from a simulation run directory. Both entire simulation and per trial plots"""
 
     if MPI.COMM_WORLD.rank != 0:
         return  # Only rank 0 plots
 
-    with open(run_paths.params_json) as f:
-        master_config = MasterParams.model_validate_json(f.read())
+    ref_mc = metas[0].load_params()
+    ref_rp = ref_mc.run_paths
 
-    path_fig = run_paths.figures
-    path_data = run_paths.data_nest
-
+    path_fig = ref_rp.figures
     path_fig.mkdir(parents=True, exist_ok=True)
 
-    # Get parameters from config
-    njt = master_config.NJT
-    N_trials = master_config.simulation.n_trials
-    # pop_size = master_config.brain.population_size # No longer needed, obtained from PopulationSpikes
-    res = master_config.simulation.resolution
-    total_sim_duration = master_config.simulation.total_duration_all_trials_ms
-    total_time_vect_concat = np.linspace(
-        0,
-        total_sim_duration,
-        num=int(np.round(total_sim_duration / res)),
-        endpoint=True,
+    # merge_and_plot(metas)
+
+    p = merge_and_plot(
+        [metas[0], metas[-1]],
+        pops_single=[POPS.plan_to_inv],
+        pops_paired=[(POPS.planner_p, POPS.planner_n)],
     )
-    single_trial_duration = master_config.simulation.duration_single_trial_ms
-    single_trial_time_vect_concat = np.linspace(
-        0,
-        single_trial_duration,
-        num=int(np.round(single_trial_duration / res)),
-        endpoint=True,
-    )
+    create_collage(p, path_fig, "first-last")
 
-    _log.debug("Generating plots from run data...", run_dir=run_paths.run)
+    # populations_to_overlay = [
+    #     POPS.planner_p,
+    #     POPS.feedback_p,
+    #     POPS.pred_p,
+    #     POPS.state_p,
+    # ]
+    # plot_overlay(
+    #     [metas[0], metas[-1]],
+    #     populations_to_overlay,
+    #     path_fig,
+    #     normalize=True,
+    #     label="plan-feed-pred-state",
+    # )
 
-    # Assuming single DoF for now as requested
-    i = 0
-    lgd = f"DoF {i}"
+    # for n in [m.load_neural() for m in metas]:
+    #     for p in n.weights:
+    #         plot_synaptic_weight_evolution(
+    #             p,
+    #             max_synapses=500,
+    #             fig_path=ref_rp.figures / p,
+    #         )
 
-    # Maps the final plot name to the prefix used for the .json data files
-    populations_to_plot = [
-        "planner",
-        "brainstem",
-        "mc_out",
-        "mc_m1",
-        "mc_ffwd",
-        "mc_fbk",
-        "state",
-        "sensoryneur",
-        "cereb_core_forw_dcnp",
-        "cereb_core_forw_io",
-        "cereb_core_forw_pc",
-        "cereb_core_inv_dcnp",
-        "cereb_core_inv_io",
-        "cereb_core_inv_pc",
-        "cereb_error",
-        "cereb_error_inv",
-        "cereb_feedback",
-        "cereb_feedback_inv",
-        "cereb_motor_prediction",
-        "cereb_state_to_inv",
-        "fbk_smooth",
-        "pred",
-    ]
-
-    for file_prefix in populations_to_plot:
-        plot_name = file_prefix
-        _log.debug(f"Plotting for {plot_name}...")
-
-        pop_p_path = path_data / f"{file_prefix}_p.json"
-        pop_n_path = path_data / f"{file_prefix}_n.json"
-
-        fig_pop, ax_pop = plot_population(
-            total_time_vect_concat,
-            pop_p_path,
-            pop_n_path,
-            title=f"{plot_name.replace('_', ' ').title()} {lgd}",
-            buffer_size=15,
-        )
-
-        filepath = path_fig / f"{plot_name}_{i}.{FIGURE_EXT}"
-        if filepath:
-            fig_pop.savefig(filepath)
-            _log.debug(f"Saved plot at {filepath}")
-            plt.close(fig_pop)
-
-    populations_to_plot_single = [
-        "cereb_motor_commands",
-        "cereb_plan_to_inv",
-        "cereb_core_forw_bc",
-        "cereb_core_forw_glom",
-        "cereb_core_forw_goc",
-        "cereb_core_forw_grc",
-        "cereb_core_forw_mf",
-        "cereb_core_forw_sc",
-        "cereb_core_inv_bc",
-        "cereb_core_inv_glom",
-        "cereb_core_inv_goc",
-        "cereb_core_inv_grc",
-        "cereb_core_inv_mf",
-        "cereb_core_inv_sc",
-    ]
-    for file_prefix in populations_to_plot_single:
-        plot_name = file_prefix
-        _log.debug(f"Plotting for {plot_name}...")
-
-        pop_p_path = path_data / f"{file_prefix}.json"
-
-        plot_population_single(
-            total_time_vect_concat,
-            pop_p_path,
-            title=f"{plot_name.replace('_', ' ').title()} {lgd}",
-            buffer_size=15,
-            filepath=path_fig / f"{plot_name}_{i}.{FIGURE_EXT}",
-        )
-
-    # PLOT PER TRIALS
-    populations_to_plot_trial = [
-        "planner",
-        "brainstem",
-        "mc_out",
-        "mc_m1",
-        "mc_ffwd",
-        "mc_fbk",
-        "state",
-        "sensoryneur",
-        "cereb_core_forw_dcnp",
-        "cereb_core_forw_io",
-        "cereb_core_forw_pc",
-        "cereb_core_inv_dcnp",
-        "cereb_core_inv_io",
-        "cereb_core_inv_pc",
-        "cereb_error",
-        "cereb_error_inv",
-        "cereb_feedback",
-        "cereb_feedback_inv",
-        "cereb_motor_prediction",
-        "cereb_state_to_inv",
-        "fbk_smooth",
-        "pred",
-    ]
-
-    """
-    # If you want to specify the population to plot in each trial
-    populations_to_plot_trial = [
-        ["planner", "sensoryneur", "pred"],
-        ["planner", "brainstem"],
-        ["planner", "brainstem", "pred"],
-    ]
-    """
-    populations_to_collage = [
-        "planner",
-        "sensoryneur",
-        # "cereb_core_forw_dcnp",
-        # "cereb_core_forw_io",
-        # "cereb_core_forw_pc",
-        "cereb_feedback",
-        "cereb_error",
-        "pred",
-        "state",
-    ]
-
-    populations_to_overlay = [
-        "planner",
-        # "sensoryneur",
-        # "cereb_core_forw_dcnp",
-        # "cereb_core_forw_io",
-        # "cereb_core_forw_pc",
-        "cereb_feedback",
-        # "cereb_error",
-        "pred",
-        "state",
-    ]
-
-    # Set trials to plot
-    trials2plot = "all"  # [0,15,29]
-    if trials2plot == "all":
-        trials2plot = list(range(N_trials))
-
-    trials_imgs = plot_populations_per_trial(
-        trials2plot,
-        lgd,
-        i,
-        populations_to_plot_trial,
-        path_data,
-        single_trial_time_vect_concat,
-        single_trial_duration,
-        path_fig,
-    )
-
-    create_collage(
-        trials_imgs,
-        populations_to_collage,
-        path_fig,
-    )
-
-    # plot both normalized and not normalized overlayed plots
-    plot_overlay(
-        trials2plot,
-        populations_to_overlay,
-        path_data,
-        single_trial_time_vect_concat,
-        single_trial_duration,
-        path_fig,
-        normalize=True,
-    )
-
-    plot_overlay(
-        trials2plot,
-        populations_to_overlay,
-        path_data,
-        single_trial_time_vect_concat,
-        single_trial_duration,
-        path_fig,
-        normalize=False,
-    )
-
-    for json_file in sorted(run_paths.data_nest.glob("weightrecord*.json")):
-        try:
-            fig_filename = (
-                json_file.stem.replace("weightrecord-", "") + "." + FIGURE_EXT
-            )
-
-            plot_synaptic_weight_evolution(
-                json_file,
-                max_synapses=500,
-                fig_path=run_paths.figures / fig_filename,
-            )
-        except Exception as e:
-            _log.warning(f"Failed to plot synaptic weights from {json_file}: {e}")
+    _log.debug("Plot generation finished.")
 
     _log.debug("Plot generation finished.")
