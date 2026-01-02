@@ -360,7 +360,7 @@ class RoboticPlant:
             self.bullet_robot._body_id,
             self.bullet_robot.HAND_LINK_ID,
             controlMode=self.p.VELOCITY_CONTROL,
-            targetVelocity=0.2,
+            targetVelocity=2 * self.config.master_config.simulation.resolution,
         )
 
     def move_shoulder(self, speed: float) -> None:

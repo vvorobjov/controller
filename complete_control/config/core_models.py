@@ -42,7 +42,7 @@ class OracleData(BaseModel):
     tgt_joint_angle: float = 140
     target_visual_offset: float = 4.0
     target_tolerance_angle_deg: float = 10
-    target_color: TargetColor = Field(default=TargetColor.BLUE_LEFT)
+    target_color: TargetColor = Field(default=TargetColor.RED_RIGHT)
     robot_spec: RobotSpecParams = Field(default_factory=lambda: RobotSpecParams())
 
     @computed_field
@@ -122,4 +122,4 @@ class MusicParams(BaseModel, frozen=True):
 class PlottingParams(BaseModel, frozen=True):
     PLOT_AFTER_SIMULATE: bool = True
     CAPTURE_VIDEO: list[str] = []  # ["x", "y", "z"]
-    NUM_STEPS_CAPTURE_VIDEO: int = 100
+    NUM_STEPS_CAPTURE_VIDEO: int = 10

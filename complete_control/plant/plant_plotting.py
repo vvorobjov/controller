@@ -19,6 +19,8 @@ from utils_common.results import (
 
 from .plant_models import JointState, JointStates, PlantPlotData
 
+plt.rcParams.update({"font.size": 15})
+
 (SHOULDER, ELBOW, HAND) = range(3)
 log = structlog.get_logger(__name__)
 
@@ -252,7 +254,7 @@ def plot_joint_space_animated(
                 log.info(f"Saved animated joint space plot at {filepath}")
         else:
             filepath = pth_fig_receiver / f"position_joint_{timestamp}.png"
-            fig.savefig(filepath, dpi=300, transparent=False)
+            fig.savefig(filepath, dpi=180, transparent=False)
             log.info(f"Saved joint space plot at {filepath}")
     plt.close()
     return fig, ax, filepath
@@ -310,10 +312,11 @@ def plot_rmse(
     ax.set_xlabel("Trial Number")
     ax.set_ylabel("Elbow RMSE (rad)")
     ax.set_title("Elbow RMSE Over Trials")
+    ax.grid(True)
     fig.tight_layout()
     if save_fig:
         filepath = pth_fig_receiver / f"elbow_rmse_{timestamp}.png"
-        fig.savefig(filepath)
+        fig.savefig(filepath, dpi=900)
         log.info(f"Saved joint RMSE plot at {filepath}")
     return fig, ax, filepath
 
@@ -466,7 +469,7 @@ def generate_video_from_existing_result_single_trial(
                 images_path / axis / f"<{step:0{len_max_frame_name}d}>.jpg"
             )
             plant._capture_state_and_save(image_path, axis)
-        if step > plant_config.master_config.simulation.neural_control_steps:
+        if (step % start) > plant_config.master_config.simulation.neural_control_steps:
             plant.update_ball_position()
 
     plant.p.resetSimulation()
