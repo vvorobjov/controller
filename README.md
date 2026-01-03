@@ -6,7 +6,9 @@ This branch of the repository features the core code needed to run simulations o
 
 As the project involves multiple simulators, the interaction between them is governed by a *coordinator*. We provide two possible coordinators: **MUSIC** and **NRP**. Because of the very different natures of the two, it may be useful to understand basic data and control flow in each, so we outline it here.
 
-## MUSIC
+## MUSIC - Deprecated
+
+Although basic usage still likely works, using MUSIC is deprecated. Please use NRP instead.
 
 MUSIC is an API that allows data exchange between simulators, implemented with MPI primitives. As it only focuses on data exchange (and between-process coordination), the main simulation loop is explicit and out of MUSIC control. Every MUSIC run is an MPI run (in fact, you run music directly with `mpirun`). NEST provides strong integration with MUSIC, so there are few explicit MUSIC calls in our neural-side implementation, which instead uses "MUSIC proxies", neuron models with MUSIC calls inside them. The robotic side, instead, needs explicit MUSIC calls.
 

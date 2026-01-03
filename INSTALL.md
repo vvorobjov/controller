@@ -7,7 +7,7 @@ This project is currently based on six main libraries
 - [BSB framework](https://bsb.readthedocs.io/en/latest/index.html): builds cerebellar network based on the model recipe
 - [pyBullet simulator](https://github.com/bulletphysics/bullet3): the physics simulator which simulates the robotic plant
 - [cerebellar models](https://github.com/dbbs-lab/cerebellar-models/tree/feature/plasticity): the `bsb` configuration tree that contains a plastic model of the cerebellum
-- [neurorobotics platform](https://bitbucket.org/hbpneurorobotics/nrp-core/src/master/): the second possible coordinator
+- [NRP-core](https://bitbucket.org/hbpneurorobotics/nrp-core/src/master/): the second possible coordinator
 
 and uses, in addition to our own code, a few supporting repos:
 - pyBullet [muscle simulation](https://github.com/UM-Projects-MZ/bullet_muscle_sim)
