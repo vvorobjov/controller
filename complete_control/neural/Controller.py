@@ -585,7 +585,7 @@ class Controller:
         )
         nest.Connect(
             self.pops.sensory_delayed_n.pop,
-            self.pops.state_n.pop,
+            self.pops.state_p.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
@@ -615,7 +615,7 @@ class Controller:
         )
         nest.Connect(
             self.pops.pred_n.pop,
-            self.pops.state_n.pop,
+            self.pops.state_p.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )

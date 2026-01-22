@@ -20,9 +20,10 @@ class ConnectionsParams(BaseModel):
 
     sensory_delay: float = 150
 
+    # atm dcn_f->pred : AtoA conn
     dcn_forw_prediction: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.1,
+            weight=0.077,  # (1/65)*5
             delay=min_delay,
         )
     )
@@ -52,7 +53,7 @@ class ConnectionsParams(BaseModel):
     )
     state_mc_fbk: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=-3.0,  # 1.67,  # -2.75,  # 1.875,  #   -1.2,
+            weight=-1.0,  # 1.67,  # -2.75,  # 1.875,  #   -1.2,
             delay=min_delay,
         )
     )
