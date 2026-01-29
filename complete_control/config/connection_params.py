@@ -23,7 +23,7 @@ class ConnectionsParams(BaseModel):
     # atm dcn_f->pred : AtoA conn
     dcn_forw_prediction: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.077,  # (1/65)*5
+            weight=0.046,  # (1/65)*3
             delay=min_delay,
         )
     )
@@ -98,7 +98,7 @@ class ConnectionsParams(BaseModel):
     )
     planner_error_inv: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.00166667,
+            weight=0.005,  # 0.00166667,
             delay=min_delay,
         )
     )
@@ -128,7 +128,7 @@ class ConnectionsParams(BaseModel):
     )
     motor_pre_brain_stem: SingleSynapseParams = Field(
         default_factory=lambda: SingleSynapseParams(
-            weight=0.005,
+            weight=0.0,  # 0.005,
             delay=min_delay,
         )
     )

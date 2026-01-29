@@ -556,27 +556,81 @@ def plot_controller_outputs(metas: list[ResultMeta]):
     path_fig = ref_rp.figures
     path_fig.mkdir(parents=True, exist_ok=True)
 
+    pops_single_list = [POPS.forw_mf, POPS.motor_commands]
+    pops_paired_list = [
+        (POPS.planner_p, POPS.planner_n),
+        (POPS.mc_out_p, POPS.mc_out_n),
+        (POPS.state_p, POPS.state_n),
+        (POPS.forw_dcnp_p, POPS.forw_dcnp_n),
+        (POPS.forw_io_p, POPS.forw_io_n),
+        (POPS.forw_pc_p, POPS.forw_pc_n),
+        (POPS.error_fwd_p, POPS.error_fwd_n),
+        (POPS.sensory_delayed_p, POPS.sensory_delayed_n),
+        (POPS.pred_p, POPS.pred_n),
+        (POPS.sn_p, POPS.sn_n),
+        (POPS.mc_out_p, POPS.mc_out_n),
+    ]
+
     # merge_and_plot(metas)
 
     p = merge_and_plot(
-        [metas[0], metas[-1]],
-        pops_single=[POPS.plan_to_inv],
-        pops_paired=[(POPS.planner_p, POPS.planner_n)],
+        [metas[0]],
+        # [metas[0], metas[-1]],
+        pops_single=pops_single_list,
+        pops_paired=pops_paired_list,
     )
     create_collage(p, path_fig, "first-last")
 
-    # populations_to_overlay = [
-    #     POPS.planner_p,
-    #     POPS.pred_p,
-    #     POPS.state_p,
-    # ]
-    # plot_overlay(
-    #     [metas[0], metas[-1]],
-    #     populations_to_overlay,
-    #     path_fig,
-    #     normalize=True,
-    #     label="plan-feed-pred-state",
-    # )
+    populations_to_overlay = [
+        POPS.state_p,
+        POPS.state_n,
+        POPS.planner_p,
+        POPS.planner_n,
+        POPS.sensory_delayed_p,
+        POPS.sensory_delayed_n,
+        POPS.pred_p,
+        POPS.pred_n,
+    ]
+    plot_overlay(
+        [metas[0], metas[-1]],
+        populations_to_overlay,
+        path_fig,
+        normalize=False,
+        label="plan-feed-pred-state",
+    )
+
+    populations_to_overlay = [
+        POPS.forw_io_p,
+        POPS.forw_io_n,
+        POPS.forw_dcnp_p,
+        POPS.forw_dcnp_n,
+        POPS.forw_pc_p,
+        POPS.forw_pc_n,
+    ]
+
+    plot_overlay(
+        [metas[0], metas[-1]],
+        populations_to_overlay,
+        path_fig,
+        normalize=False,
+        label="cereb_forward",
+    )
+
+    populations_to_overlay = [
+        POPS.pred_p,
+        POPS.pred_n,
+        POPS.error_fwd_p,
+        POPS.error_fwd_n,
+        POPS.forw_dcnp_p,
+        POPS.forw_dcnp_n,
+    ]
+    plot_overlay(
+        [metas[0], metas[-1]],
+        populations_to_overlay,
+        path_fig,
+        normalize=False,
+        label="Forward-Model Interface",
+    )
 
     # for n in [m.load_neural() for m in metas]:
     #     for p in n.weights:
