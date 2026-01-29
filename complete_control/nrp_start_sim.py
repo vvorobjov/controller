@@ -83,7 +83,7 @@ def run_trial(parent_id: str = "", label: str = "") -> str:
     if master_config.plotting.PLOT_AFTER_SIMULATE:
         client_log.info("--- Generating Plots (Standalone) ---")
         plot_start_time = timer()
-        # plot_controller_outputs([result])
+        plot_controller_outputs([result])
         plot_plant_outputs([result])
         # draw_schema([result])
         plot_end_time = timer()

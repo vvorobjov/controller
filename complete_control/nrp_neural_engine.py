@@ -19,6 +19,10 @@ from utils_common.profile import Profile
 from utils_common.utils import TrialSection, get_current_section
 
 NANO_SEC = 1e-9
+blockingWindow = False
+Block_Err_IO = True
+Block_Motor_MF = False
+Block_DCN_Pred = True
 
 
 class Script(GrpcEngineScript):
@@ -79,6 +83,8 @@ class Script(GrpcEngineScript):
         self._setDataPack("control_cmd", proto_wrapper)
 
         nest.Prepare()
+        if blockingWindow:
+            self.get_connections_to_block()
         self.log.info("NRP Neural Engine: Initialization complete.")
 
     def runLoop(self, timestep_ns):
@@ -100,6 +106,8 @@ class Script(GrpcEngineScript):
             self.log.debug("[neural] updated sensory info")
 
         with self.sim_profile.time():
+            if blockingWindow == True:
+                self.apply_blocking_window(sim_time_s, curr_section)
             if (
                 curr_section != TrialSection.TIME_GRASP
                 and curr_section != TrialSection.TIME_POST
@@ -156,3 +164,129 @@ class Script(GrpcEngineScript):
             f.write(res.model_dump_json())
 
         nest.Cleanup()
+
+    def get_connections_to_block(self):
+        self.log.debug("[neural] Applying blocking window...")
+        # dcn: self.controller.cerebellum_handler.cerebellum.populations.forw_dcnp_p.pop,
+        # pred: self.controller.pops.pred_p.pop,
+        # error: self.controller.cerebellum_handler.interface_pops.error_p.pop,
+        # io: self.controller.cerebellum_handler.cerebellum.populations.forw_io_p.pop,
+
+        # BLOCK connections from error to forw_io
+        if Block_Err_IO:
+            source_p = self.controller.cerebellum_handler.interface_pops.error_fwd_p.pop
+            target_p = (
+                self.controller.cerebellum_handler.cerebellum.populations.forw_io_p.pop
+            )
+            source_n = self.controller.cerebellum_handler.interface_pops.error_fwd_n.pop
+            target_n = (
+                self.controller.cerebellum_handler.cerebellum.populations.forw_io_n.pop
+            )
+
+            self.blockErrIO_p_p = nest.GetConnections(
+                source=source_p,
+                target=target_p,
+                synapse_model="static_synapse",
+            )
+
+            self.blockErrIO_n_n = nest.GetConnections(
+                source=source_n,
+                target=target_n,
+                synapse_model="static_synapse",
+            )
+
+        # BLOCK connections from motor command to mf
+        if Block_Motor_MF:
+            self.mf_pop = (
+                self.controller.cerebellum_handler.cerebellum.populations.forw_mf.pop
+            )
+            self.motor_comm_pop = (
+                self.controller.cerebellum_handler.interface_pops.motor_commands.pop
+            )
+            self.log.debug(
+                f"MF pop max_peak_rate 1: {nest.GetStatus(self.motor_comm_pop)[0]['max_peak_rate']}"
+            )
+
+            self.flag_motor_mf_blocked = False
+
+        # BLOCK connections from DCN to forw_prediction
+        if Block_DCN_Pred:
+            source_p = (
+                self.controller.cerebellum_handler.cerebellum.populations.forw_dcnp_p.pop
+            )
+            target_p = self.controller.pops.pred_p.pop
+            source_n = (
+                self.controller.cerebellum_handler.cerebellum.populations.forw_dcnp_n.pop
+            )
+            target_n = self.controller.pops.pred_n.pop
+
+            self.blockDCNpred_p_p = nest.GetConnections(
+                source=source_p,
+                target=target_p,
+                synapse_model="static_synapse",
+            )
+            self.blockDCNpred_n_n = nest.GetConnections(
+                source=source_n,
+                target=target_n,
+                synapse_model="static_synapse",
+            )
+            self.blockDCNpred_p_n = nest.GetConnections(
+                source=source_p,
+                target=target_n,
+                synapse_model="static_synapse",
+            )
+            self.blockDCNpred_n_p = nest.GetConnections(
+                source=source_n,
+                target=target_p,
+                synapse_model="static_synapse",
+            )
+
+        return
+
+    def apply_blocking_window(self, sim_time_s, curr_section):
+        # if sim_time_s * 1000 < 200:
+        if Block_Err_IO:
+            if curr_section == TrialSection.TIME_PREP:
+                nest.SetStatus(self.blockErrIO_p_p, {"weight": 0.0})
+                nest.SetStatus(self.blockErrIO_n_n, {"weight": 0.0})
+            else:
+                w = self.master_config.connections.error_io_f.weight
+                nest.SetStatus(self.blockErrIO_p_p, {"weight": w})
+                nest.SetStatus(self.blockErrIO_n_n, {"weight": -w})
+
+        if Block_Motor_MF:
+            if curr_section == TrialSection.TIME_PREP:
+                if not self.flag_motor_mf_blocked:
+
+                    nest.SetStatus(
+                        self.motor_comm_pop, {"max_peak_rate": 0.0, "base_rate": 0.0}
+                    )
+                    self.flag_motor_mf_blocked = True
+                    self.log.debug(
+                        f"[neural] Motor to MF connections disconnected. Rb params: {nest.GetStatus(self.motor_comm_pop)[0]['max_peak_rate']}"
+                    )
+            else:
+                if self.flag_motor_mf_blocked:
+                    base_rate_mc = self.controller.pops_params.motor_commands.base_rate
+                    nest.SetStatus(
+                        self.motor_comm_pop,
+                        {"max_peak_rate": 300.0, "base_rate": base_rate_mc},
+                    )
+                    self.log.debug(
+                        f"[neural] Motor to MF connections reconnected at sim time: {sim_time_s}s. Rb params: {nest.GetStatus(self.motor_comm_pop)[0]['max_peak_rate']}, {nest.GetStatus(self.motor_comm_pop)[0]['base_rate']}"
+                    )
+                    self.flag_motor_mf_blocked = False
+
+        if Block_DCN_Pred:
+            if curr_section == TrialSection.TIME_PREP:
+                nest.SetStatus(self.blockDCNpred_p_p, {"weight": 0.0})
+                nest.SetStatus(self.blockDCNpred_n_n, {"weight": 0.0})
+                nest.SetStatus(self.blockDCNpred_p_n, {"weight": 0.0})
+                nest.SetStatus(self.blockDCNpred_n_p, {"weight": 0.0})
+            else:
+                w = self.master_config.connections.dcn_forw_prediction.weight
+                nest.SetStatus(self.blockDCNpred_p_p, {"weight": w})
+                nest.SetStatus(self.blockDCNpred_p_n, {"weight": w})
+                nest.SetStatus(self.blockDCNpred_n_p, {"weight": -w})
+                nest.SetStatus(self.blockDCNpred_n_n, {"weight": -w})
+        return
