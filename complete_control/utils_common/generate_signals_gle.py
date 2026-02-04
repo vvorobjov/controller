@@ -19,6 +19,7 @@ def generate_trajectory_gle(
     from pfc_planner.src.factory import get_planner
 
     torch.set_num_threads(int(os.getenv("OMP_NUM_THREADS")))
+    torch.manual_seed(sim.seed)
     # otherwise torch messes with OMP_NUM_THREADS;
     # then nest does `assert env(OMP_NUM_THREADS) == kernel.virtual_threads` and fails
 
