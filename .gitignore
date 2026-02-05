@@ -6,7 +6,7 @@ logs
 
 runs/*
 
-build_custom_stdp/
+built_custom_stdp/
 
 tests_POCs/runs_tests_state/*
 

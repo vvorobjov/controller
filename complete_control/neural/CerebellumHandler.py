@@ -9,6 +9,7 @@ from config.connection_params import ConnectionsParams
 from config.core_models import SimulationParams
 from config.population_params import PopulationsParams, RBFPopParams
 from neural.nest_adapter import nest
+from utils_common.utils import TrialSection
 
 from .Cerebellum import Cerebellum
 from .CerebellumHandlerPopulations import CerebellumHandlerPopulations
@@ -642,3 +643,87 @@ class CerebellumHandler:
             "all_to_all",
             syn_spec=conn_spec_n_bs,
         )
+
+    def get_connections_block_window(self):
+        self.blockw_is_applied = False
+        # BLOCK connections from error to forw_io
+        self.blockw_conns_io_fwd_pp = nest.GetConnections(
+            source=self.interface_pops.error_fwd_p.pop,
+            target=self.cerebellum.populations.forw_io_p.pop,
+            synapse_model="static_synapse",
+        )
+
+        self.blockw_conns_io_fwd_nn = nest.GetConnections(
+            source=self.interface_pops.error_fwd_n.pop,
+            target=self.cerebellum.populations.forw_io_n.pop,
+            synapse_model="static_synapse",
+        )
+
+        # BLOCK connections from DCN to forw_prediction
+        self.blockw_conns_pred_pp = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_p.pop,
+            target=self.controller_pops.pred_p.pop,
+            synapse_model="static_synapse",
+        )
+        self.blockw_conns_pred_nn = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_n.pop,
+            target=self.controller_pops.pred_n.pop,
+            synapse_model="static_synapse",
+        )
+        self.blockw_conns_pred_pn = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_p.pop,
+            target=self.controller_pops.pred_n.pop,
+            synapse_model="static_synapse",
+        )
+        self.blockw_conns_pred_np = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_n.pop,
+            target=self.controller_pops.pred_p.pop,
+            synapse_model="static_synapse",
+        )
+        return
+
+    def apply_blocking_window(self, curr_section):
+        if curr_section == TrialSection.TIME_PREP:
+            if not self.blockw_is_applied:
+                self.log.debug("[neural] Applying blocking window to IO-MF-PRED")
+                # block io_fwd
+                nest.SetStatus(self.blockw_conns_io_fwd_pp, {"weight": 0.0})
+                nest.SetStatus(self.blockw_conns_io_fwd_nn, {"weight": 0.0})
+
+                # block mf_fwd
+                nest.SetStatus(
+                    self.interface_pops.motor_commands.pop,
+                    {"max_peak_rate": 0.0, "base_rate": 0.0},
+                )
+
+                # block pred
+                nest.SetStatus(self.blockw_conns_pred_pp, {"weight": 0.0})
+                nest.SetStatus(self.blockw_conns_pred_nn, {"weight": 0.0})
+                nest.SetStatus(self.blockw_conns_pred_pn, {"weight": 0.0})
+                nest.SetStatus(self.blockw_conns_pred_np, {"weight": 0.0})
+
+                self.blockw_is_applied = True
+
+        else:
+            if self.blockw_is_applied:
+                self.log.debug("[neural] Removing blocking window to IO-MF-PRED")
+                # active  io_fwd
+                w = self.conn_params.error_io_f.weight
+                nest.SetStatus(self.blockw_conns_io_fwd_pp, {"weight": w})
+                nest.SetStatus(self.blockw_conns_io_fwd_nn, {"weight": -w})
+
+                # active mf_fwd
+                base_rate_mc = self.pops_params.motor_commands.base_rate
+                nest.SetStatus(
+                    self.interface_pops.motor_commands.pop,
+                    {"max_peak_rate": 300.0, "base_rate": base_rate_mc},
+                )
+
+                # active pred
+                w = self.conn_params.dcn_forw_prediction.weight
+                nest.SetStatus(self.blockw_conns_pred_pp, {"weight": w})
+                nest.SetStatus(self.blockw_conns_pred_pn, {"weight": w})
+                nest.SetStatus(self.blockw_conns_pred_np, {"weight": -w})
+                nest.SetStatus(self.blockw_conns_pred_nn, {"weight": -w})
+
+                self.blockw_is_applied = False

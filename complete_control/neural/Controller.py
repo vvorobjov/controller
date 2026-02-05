@@ -22,6 +22,7 @@ from neural.neural_models import Synapse, SynapseBlock, SynapseRecording
 from plant.sensoryneuron import SensoryNeuron
 from utils_common.generate_signals import generate_traj
 from utils_common.results import read_weights
+from utils_common.utils import TrialSection
 
 from .ControllerPopulations import ControllerPopulations
 from .motorcortex import MotorCortex
@@ -156,6 +157,7 @@ class Controller:
         # --- Connect Cerebellum and Controller (needs to be here... >:( )
         if use_cerebellum:
             self.cerebellum_handler.connect_to_main_controller_populations()
+            self.cerebellum_handler.get_connections_block_window()
 
         self.log.info("Creating coordinator interface...")
         self.enable_music = music_cfg is not None
@@ -822,3 +824,16 @@ class Controller:
             self.log.debug("Cerebellum not in use, skipping cerebellum pops.")
 
         return pops
+
+    def run_simulation_step(self, curr_section, timestep):
+        if self.master_params.USE_CEREBELLUM:
+            self.cerebellum_handler.apply_blocking_window(curr_section)
+
+            if (
+                curr_section != TrialSection.TIME_GRASP
+                and curr_section != TrialSection.TIME_POST
+                and curr_section != TrialSection.TIME_END_TRIAL
+            ):
+                nest.Run(timestep)
+
+        return
