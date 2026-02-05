@@ -4,6 +4,8 @@ from typing import ClassVar
 
 from pydantic import BaseModel, Field
 
+from .paths import ARTIFACTS_PLANNER
+
 
 class TrajGeneratorType(str, Enum):
     MOCKED = "mocked"
@@ -12,7 +14,7 @@ class TrajGeneratorType(str, Enum):
 
 
 class GLETrajGeneratorConfig(BaseModel):
-    model_dir: Path | None = None  # None = use submodule default
+    model_dir: Path = ARTIFACTS_PLANNER
 
 
 class PlannerModuleConfig(BaseModel):

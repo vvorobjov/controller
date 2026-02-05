@@ -12,6 +12,7 @@ FOLDER_NAME_ROBOTIC_FIGS = "figs_robotic"
 REFERENCE_DATA_DIR = COMPLETE_CONTROL / "reference_data"
 
 CONFIG = COMPLETE_CONTROL / "config"
+ARTIFACTS = ROOT / "artifacts"
 
 TRAJECTORY = CONFIG / "trajectory.txt"
 MOTOR_COMMANDS = CONFIG / "motor_commands.txt"
@@ -32,6 +33,7 @@ M1_WEIGHTS = (
 )
 
 PFC_PLANNER = SUBMODULES / "pfc_planner"
+ARTIFACTS_PLANNER = ARTIFACTS / "pfc_planner"
 
 
 @dataclass(frozen=True)
