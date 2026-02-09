@@ -830,11 +830,11 @@ class Controller:
         if self.master_params.USE_CEREBELLUM:
             self.cerebellum_handler.apply_blocking_window(curr_section)
 
-            if (
-                curr_section != TrialSection.TIME_GRASP
-                and curr_section != TrialSection.TIME_POST
-                and curr_section != TrialSection.TIME_END_TRIAL
-            ):
-                nest.Run(timestep)
+        if (
+            curr_section != TrialSection.TIME_GRASP
+            and curr_section != TrialSection.TIME_POST
+            and curr_section != TrialSection.TIME_END_TRIAL
+        ):
+            nest.Run(timestep)
 
         return
