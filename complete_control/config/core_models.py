@@ -70,7 +70,7 @@ class SimulationParams(BaseModel, frozen=True):
 
     oracle: OracleData = Field(default_factory=lambda: OracleData())
 
-    seed: int = 12345
+    seed: int = 123456
 
     @computed_field
     @property
