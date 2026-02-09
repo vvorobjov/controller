@@ -9,6 +9,7 @@ from config.connection_params import ConnectionsParams
 from config.core_models import SimulationParams
 from config.population_params import PopulationsParams, RBFPopParams
 from neural.nest_adapter import nest
+from utils_common.utils import TrialSection
 
 from .Cerebellum import Cerebellum
 from .CerebellumHandlerPopulations import CerebellumHandlerPopulations
@@ -98,6 +99,14 @@ class CerebellumHandler:
         self.res = sim_params.resolution
         self.controller_pops = controller_pops
 
+        self.blocking_window_is_applied: bool = False
+        self.blocking_window_io_fwd_pos_conns = None
+        self.blocking_window_io_fwd_neg_conns = None
+        self.blocking_window_pred_pos_pos_conns = None
+        self.blocking_window_pred_neg_neg_conns = None
+        self.blocking_window_pred_pos_neg_conns = None
+        self.blocking_window_pred_neg_pos_conns = None
+
         # --- Initialize Interface Populations Dataclass ---
         self.interface_pops = CerebellumHandlerPopulations()
 
@@ -138,26 +147,6 @@ class CerebellumHandler:
 
     def _create_interface_populations(self):
         """Creates the intermediate populations connecting to the cerebellum."""
-        # --- Populations based on brain.py logic ---
-
-        # Feedback Scaling (Input to Fwd Error Calc)
-        # prediction_p and prediction_n are now created in Controller
-        params = self.pops_params.feedback
-        pop_params = {
-            "kp": params.kp,
-            "buffer_size": params.buffer_size,
-            "base_rate": params.base_rate,
-            "simulation_steps": len(self.total_time_vect),
-        }
-        feedback_p = nest.Create(
-            "basic_neuron_nestml", self.N
-        )  # Using basic_neuron like brain.py
-        nest.SetStatus(feedback_p, {**pop_params, "pos": True})
-        self.interface_pops.feedback_p = self._pop_view(feedback_p)
-        feedback_n = nest.Create("basic_neuron_nestml", self.N)
-        nest.SetStatus(feedback_n, {**pop_params, "pos": False})
-        self.interface_pops.feedback_n = self._pop_view(feedback_n)
-
         # Motor Commands Relay (Input to Fwd MFs) - Size N_mossy_forw
         params: RBFPopParams = self.pops_params.motor_commands
         motor_commands = nest.Create("rb_neuron_nestml", self.N_mossy_forw)
@@ -184,12 +173,12 @@ class CerebellumHandler:
             "base_rate": params.base_rate,
             "simulation_steps": len(self.total_time_vect),
         }
-        error_p = nest.Create("diff_neuron_nestml", self.N)
-        nest.SetStatus(error_p, {**pop_params, "pos": True})
-        self.interface_pops.error_p = self._pop_view(error_p)
-        error_n = nest.Create("diff_neuron_nestml", self.N)
-        nest.SetStatus(error_n, {**pop_params, "pos": False})
-        self.interface_pops.error_n = self._pop_view(error_n)
+        error_fwd_p = nest.Create("diff_neuron_nestml", self.N)
+        nest.SetStatus(error_fwd_p, {**pop_params, "pos": True})
+        self.interface_pops.error_fwd_p = self._pop_view(error_fwd_p)
+        error_fwd_n = nest.Create("diff_neuron_nestml", self.N)
+        nest.SetStatus(error_fwd_n, {**pop_params, "pos": False})
+        self.interface_pops.error_fwd_n = self._pop_view(error_fwd_n)
 
         # Planner Relay (Input to Inv MFs) - Size N_mossy_inv
         params = self.pops_params.plan_to_inv
@@ -254,21 +243,6 @@ class CerebellumHandler:
         nest.SetStatus(motor_prediction_n, {**pop_params, "pos": False})
         self.interface_pops.motor_prediction_n = self._pop_view(motor_prediction_n)
 
-        # Feedback Inverse Scaling (Input to Inv Error Calc?) - Check necessity
-        params = self.pops_params.feedback_inv
-        pop_params = {
-            "kp": params.kp,
-            "buffer_size": params.buffer_size,
-            "base_rate": params.base_rate,
-            "simulation_steps": len(self.total_time_vect),
-        }
-        feedback_inv_p = nest.Create("diff_neuron_nestml", self.N)
-        nest.SetStatus(feedback_inv_p, {**pop_params, "pos": True})
-        self.interface_pops.feedback_inv_p = self._pop_view(feedback_inv_p)
-        feedback_inv_n = nest.Create("diff_neuron_nestml", self.N)
-        nest.SetStatus(feedback_inv_n, {**pop_params, "pos": False})
-        self.interface_pops.feedback_inv_n = self._pop_view(feedback_inv_n)
-
     def _pop_view(self, nest_pop) -> PopView:
         """Always creates with no label and to_file True to trigger auto naming"""
         return PopView(nest_pop, to_file=True)
@@ -293,7 +267,7 @@ class CerebellumHandler:
         conn_spec_error_io_f = self.conn_params.error_io_f
         self.log.debug("Connecting error -> fwd_io", conn_spec=conn_spec_error_io_f)
         nest.Connect(
-            self.interface_pops.error_p.pop,
+            self.interface_pops.error_fwd_p.pop,
             self.cerebellum.populations.forw_io_p.pop,
             "all_to_all",
             syn_spec=conn_spec_error_io_f.model_dump(exclude_none=True),
@@ -303,7 +277,7 @@ class CerebellumHandler:
             update={"weight": -conn_spec_error_io_f.weight}
         )
         nest.Connect(
-            self.interface_pops.error_n.pop,
+            self.interface_pops.error_fwd_n.pop,
             self.cerebellum.populations.forw_io_n.pop,
             "all_to_all",
             syn_spec=conn_spec_error_io_f_neg.model_dump(exclude_none=True),
@@ -375,9 +349,9 @@ class CerebellumHandler:
         """Connects populations involved in calculating error signals for IO."""
         self.log.debug("Connecting populations for error calculation")
 
-        # --- Forward Error Calculation (Error = Feedback - Fwd_DCN_Prediction) ---
+        # --- Forward Error Calculation (Error = sensory_delayed - state) ---
         # Connect Feedback -> Error
-        fb_err_spec = self.conn_params.feedback_error
+        fb_err_spec = self.conn_params.sensory_delayed_error
         syn_spec_p = fb_err_spec.model_dump(exclude_none=True)
         syn_spec_n = fb_err_spec.model_copy(
             update={"weight": -fb_err_spec.weight}
@@ -386,65 +360,57 @@ class CerebellumHandler:
             "Connecting feedback -> error", syn_spec_p=syn_spec_p, syn_spec_n=syn_spec_n
         )
         nest.Connect(
-            self.interface_pops.feedback_p.pop,
-            self.interface_pops.error_p.pop,
+            self.controller_pops.sensory_delayed_p.pop,
+            self.interface_pops.error_fwd_p.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
-            self.interface_pops.feedback_p.pop,
-            self.interface_pops.error_n.pop,
+            self.controller_pops.sensory_delayed_p.pop,
+            self.interface_pops.error_fwd_n.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
-            self.interface_pops.feedback_n.pop,
-            self.interface_pops.error_p.pop,
+            self.controller_pops.sensory_delayed_n.pop,
+            self.interface_pops.error_fwd_p.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
         nest.Connect(
-            self.interface_pops.feedback_n.pop,
-            self.interface_pops.error_n.pop,
+            self.controller_pops.sensory_delayed_n.pop,
+            self.interface_pops.error_fwd_n.pop,
             "all_to_all",
             syn_spec=syn_spec_n,
         )
 
-        # Connect Fwd DCN -> Error (Inhibitory)
-        dcn_f_err_spec = self.conn_params.dcn_f_error
-        syn_spec_p = dcn_f_err_spec.model_dump(exclude_none=True)
-        syn_spec_n = dcn_f_err_spec.model_copy(
-            update={"weight": -dcn_f_err_spec.weight}
+        syn_spec_p = self.conn_params.state_error_fwd.model_dump(exclude_none=True)
+        syn_spec_n = self.conn_params.state_error_fwd.model_copy(
+            update={"weight": -self.conn_params.state_error_fwd.weight}
         ).model_dump(exclude_none=True)
-        self.log.debug(
-            "Connecting fwd_dcn -> error (inhibitory)",
-            syn_spec_p=syn_spec_p,
-            syn_spec_n=syn_spec_n,
-        )
-        # TODO this agrees with brain.py, but why these signs?
         nest.Connect(
-            self.cerebellum.populations.forw_dcnp_n.pop,
-            self.interface_pops.error_p.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-        nest.Connect(
-            self.cerebellum.populations.forw_dcnp_n.pop,
-            self.interface_pops.error_n.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-        nest.Connect(
-            self.cerebellum.populations.forw_dcnp_p.pop,
-            self.interface_pops.error_p.pop,
+            self.controller_pops.state_p.pop,
+            self.interface_pops.error_fwd_p.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
         )
         nest.Connect(
-            self.cerebellum.populations.forw_dcnp_p.pop,
-            self.interface_pops.error_n.pop,
+            self.controller_pops.state_p.pop,
+            self.interface_pops.error_fwd_n.pop,
             "all_to_all",
             syn_spec=syn_spec_p,
+        )
+        nest.Connect(
+            self.controller_pops.state_n.pop,
+            self.interface_pops.error_fwd_p.pop,
+            "all_to_all",
+            syn_spec=syn_spec_n,
+        )
+        nest.Connect(
+            self.controller_pops.state_n.pop,
+            self.interface_pops.error_fwd_n.pop,
+            "all_to_all",
+            syn_spec=syn_spec_n,
         )
 
         # --- Inverse Error Calculation (Error = Plan - StateEst?) ---
@@ -518,45 +484,6 @@ class CerebellumHandler:
             "all_to_all",
             syn_spec=syn_spec_n,
         )
-
-        ######################## CONNECT CEREB_ERROR -> STATE ###############################
-        # connect to state
-        error_state_params = {
-            "buffer_size_error": 25,
-            "N_error": self.N,
-            "C_error": 5,
-            "error_bf_size": 25,
-        }
-        nest.SetStatus(self.controller_pops.state_p.pop, error_state_params)
-        nest.SetStatus(self.controller_pops.state_n.pop, error_state_params)
-        w_error = 1.0
-        syn_spec_p = {"weight": w_error, "delay": 1.0, "receptor_type": 401}
-        syn_spec_n = {"weight": -w_error, "delay": 1.0, "receptor_type": 401}
-        nest.Connect(
-            self.interface_pops.error_p.pop,
-            self.controller_pops.state_p.pop,
-            "all_to_all",
-            syn_spec=syn_spec_p,
-        )
-        nest.Connect(
-            self.interface_pops.error_n.pop,
-            self.controller_pops.state_p.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-        nest.Connect(
-            self.interface_pops.error_p.pop,
-            self.controller_pops.state_n.pop,
-            "all_to_all",
-            syn_spec=syn_spec_p,
-        )
-        nest.Connect(
-            self.interface_pops.error_n.pop,
-            self.controller_pops.state_n.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-        #################################################################à
 
     def connect_to_main_controller_populations(self):
         if not self.controller_pops:
@@ -673,54 +600,6 @@ class CerebellumHandler:
             syn_spec=syn_spec_n,
         )
 
-        # Sensory -> Cereb Feedback Input
-        sn_fbk_sm_spec = self.conn_params.sn_feedback  # sn_fbk_smoothed
-        syn_spec_p = sn_fbk_sm_spec.model_dump(exclude_none=True)
-        syn_spec_n = sn_fbk_sm_spec.model_copy(
-            update={"weight": -sn_fbk_sm_spec.weight}
-        ).model_dump(exclude_none=True)
-        self.log.debug(
-            "Connecting Controller Sensory -> Cereb Feedback",
-            syn_spec_p=syn_spec_p,
-            syn_spec_n=syn_spec_n,
-        )
-        nest.Connect(
-            self.controller_pops.sn_p.pop,
-            self.interface_pops.feedback_p.pop,
-            "all_to_all",
-            syn_spec=syn_spec_p,
-        )
-        nest.Connect(
-            self.controller_pops.sn_n.pop,
-            self.interface_pops.feedback_n.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-
-        # Sensory -> Cereb Feedback Inv Input
-        sn_fbk_inv_spec = self.conn_params.sn_feedback_inv
-        syn_spec_p = sn_fbk_inv_spec.model_dump(exclude_none=True)
-        syn_spec_n = sn_fbk_inv_spec.model_copy(
-            update={"weight": -sn_fbk_inv_spec.weight}
-        ).model_dump(exclude_none=True)
-        self.log.debug(
-            "Connecting Controller Sensory -> Cereb FeedbackInv",
-            syn_spec_p=syn_spec_p,
-            syn_spec_n=syn_spec_n,
-        )
-        nest.Connect(
-            self.controller_pops.sn_p.pop,
-            self.interface_pops.feedback_inv_p.pop,
-            "all_to_all",
-            syn_spec=syn_spec_p,
-        )
-        nest.Connect(
-            self.controller_pops.sn_n.pop,
-            self.interface_pops.feedback_inv_n.pop,
-            "all_to_all",
-            syn_spec=syn_spec_n,
-        )
-
         state_sti_spec = (
             self.conn_params.state_state_to_inv
         )  # Using planner_plan_to_inv as per existing code
@@ -772,3 +651,87 @@ class CerebellumHandler:
             "all_to_all",
             syn_spec=conn_spec_n_bs,
         )
+
+    def get_connections_block_window(self):
+        self.blocking_window_is_applied = False
+        # BLOCK connections from error to forw_io
+        self.blocking_window_io_fwd_pos_conns = nest.GetConnections(
+            source=self.interface_pops.error_fwd_p.pop,
+            target=self.cerebellum.populations.forw_io_p.pop,
+            synapse_model="static_synapse",
+        )
+
+        self.blocking_window_io_fwd_neg_conns = nest.GetConnections(
+            source=self.interface_pops.error_fwd_n.pop,
+            target=self.cerebellum.populations.forw_io_n.pop,
+            synapse_model="static_synapse",
+        )
+
+        # BLOCK connections from DCN to forw_prediction
+        self.blocking_window_pred_pos_pos_conns = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_p.pop,
+            target=self.controller_pops.pred_p.pop,
+            synapse_model="static_synapse",
+        )
+        self.blocking_window_pred_neg_neg_conns = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_n.pop,
+            target=self.controller_pops.pred_n.pop,
+            synapse_model="static_synapse",
+        )
+        self.blocking_window_pred_pos_neg_conns = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_p.pop,
+            target=self.controller_pops.pred_n.pop,
+            synapse_model="static_synapse",
+        )
+        self.blocking_window_pred_neg_pos_conns = nest.GetConnections(
+            source=self.cerebellum.populations.forw_dcnp_n.pop,
+            target=self.controller_pops.pred_p.pop,
+            synapse_model="static_synapse",
+        )
+        return
+
+    def apply_blocking_window(self, curr_section):
+        if curr_section == TrialSection.TIME_PREP:
+            if not self.blocking_window_is_applied:
+                self.log.debug("[neural] Applying blocking window to IO-MF-PRED")
+                # block io_fwd
+                nest.SetStatus(self.blocking_window_io_fwd_pos_conns, {"weight": 0.0})
+                nest.SetStatus(self.blocking_window_io_fwd_neg_conns, {"weight": 0.0})
+
+                # block mf_fwd
+                nest.SetStatus(
+                    self.interface_pops.motor_commands.pop,
+                    {"max_peak_rate": 0.0, "base_rate": 0.0},
+                )
+
+                # block pred
+                nest.SetStatus(self.blocking_window_pred_pos_pos_conns, {"weight": 0.0})
+                nest.SetStatus(self.blocking_window_pred_neg_neg_conns, {"weight": 0.0})
+                nest.SetStatus(self.blocking_window_pred_pos_neg_conns, {"weight": 0.0})
+                nest.SetStatus(self.blocking_window_pred_neg_pos_conns, {"weight": 0.0})
+
+                self.blocking_window_is_applied = True
+
+        else:
+            if self.blocking_window_is_applied:
+                self.log.debug("[neural] Removing blocking window to IO-MF-PRED")
+                # active  io_fwd
+                w = self.conn_params.error_io_f.weight
+                nest.SetStatus(self.blocking_window_io_fwd_pos_conns, {"weight": w})
+                nest.SetStatus(self.blocking_window_io_fwd_neg_conns, {"weight": -w})
+
+                # active mf_fwd
+                base_rate_mc = self.pops_params.motor_commands.base_rate
+                nest.SetStatus(
+                    self.interface_pops.motor_commands.pop,
+                    {"max_peak_rate": 300.0, "base_rate": base_rate_mc},
+                )
+
+                # active pred
+                w = self.conn_params.dcn_forw_prediction.weight
+                nest.SetStatus(self.blocking_window_pred_pos_pos_conns, {"weight": w})
+                nest.SetStatus(self.blocking_window_pred_pos_neg_conns, {"weight": w})
+                nest.SetStatus(self.blocking_window_pred_neg_pos_conns, {"weight": -w})
+                nest.SetStatus(self.blocking_window_pred_neg_neg_conns, {"weight": -w})
+
+                self.blocking_window_is_applied = False

@@ -11,7 +11,7 @@ BUILD_DIR="/sim/controller/built_custom_stdp"
 : "${NEST_INSTALL_DIR:?Error: NEST_INSTALL_DIR environment variable is not set (needed for cmake)}"
 
 # Source directory for the custom module
-SOURCE_DIR="${CONTROLLER_DIR}/cerebellum/custom_stdp"
+SOURCE_DIR="/sim/cerebellum/custom_stdp"
 
 # Validate that the source directory exists
 if [ ! -d "${SOURCE_DIR}" ]; then

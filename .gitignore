@@ -6,6 +6,8 @@ logs
 
 runs/*
 
+built_custom_stdp/
+
 tests_POCs/runs_tests_state/*
 
 *.tar.gz

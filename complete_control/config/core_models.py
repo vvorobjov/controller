@@ -39,7 +39,7 @@ class ExperimentParams(BaseModel, frozen=True):
 
 class OracleData(BaseModel):
     init_joint_angle: float = 90
-    tgt_joint_angle: float = 20
+    tgt_joint_angle: float = 140
     target_visual_offset: float = 4.0
     target_tolerance_angle_deg: float = 10
     target_color: TargetColor = Field(default=TargetColor.RED_RIGHT)
@@ -70,7 +70,7 @@ class SimulationParams(BaseModel, frozen=True):
 
     oracle: OracleData = Field(default_factory=lambda: OracleData())
 
-    seed: int = 12345
+    seed: int = 123456
 
     @computed_field
     @property

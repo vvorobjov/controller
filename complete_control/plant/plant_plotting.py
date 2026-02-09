@@ -168,8 +168,8 @@ def plot_joint_space_animated(
     plt.rcParams.update({"font.size": 13})
 
     x = time_vector_s
-    y1 = pos_j_rad_actual
-    y2 = desired_trj_joint_rad
+    y1 = np.degrees(pos_j_rad_actual)
+    y2 = np.degrees(desired_trj_joint_rad)
     filepath = None
 
     MARKERSIZE = 0.8
@@ -180,10 +180,11 @@ def plot_joint_space_animated(
 
     fig, ax = plt.subplots()
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Joint Angle (rad)")
+    ax.set_ylabel("Joint Angle (deg)")
     ax.set_title("Joint Space Position")
     ax.set_xlim(x.min(), x.max())
-    ax.set_ylim(y1.min() - 0.1, 2.8)
+    ax.set_ylim(0, np.degrees(2.8))
+    ax.secondary_yaxis("right", functions=(np.radians, np.degrees)).set_ylabel("Joint Angle (rad)")
 
     legend_elements = [
         Line2D(

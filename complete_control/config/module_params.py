@@ -57,7 +57,7 @@ class SpineModuleConfig(BaseModel):
     wgt_motCtx_motNeur: float = 1.0625540740843757
     wgt_sensNeur_spine: float = 1.0  # 1.6427161409427353
     sensNeur_base_rate: float = 0.0
-    sensNeur_kp: float = 35.0  # 1200.0
+    sensNeur_kp: float = 100.0  # 35.0  # 1200.0
     fbk_delay: float = 1.0  # ms
 
 
