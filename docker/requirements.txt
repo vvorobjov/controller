@@ -21,3 +21,5 @@ gunicorn
 requests
 RestrictedPython
 h5py
+#
+jupyterlab

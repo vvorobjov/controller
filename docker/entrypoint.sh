@@ -126,6 +126,8 @@ echo "----------------------------------------"
 echo "Switching to user $USERNAME (UID: $USER_ID_TO_USE, GID: $GROUP_ID_TO_USE) and executing command: $@"
 echo "----------------------------------------"
 
+/sim/venv/bin/jupyter lab --ip=0.0.0.0 --allow-root
+
 
 if [ "$NEST_MODE" = "nest-server" ]; then
     export NEST_SERVER_HOST="${NEST_SERVER_HOST:-0.0.0.0}"
